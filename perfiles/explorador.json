@@ -1,0 +1,15 @@
+{
+ "nombre": "explorador",
+ "identidad": "Explorador: arriesgado y sin prisa; solo huye cuando el hostil ya está encima. Le faltan las habilidades de explorar (fases futuras).",
+ "metas": [
+  "recorrer el mundo",
+  "madera de paso"
+ ],
+ "pesos": {
+  "madera": 0.7,
+  "compania": 0.0,
+  "seguridad": 0.3,
+  "tiempo": 0.0,
+  "supervivencia": 0.2
+ }
+}

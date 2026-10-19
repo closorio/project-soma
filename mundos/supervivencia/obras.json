@@ -1,0 +1,779 @@
+{
+ "permitido": {
+  "x1": -30000000,
+  "z1": -30000000,
+  "x2": 30000000,
+  "z2": 30000000,
+  "nota": "F7.7 (2026-10-17, decisión del usuario): en el mundo de supervivencia se puede minar piedra en todo el mundo, no solo en el rectángulo de F7.5 (guardado en rectangulo_f75). Solo este mundo; el del usuario sigue igual. Efecto lateral: construir también vale en todo este mundo."
+ },
+ "obras": [],
+ "minados": [
+  {
+   "t": "2026-10-17 22:18:20",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 61,
+   "z": -211,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:22",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:24",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 62,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:26",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:28",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 61,
+   "z": -212,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:29",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 61,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:31",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 61,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:18:33",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 62,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:20:55",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 62,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:20:57",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 61,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:20:58",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 61,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:00",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 61,
+   "z": -213,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:02",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 62,
+   "z": -215,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:04",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 62,
+   "z": -215,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:05",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -215,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:07",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 61,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:09",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 61,
+   "z": -214,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:26",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 63,
+   "z": -217,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:28",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 63,
+   "z": -217,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:21:30",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 63,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:46",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 63,
+   "z": -216,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:49",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 62,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:50",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 62,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:52",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 62,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:55",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -216,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:56",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 63,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:23:58",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -217,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:24:00",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 63,
+   "z": -219,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:13",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 64,
+   "z": -216,
+   "tipo": "dirt",
+   "herramienta": "acacia_planks",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:16",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 64,
+   "z": -217,
+   "tipo": "dirt",
+   "herramienta": "acacia_log",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:17",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 64,
+   "z": -217,
+   "tipo": "dirt",
+   "herramienta": "wooden_sword",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:19",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 65,
+   "z": -217,
+   "tipo": "dirt",
+   "herramienta": "oak_planks",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:21",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 63,
+   "z": -216,
+   "tipo": "dirt",
+   "herramienta": "sand",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:23",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 63,
+   "z": -217,
+   "tipo": "dirt",
+   "herramienta": "gravel",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:25",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 64,
+   "z": -215,
+   "tipo": "dirt",
+   "herramienta": "crafting_table",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:27",
+   "personaje": "Alma",
+   "x": -66,
+   "y": 63,
+   "z": -215,
+   "tipo": "dirt",
+   "herramienta": "oak_log",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:28",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 63,
+   "z": -216,
+   "tipo": "dirt",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:31",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 63,
+   "z": -215,
+   "tipo": "dirt",
+   "herramienta": "dirt",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:33",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 63,
+   "z": -217,
+   "tipo": "dirt",
+   "herramienta": "acacia_planks",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:25:35",
+   "personaje": "Alma",
+   "x": -65,
+   "y": 63,
+   "z": -215,
+   "tipo": "dirt",
+   "herramienta": "acacia_log",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:10",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 63,
+   "z": -216,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:12",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 62,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:14",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 62,
+   "z": -216,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:16",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 62,
+   "z": -217,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:18",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 62,
+   "z": -215,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:20",
+   "personaje": "Alma",
+   "x": -67,
+   "y": 63,
+   "z": -219,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:36",
+   "personaje": "Alma",
+   "x": -68,
+   "y": 63,
+   "z": -219,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:38",
+   "personaje": "Alma",
+   "x": -69,
+   "y": 62,
+   "z": -218,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:40",
+   "personaje": "Alma",
+   "x": -70,
+   "y": 62,
+   "z": -216,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 22:26:42",
+   "personaje": "Alma",
+   "x": -70,
+   "y": 62,
+   "z": -215,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-17 22:37:45"
+  },
+  {
+   "t": "2026-10-17 23:59:07",
+   "personaje": "Eco",
+   "x": 87,
+   "y": 76,
+   "z": -67,
+   "tipo": "oak_leaves",
+   "herramienta": "oak_log",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-17 23:59:22",
+   "personaje": "Eco",
+   "x": 87,
+   "y": 75,
+   "z": -68,
+   "tipo": "oak_leaves",
+   "herramienta": "wooden_sword",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-17 23:59:22",
+   "personaje": "Eco",
+   "x": 88,
+   "y": 76,
+   "z": -67,
+   "tipo": "oak_leaves",
+   "herramienta": "wooden_sword",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-17 23:59:22",
+   "personaje": "Eco",
+   "x": 88,
+   "y": 77,
+   "z": -67,
+   "tipo": "oak_leaves",
+   "herramienta": "wooden_sword",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:36",
+   "personaje": "Alma",
+   "x": -160,
+   "y": 106,
+   "z": 252,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:40",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 105,
+   "z": 252,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:41",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 105,
+   "z": 251,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:43",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 106,
+   "z": 251,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:49",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 104,
+   "z": 252,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:00:51",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 103,
+   "z": 252,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:33",
+   "personaje": "Alma",
+   "x": -155,
+   "y": 110,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:35",
+   "personaje": "Alma",
+   "x": -155,
+   "y": 110,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:37",
+   "personaje": "Alma",
+   "x": -155,
+   "y": 109,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:39",
+   "personaje": "Alma",
+   "x": -156,
+   "y": 109,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:41",
+   "personaje": "Alma",
+   "x": -155,
+   "y": 109,
+   "z": 242,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:43",
+   "personaje": "Alma",
+   "x": -155,
+   "y": 109,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:45",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 110,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:11:47",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 111,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:06",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 110,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:08",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 110,
+   "z": 242,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:10",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 109,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:12",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 111,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:13",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 109,
+   "z": 244,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:15",
+   "personaje": "Alma",
+   "x": -154,
+   "y": 109,
+   "z": 242,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:17",
+   "personaje": "Alma",
+   "x": -153,
+   "y": 110,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  },
+  {
+   "t": "2026-10-18 00:17:19",
+   "personaje": "Alma",
+   "x": -153,
+   "y": 111,
+   "z": 243,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe",
+   "repuesto": "2026-10-18 00:51:35"
+  }
+ ],
+ "rectangulo_f75": {
+  "x1": 32,
+  "z1": -120,
+  "x2": 160,
+  "z2": 8,
+  "nota": "F7.5: radio 64 alrededor del campamento (mundos/supervivencia/mundo.json), mundo de pruebas"
+ }
+}

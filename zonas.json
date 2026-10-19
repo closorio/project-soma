@@ -1,0 +1,29 @@
+{
+ "zonas": [
+  {
+   "nombre": "GRANARBOL",
+   "x1": 294,
+   "z1": 4,
+   "x2": 308,
+   "z2": 18,
+   "modo": "vedada"
+  },
+  {
+   "nombre": "ESTANQUE",
+   "x1": 282,
+   "z1": 0,
+   "x2": 292,
+   "z2": 18,
+   "modo": "vedada"
+  },
+  {
+   "nombre": "HOGAR",
+   "x1": 310,
+   "z1": 0,
+   "x2": 321,
+   "z2": 22,
+   "modo": "vedada"
+  }
+ ],
+ "arboles": []
+}

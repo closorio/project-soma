@@ -1,0 +1,13 @@
+{
+ "nota": "Cofres donde los personajes guardan lo que recogen (habilidad depositar). Cada entrada es un contenedor: un cofre doble = 2 bloques; se abre por el primero. Fuera de las zonas de zonas.json.",
+ "cofres": [
+  {
+   "nombre": "ALMACEN-1",
+   "bloques": [[282, 63, 28], [283, 63, 28]]
+  },
+  {
+   "nombre": "ALMACEN-2",
+   "bloques": [[284, 63, 28], [285, 63, 28]]
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+{
+ "nombre": "constructor",
+ "identidad": "Constructor: necesita mucha madera y deprisa para construir; la junta como el recolector y valora algo estar cerca del jugador.",
+ "metas": [
+  "juntar mucha madera",
+  "trabajar rápido",
+  "no alejarse demasiado de la obra"
+ ],
+ "pesos": {
+  "madera": 2.0,
+  "compania": 0.5,
+  "seguridad": 1.0,
+  "tiempo": 0.005,
+  "supervivencia": 0.5
+ }
+}

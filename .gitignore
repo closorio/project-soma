@@ -1,0 +1,29 @@
+# dependencias y entornos
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+# lanzador de Minecraft
+tlauncher/
+# servidores: mundos, jars, librerías, copias, registros y datos de jugadores
+servidor/
+servidor-supervivencia/libraries/
+servidor-supervivencia/copias/
+servidor-supervivencia/logs/
+servidor-supervivencia/world*/
+servidor-supervivencia/*.jar
+servidor-supervivencia/ops.json
+servidor-supervivencia/whitelist.json
+servidor-supervivencia/banned-*.json
+servidor-supervivencia/usercache.json
+servidor-supervivencia/.preparado
+# entrenamiento pesado y modelos
+entrenamiento/ejecuciones/
+*.pt
+*.pth
+*.npz
+*.onnx
+*.safetensors
+# secretos y registros
+.env*
+*.log

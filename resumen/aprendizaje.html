@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Experimento A · Hallazgos y aprendizaje</title>
+<style>
+@page { size: A4; margin: 17mm 16mm; }
+*{box-sizing:border-box} body{font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif;font-size:10pt;line-height:1.45;color:#1d2330}
+h1{font-size:20pt;margin:0 0 2pt;color:#0f2a4a} .sub{color:#5a6577;margin-bottom:8pt}
+h2{font-size:13pt;color:#0f2a4a;border-bottom:1.5px solid #c9d3e3;padding-bottom:2pt;margin:14pt 0 6pt}
+h3{font-size:10.8pt;margin:8pt 0 2pt;color:#23406b}
+table{border-collapse:collapse;width:100%;margin:5pt 0;font-size:9.2pt} th,td{border:1px solid #d3dbe8;padding:3pt 5pt;text-align:left;vertical-align:top}
+th{background:#eef2f9} .num{text-align:right;white-space:nowrap}
+.caja{background:#f4f7fc;border-left:3px solid #3b6fb6;padding:5pt 8pt;margin:6pt 0}
+ul{margin:3pt 0 3pt 14pt;padding:0} li{margin:1.5pt 0} .pie{margin-top:12pt;color:#6b7587;font-size:8.5pt}
+</style></head><body>
+<h1>Experimento A · Hallazgos y aprendizaje</h1>
+<div class="sub">Ío en Minecraft: un modelo propio, pequeño y local que decide la movilidad y las acciones del cuerpo · 13-14 de octubre de 2026 · actualizado tras las fases C y D</div>
+
+<h2>1. Qué se construyó</h2>
+<ul>
+<li><b>Cuerpo:</b> bot Mineflayer con puerto de control local; ahora una clase <i>Personaje</i> admite varios a la vez (Io, Eco, Iris), cada uno con su puerto, memoria y perfil.</li>
+<li><b>Cerebro:</b> red neuronal pequeña (archivo de ~100 KB) entrenada en el propio ordenador, sin claves de API ni Colab. Primero elige pasos (avanzar, girar, picar) con 10 entradas; después elige entre 5 habilidades con 20-25 entradas.</li>
+<li><b>Habilidades</b> (código determinista con resultado y causa): ir a un árbol, picar el tronco, recoger, ir hacia un jugador, huir.</li>
+<li><b>Perfiles</b> (recolector, constructor, cooperativo, supervivencia, explorador): 4 pesos que entran a la red como entradas.</li>
+<li><b>Zonas protegidas</b> definidas por el usuario (<i>zonas.json</i>): los personajes no talan ni, si son vedadas, pisan esas zonas. Se marcan desde el chat del juego (!zona inicio / fin NOMBRE).</li>
+</ul>
+
+<h2>2. Cifras clave</h2>
+<table><tr><th>Hito</th><th>Resultado</th><th>Qué cambió</th></tr>
+<tr><td>Punto de partida (banco de 30)</td><td class="num">15/30 · 50 %</td><td>Política con 3 entradas</td></tr>
+<tr><td>Visión lateral (10 entradas)</td><td class="num">18/30 · 60 %</td><td>Obstáculos a izquierda y derecha</td></tr>
+<tr><td>Banco corregido</td><td class="num">22/30 · 73 %</td><td>Sin caer en copas ni en el mar; sin picar al aire</td></tr>
+<tr><td>Primer banco de 60</td><td class="num">23/60 · 38 %</td><td>Falso: el banco había talado el arbolado</td></tr>
+<tr><td>Banco de 60 con troncos repuestos</td><td class="num">47/60 · 78 % ±10</td><td>Cifra fiable</td></tr>
+<tr><td>Elegir árbol por camino real</td><td class="num">52/60 · 87 %</td><td>Descarta árboles al otro lado del agua</td></tr>
+<tr><td>Confirmación (otra semilla)</td><td class="num">46/60 · 77 %</td><td>Conjunto: 98/120 = 82 %</td></tr>
+<tr><td>Vallas y escalones</td><td class="num">55/60 · 92 %</td><td>Salto manual corriendo; repetido con igual resultado</td></tr>
+<tr><td>Nueva línea base (zona inundada excluida)</td><td class="num">54/60 · 90 %</td><td>Con 25 entradas y perfiles</td></tr>
+<tr><td>Tres personajes a la vez</td><td class="num">159/180 · 88 %</td><td>Io 52, Eco 54, Iris 53 de 60; uno solo: 54/60</td></tr>
+</table>
+<h3>Habilidades (fase 2)</h3>
+<ul>
+<li>ir a un árbol 26/30; picar 52/52; huir 8/8; ir hacia un jugador 8/8; recoger de 8/14 a un 92 % tras corregirla (se perdía persiguiendo huevos tras una valla).</li>
+<li>Red elige habilidades vs guion escrito a mano, en Minecraft: 61,8 ± 5,4 frente a 60,5 ± 6,2 troncos cada 5 minutos: empate. En el simulador: guion 16,8, azar 9,1, DQN solo 14,5-15,8, DQN con imitación 16,7-17,0.</li>
+<li>Perfiles (banco real, aldeano en un claro): cooperativo 3,2 troncos y 64 % del tiempo junto al jugador; recolector 51,2 troncos y 0 %.</li>
+<li>Coste de varios personajes: 20-60 % de un núcleo y 200-300 MB cada uno.</li>
+</ul>
+
+<h3>Varios personajes (fases C y D)</h3>
+<ul>
+<li><b>Simulador con N personajes</b> que comparten una sola red y una sola memoria; cada uno ve la posición del compañero y su árbol objetivo (25 entradas) y dispone de una habilidad nueva, ir a otro árbol. Con dos recolectores, los conflictos bajan de 10,9 a 1,5 por partida (y de 22,4 a 4,7 con tres).</li>
+<li><b>Minecraft, tres a la vez:</b> 159/180 (88 %) frente a 90 % de uno solo. Fuera de las zonas protegidas, 39/40 cada uno. Pero al empezar los tres delante del mismo árbol, en 39 de 54 puntos picaron el mismo bloque.</li>
+<li><b>Madera del equipo:</b> con el guion, tres personajes sacan 54-90 troncos en 4 minutos frente a 47-55 de uno solo: la ganancia coincide con los bloques distintos que se pican; entre 36 y 54 bloques por episodio los picaron dos o tres a la vez. Arreglo ya hecho en el bot (no pica el bloque de un compañero), pendiente de medir.</li>
+<li><b>Carga del servidor:</b> 36 % de un núcleo y 16 ms por tick sin bots; con tres trabajando, 46-51 % y 18 ms de media (máximo 23 ms; el límite son 50). Los bots, 55-63 % de un núcleo y 430-520 MB en total.</li>
+<li><b>Zonas protegidas:</b> con las tres zonas del usuario, 20 de los 60 puntos del banco quedan fuera; en los 40 restantes, Io solo acierta 39/40.</li>
+<li><b>Red nueva (validación en simulador, 40 mundos):</b> recolector 16,6 troncos; cooperativo 7 con el 60 % del tiempo junto al jugador; dos recolectores, 20,4-22,6 cada uno con 1-1,5 conflictos; tres, 20,3-22,6 con 2,4-3. Aún no medida en Minecraft.</li>
+</ul>
+
+<h2>3. Lo que aprendimos</h2>
+<div class="caja"><b>1. Medir bien cuesta tanto como entrenar bien.</b> Con 30 pruebas el ruido es de ±3 aciertos: casi todas las «mejoras» eran suerte. Con 60 pruebas el margen baja a ±10 puntos y ya se pueden comparar variantes.</div>
+<div class="caja"><b>2. El banco de pruebas también puede equivocarse.</b> Falseaba las cifras de tres formas: dejaba a Ío sobre las copas, lo hacía aparecer bajo el mar, y cada acierto talaba un árbol real hasta agotar el arbolado (38 % falso). Hay que reponer el escenario después de cada prueba.</div>
+<div class="caja"><b>3. Lo que la red no puede ver se arregla fuera de la red.</b> Árboles inalcanzables, vallas de metro y medio o escalones se resuelven en la elección del objetivo y en la ejecución, no entrenando más.</div>
+<div class="caja"><b>4. La brecha simulador-mundo real aparece siempre.</b> El simulador es más limpio (siempre hay camino al árbol). Cada fallo en Minecraft debe trasladarse al simulador; en cambio, los fallos de ejecución (navegador atascado) se arreglan en el bot.</div>
+<div class="caja"><b>5. Con pocas señales, el guion ya es casi óptimo.</b> La red sola quedaba por debajo; igualó al guion solo aprendiendo de él (DQN con imitación). Para aportar algo más hacen falta perfiles, señales nuevas o habilidades nuevas.</div>
+<div class="caja"><b>6. Las observaciones del usuario valen oro.</b> El pantano junto al mar y la valla con alfombra que un jugador salta y el bot no fueron hallazgos suyos, imposibles de ver en las cifras.</div>
+<div class="caja"><b>7. Compartir un modelo entre varios personajes funciona</b> si cada uno recibe su perfil y la posición del compañero; con tres personajes el rendimiento individual apenas cae (88 % frente a 90 %).</div>
+
+<div class="caja"><b>8. Compartir red no basta: hay que repartir el trabajo.</b> Tres personajes con la misma red eligen el mismo árbol y se estorban. Hace falta una regla explícita de ceder el árbol y que el simulador la haga necesaria (posiciones distintas, conflictos medidos).</div>
+<div class="caja"><b>9. Un banco que modifica el mundo debe poder deshacerse.</b> Cortar una serie a medias dejó 74 troncos talados dentro de una zona protegida del usuario y objetos apartados sin devolver. Conviene un script de reposición y registrar siempre lo que se aparta.</div>
+<div class="caja"><b>10. Antes de dar por buena una cifra, mira de dónde sale.</b> Tres de los fallos de mayor tamaño de esta sesión (copas, mar y arbolado agotado) eran del banco, no del modelo.</div>
+
+<h2>4. Pendiente</h2>
+<ul>
+<li>La orden <i>soltar</i> del bot no tira nada (tossStack no tiene efecto); se resolvió con un comando del servidor.</li>
+<li>Elegir la política del entrenamiento con varios agentes (<i>politica_habilidades_equipo_s0/s1.json</i>), copiarla a <i>politica_habilidades.json</i> y medir la red en Minecraft: sola, en dúo y en trío, y con perfiles opuestos a la vez.</li>
+<li>Rehacer la línea base de <i>medir.py</i> con las zonas excluidas (los puntos se redibujan) y medir tres personajes con el arreglo de picar entre compañeros.</li>
+<li>Regla de ceder el árbol cuando dos personajes están delante del mismo; calibrar con lo medido el supuesto de «estorbo» del simulador (hoy 0,75).</li>
+<li>Los objetos apartados del inventario de Io (384 de roble, 192 de roble oscuro, 229 huevos), Eco (9+9) e Iris (5+3) siguen guardados; hay que devolverlos o decidir qué hacer con ellos.</li>
+<li>Constructor y explorador se comportan como el recolector: faltan habilidades propias.</li>
+<li>Probar la huida con hostiles reales (el servidor está en pacífico) y la habilidad de dormir.</li>
+<li>El entrenamiento con varios agentes (5000 episodios, dos semillas) sigue en segundo plano en el ordenador.</li>
+</ul>
+
+<h2>5. Cómo retomar</h2>
+<ul>
+<li>Servidor: <i>servidor/arrancar.sh</i>. Bots: <i>node io.js Io Eco:3002:recolector Iris:3003:recolector</i> en <i>bot/</i> (parar con <i>fuser -k PUERTO/tcp</i>).</li>
+<li>Banco: <i>entrenamiento/medir.py 60 42</i> (repone troncos; descarta puntos dentro de <i>zonas.json</i>). Ejecutor: <i>entrenamiento/medir_ejecutor.py</i> (opción <i>--equipo</i> para varios personajes) y <i>medir_carga.py</i> para la carga.</li>
+<li>Informe completo y pasos para retomar, uno a uno, en el archivo del trabajador (fases C y D); reposición de troncos con <i>reponer_serie.py</i> (sin <i>--hacer</i> solo lista).</li>
+<li>Todo el detalle, ciclo a ciclo, está en <i>mente/diario.md</i>; el plan, en <i>PLAN.md</i>.</li>
+</ul>
+<div class="pie">Los entrenamientos se hacen en local y no gastan tokens; sí los gasta el trabajo de programarlos y medirlos. Cifras tomadas del diario del experimento; los márgenes son intervalos del 95 %.</div>
+</body></html>

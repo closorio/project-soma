@@ -1,0 +1,4 @@
+- (2026-10-17) Día 1: tala falla con árboles de ladera (tronco fuera de alcance) y recoger no llega a los troncos caídos; solo 1 tronco al anochecer. De noche sin pico ni bloques: no puede refugiarse.
+- (2026-10-17) Pozo de arena 1x1 de 2 de hondo: no sube con arena ni grava (no son colocables); con 1 tronco → 4 tablones, y «sal del refugio» funciona.
+- (2026-10-18) Día 2 (r1): tras 'explora nadando' y minar desde el pozo en un monte (-155,109,243) Alma quedó en un túnel cerrado (luz 0 de día); explorar falla 'sin camino/sin suelo seco' en todos los rumbos, con o sin nadando; la red en libre solo alterna refugiarse/salir. No hay suelo llano para la cabaña (desnivel 5-15).
+- (2026-10-18) Día 3 al amanecer: creeper a 12-13 bloques dentro de la cueva; me quedo en el pozo hasta que se vaya (de día no arde a oscuras).

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Experimento A · Resumen</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "DejaVu Sans", "Liberation Sans", Arial, sans-serif; font-size: 10.2pt; line-height: 1.45; color: #1d2330; }
+  h1 { font-size: 21pt; margin: 0 0 2pt; color: #0f2a4a; }
+  .sub { color: #5a6577; margin-bottom: 10pt; }
+  h2 { font-size: 13.5pt; color: #0f2a4a; border-bottom: 1.5px solid #c9d3e3; padding-bottom: 2pt; margin: 16pt 0 6pt; }
+  h3 { font-size: 11pt; margin: 9pt 0 3pt; color: #23406b; }
+  p { margin: 0 0 6pt; }
+  ul { margin: 0 0 6pt 0; padding-left: 15pt; }
+  li { margin-bottom: 2.5pt; }
+  table { border-collapse: collapse; width: 100%; margin: 4pt 0 8pt; font-size: 9.4pt; }
+  th { background: #0f2a4a; color: #fff; text-align: left; padding: 4pt 6pt; }
+  td { border-bottom: 1px solid #dde3ee; padding: 3.5pt 6pt; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f7fb; }
+  .kpi { display: flex; gap: 8pt; margin: 6pt 0 8pt; }
+  .kpi div { flex: 1; border: 1px solid #c9d3e3; border-radius: 5pt; padding: 6pt 8pt; background: #f5f7fb; }
+  .kpi b { display: block; font-size: 17pt; color: #0f2a4a; }
+  .kpi span { font-size: 8.6pt; color: #5a6577; }
+  .nota { background: #fff7e6; border-left: 3px solid #e0a100; padding: 5pt 8pt; margin: 6pt 0; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #eef1f7; padding: 0 2pt; border-radius: 2pt; }
+  .pie { margin-top: 14pt; font-size: 8.5pt; color: #6b7587; }
+  .bar { height: 9pt; background: #dde3ee; border-radius: 3pt; position: relative; }
+  .bar i { display: block; height: 100%; background: #2f6fb5; border-radius: 3pt; }
+</style>
+</head>
+<body>
+
+<h1>Experimento A · Ío en Minecraft</h1>
+<div class="sub">Resumen de lo conseguido, hallazgos y oportunidades de mejora · 13 de octubre de 2026</div>
+
+<h2>1. Objetivo</h2>
+<p>Construir y entrenar un <b>modelo propio, pequeño</b>, que se encargue de la movilidad y las decisiones de un cuerpo (un bot) dentro de un mundo sandbox, con dos modos —<b>órdenes</b> y <b>libre</b>— y con «propósitos» intercambiables. La idea de fondo: estudiar cómo se comporta un agente en un mundo simulado y, más adelante, qué efecto tiene el propósito que se le da.</p>
+
+<div class="kpi">
+  <div><b>50 %</b><span>aciertos en Minecraft (15/30, banco repetible)</span></div>
+  <div><b>20→50 %</b><span>evolución en las mediciones de 20-30 pruebas</span></div>
+  <div><b>76-88 %</b><span>aciertos en el simulador, según versión</span></div>
+  <div><b>0 claves</b><span>sin API de terceros: el modelo decide en local</span></div>
+</div>
+
+<h2>2. Lo que se ha construido</h2>
+<table>
+<tr><th style="width:30%">Pieza</th><th>Qué hace</th></tr>
+<tr><td>Servidor local</td><td>Minecraft Java 1.21.11 oficial (verificado con su firma), solo en 127.0.0.1, modo offline, dificultad pacífica. RCON local activado para teletransportar al bot en las pruebas (clave aleatoria en un archivo privado).</td></tr>
+<tr><td>Cliente</td><td>TLauncher extraído dentro del proyecto, sin instalarlo en el sistema; trae su propio Java 21.</td></tr>
+<tr><td>Cuerpo (bot)</td><td>Bot Mineflayer 4.39 con puerto de control local. Órdenes: estado, percibir, decir, ven, para, ir, talar, árboles, cerebro. Se reconecta solo y limita el tiempo de cada movimiento.</td></tr>
+<tr><td>Mente de Ío</td><td>Memoria y diario en archivos de texto, con 11 ciclos documentados (qué percibió, qué hizo, qué aprendió).</td></tr>
+<tr><td>Simulador</td><td>Mundo de cuadrícula (8 a 24 casillas) con obstáculos en manchas, que genera siempre problemas resolubles. Es la «gimnasia» del modelo.</td></tr>
+<tr><td>Cerebro</td><td>Red neuronal de 2 capas ocultas de 64 neuronas entrenada por refuerzo (DQN) con PyTorch en CPU: entrena en unos minutos en el propio equipo. También hay cuaderno para Google Colab.</td></tr>
+<tr><td>Adaptador</td><td>Traduce lo que ve el bot en Minecraft a las mismas entradas que el simulador y ejecuta la acción elegida: avanzar, girar izquierda, girar derecha o picar.</td></tr>
+<tr><td>Banco de pruebas</td><td>30 pruebas repetibles: teletransporte por RCON a puntos fijos (semilla 42) a 12-30 bloques del arbolado; éxito = el bot pica un tronco.</td></tr>
+</table>
+
+<h2>3. Cómo evolucionó el rendimiento</h2>
+<table>
+<tr><th style="width:36%">Versión del modelo</th><th style="width:22%">Simulador</th><th>Minecraft</th></tr>
+<tr><td>Árbol, sin obstáculos, 3 entradas</td><td>100 %</td><td>Se atascaba en obstáculos reales</td></tr>
+<tr><td>+ obstáculos y entrada «bloqueado»</td><td>67 %</td><td>Camina hasta ~20 casillas</td></tr>
+<tr><td>+ memoria de la acción anterior</td><td>86-88 %</td><td>2/3 (muestra pequeña)</td></tr>
+<tr><td>Mismo, 20 pruebas variadas</td><td>—</td><td><b>4/20 (20 %)</b></td></tr>
+<tr><td>Rejillas 8-24 con terreno en manchas</td><td>76 %</td><td>5/13 válidas (38 %)</td></tr>
+<tr><td>+ penalización por giros repetidos</td><td>65-76 %</td><td>3 de ~10 válidas; banco poco fiable</td></tr>
+<tr><td>Banco repetible, bot sin cuelgues</td><td>—</td><td><b>13/30 (43 %)</b></td></tr>
+<tr><td>+ corrección: picar al aire no termina</td><td>—</td><td><b>15/30 (50 %)</b></td></tr>
+</table>
+<p>La política escrita a mano (referencia) acierta el 51-57 % en el simulador con obstáculos: el modelo la supera, pero no por un margen enorme.</p>
+
+<h2>4. Hallazgos principales</h2>
+<ul>
+  <li><b>La brecha simulador → mundo real es el problema central.</b> Cada fallo en Minecraft fue algo que el simulador no tenía: un árbol en la propia columna, troncos altos, distancias mayores de lo entrenado, desniveles, hojas. Cada uno se corrigió trasladándolo al simulador o al adaptador.</li>
+  <li><b>Medir mal engaña.</b> Con 3 pruebas salió un 67 %; con 20 salió un 20 %. Varias mediciones estuvieron contaminadas por cuelgues del navegador del bot y desconexiones. Solo el banco repetible con teletransporte (30 pruebas, semilla fija) permite comparar versiones.</li>
+  <li><b>Sin memoria, el agente oscila.</b> Con solo lo que ve en el instante, gira a un lado y a otro sin avanzar. La memoria de la acción anterior elevó el simulador del 67 % al 86 %.</li>
+  <li><b>Los obstáculos reales son ahora el cuello de botella:</b> 13 de los 15 fallos de la última medición incluyen choques repetidos contra algo que bloquea (hojas, troncos, desniveles de 2 o más).</li>
+  <li><b>Coste y autonomía:</b> el modelo propio decide sin consumir tokens ni claves de terceros; la intervención de Ío (planificar, depurar) se limita a lo imprescindible.</li>
+</ul>
+
+<h2>5. Oportunidades de mejora</h2>
+<h3>Corto plazo (el siguiente paso inmediato)</h3>
+<ul>
+  <li><b>Visión lateral:</b> dar al modelo la casilla libre/bloqueada a izquierda, frente y derecha para que sepa por dónde rodear. El simulador y el adaptador ya están preparados; <b>el entrenamiento se interrumpió</b> y hay que relanzarlo y volver a medir con las mismas 30 pruebas.</li>
+  <li><b>Mejor detección de obstáculos:</b> distinguir hojas (que el navegador rodea) de paredes, y desniveles reales.</li>
+  <li><b>Recoger el tronco</b> tras picarlo (ahora solo lo pica).</li>
+  <li>Más memoria: historial de 3-4 acciones, no solo la última.</li>
+  <li>Subir a 50-100 pruebas con intervalos de confianza antes de afirmar una mejora.</li>
+</ul>
+<h3>Medio plazo (fases 2 a 4 del plan)</h3>
+<ul>
+  <li><b>Habilidades de alto nivel</b> (estilo Voyager): ir al árbol, picar, recoger, ir al jugador, huir. El modelo elige habilidades y no pasos sueltos, lo que acelera mucho el aprendizaje.</li>
+  <li><b>Subobjetivos con el navegador:</b> que Mineflayer acerque al bot a unas siete casillas y la red resuelva solo el tramo final.</li>
+  <li><b>Perfiles de propósito</b> (cooperativo, supervivencia, explorador, constructor): archivos que entran al modelo como entrada extra y modulan la recompensa.</li>
+  <li><b>Interruptor órdenes / libre</b>, con registro de cada decisión en el diario.</li>
+</ul>
+<h3>Largo plazo (investigación)</h3>
+<ul>
+  <li>Experimentos comparativos: mismo mundo y semilla, un perfil por ejecución; métricas de recursos, supervivencia, distancia y cooperación con el jugador.</li>
+  <li>Variantes: ruido en la percepción, metas que cambian a mitad de camino, varios agentes.</li>
+  <li>Conectar con la línea inicial de la conversación: autómatas (juego de la vida) y teoría de conjuntos en un sandbox, con el simulador propio como banco previo.</li>
+</ul>
+
+<h2>6. Riesgos y límites</h2>
+<ul>
+  <li>Mineflayer soporta hasta la 1.21.11 (la estable más reciente es la 26.3): no actualizar el servidor sin comprobarlo.</li>
+  <li>El servidor debe seguir siendo local y offline; el modo offline no debe exponerse a internet.</li>
+  <li>El modelo es de decisión instantánea (más memoria corta): no planifica a largo plazo. Para eso sirven las habilidades y los subobjetivos.</li>
+  <li>TLauncher es un launcher de terceros no oficial: se descargó de su web y no se instaló en el sistema.</li>
+</ul>
+
+<div class="nota"><b>Estado actual a tener en cuenta:</b> el adaptador del bot ya calcula 10 entradas (con visión lateral), pero no hay una política entrenada compatible porque el entrenamiento se detuvo. Hasta relanzarlo, el bot usa la política de referencia escrita a mano. Las versiones anteriores del modelo están guardadas en <code>entrenamiento/politica_v*.json</code> (de 3 a 8 entradas; no son compatibles con el adaptador actual).</div>
+
+<h2>7. Dónde está todo</h2>
+<table>
+<tr><td style="width:36%"><code>laboratorio/mundo-simulado/PLAN.md</code></td><td>Plan por fases y estado</td></tr>
+<tr><td><code>mente/diario.md</code>, <code>mente/memoria.md</code></td><td>Diario de ciclos y memoria de Ío</td></tr>
+<tr><td><code>bot/io.js</code></td><td>Cuerpo, adaptador del cerebro y puerto de control</td></tr>
+<tr><td><code>entrenamiento/entorno.py</code>, <code>entrenar.py</code>, <code>entrenar_io.ipynb</code></td><td>Simulador, entrenamiento local y cuaderno de Colab</td></tr>
+<tr><td><code>servidor/</code></td><td>Servidor, <code>arrancar.sh</code> y cliente RCON</td></tr>
+</table>
+
+<div class="pie">Generado por Ío a partir del diario y el plan del proyecto. Las cifras de Minecraft proceden de las mediciones registradas; las de 3 pruebas son anecdóticas y se incluyen solo como historial.</div>
+
+</body>
+</html>

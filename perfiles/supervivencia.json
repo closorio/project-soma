@@ -1,0 +1,16 @@
+{
+ "nombre": "supervivencia",
+ "identidad": "Supervivencia: lo primero es no recibir daño; huye de cualquier hostil que vea y de noche se queda junto al jugador.",
+ "metas": [
+  "no recibir daño",
+  "no morir",
+  "madera solo si es seguro"
+ ],
+ "pesos": {
+  "madera": 0.5,
+  "compania": 1.0,
+  "seguridad": 5.0,
+  "tiempo": 0.001,
+  "supervivencia": 3.0
+ }
+}

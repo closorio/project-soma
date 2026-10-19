@@ -1,0 +1,64 @@
+// Libro de obras (F6): lo que los personajes construyen (habilidad construir) y minan (habilidad minar), para poder deshacerlo
+// (habilidad deshacer, o reponerlo por RCON en las pruebas) y para que la mente lo vea. Se guarda en obras.json de los datos del
+// mundo (bot/mundo.js: ../obras.json en el del usuario):
+//   { permitido: { x1, z1, x2, z2 } | null,   ← rectángulo de obras acordado con el usuario; sin él, construir y minar se niegan
+//     obras: [{ id, nombre, plano, personaje, materia, origen: [x, y, z], inicio, fin, estado, bloques: [[x, y, z, tipo], …] }],
+//     minados: [{ t, personaje, x, y, z, tipo, herramienta }] }
+// Se relee solo cuando el archivo cambia (como cofres.js y zonas.js); cada bloque puesto se escribe en el acto, no al final.
+const fs = require('fs')
+
+const RUTA = require('./mundo').obras
+const VACIO = () => ({ permitido: null, obras: [], minados: [] })
+const MAX_MINADOS = 2000
+let cache = { mtime: -1, datos: VACIO() }
+const fecha = () => new Date().toLocaleString('sv-SE').slice(0, 19)
+
+function leer() {
+  try {
+    const st = fs.statSync(RUTA)
+    if (st.mtimeMs !== cache.mtime) cache = { mtime: st.mtimeMs, datos: Object.assign(VACIO(), JSON.parse(fs.readFileSync(RUTA, 'utf8'))) }
+  } catch (_) { cache = { mtime: -1, datos: VACIO() } }
+  return cache.datos
+}
+function guardar(d) {
+  fs.writeFileSync(RUTA, JSON.stringify(d, null, 1) + '\n')
+  cache = { mtime: fs.statSync(RUTA).mtimeMs, datos: d }
+}
+
+const permitido = () => leer().permitido || null
+// ¿Cae (x, z) dentro del rectángulo de obras? Sin rectángulo, nada está permitido.
+function enPermitido(x, z) {
+  const p = permitido()
+  return !!p && x >= Math.min(p.x1, p.x2) && x <= Math.max(p.x1, p.x2) && z >= Math.min(p.z1, p.z2) && z <= Math.max(p.z1, p.z2)
+}
+
+function nueva(personaje, nombre, plano, origen, materia) {
+  const d = leer()
+  const id = `${nombre}-${Date.now().toString(36)}`
+  d.obras.push({ id, nombre, plano, personaje, materia, origen, inicio: fecha(), fin: null, estado: 'en curso', bloques: [] })
+  guardar(d)
+  return id
+}
+const buscarId = (d, id) => d.obras.find(o => o.id === id)
+function anotarPuesto(id, bloque) { const d = leer(), o = buscarId(d, id); if (o) { o.bloques.push(bloque); guardar(d) } }
+function quitarPuesto(id, [x, y, z]) {
+  const d = leer(), o = buscarId(d, id)
+  if (!o) return
+  o.bloques = o.bloques.filter(b => !(b[0] === x && b[1] === y && b[2] === z))
+  guardar(d)
+}
+function cerrar(id, estado) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = estado; o.fin = fecha(); guardar(d) } }
+function anotarMinado(personaje, [x, y, z], tipo, herramienta) {
+  const d = leer()
+  d.minados.push({ t: fecha(), personaje, x, y, z, tipo, herramienta: herramienta || null })
+  if (d.minados.length > MAX_MINADOS) d.minados.splice(0, d.minados.length - MAX_MINADOS)
+  guardar(d)
+}
+// Una obra por nombre o id: la más reciente que no esté deshecha.
+const obra = (nombre) => [...leer().obras].reverse().find(o => (o.nombre === nombre || o.id === nombre) && o.estado !== 'deshecha') || null
+const enCurso = () => leer().obras.find(o => o.estado === 'en curso') || null
+const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: o.plano, estado: o.estado, bloques: o.bloques.length, origen: o.origen }))
+// ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
+const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && o.bloques.some(b => b[0] === x && b[1] === y && b[2] === z))
+
+module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

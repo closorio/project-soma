@@ -1,0 +1,1165 @@
+{
+ "n": 300,
+ "bases": [
+  100000,
+  200000
+ ],
+ "fecha": "2026-10-14 18:15",
+ "politicas": {
+  "actual": {
+   "nota": 551.04,
+   "fidelidad_guion": {
+    "constructor": 98.3,
+    "cooperativo": 98.6,
+    "explorador": 98.6,
+    "recolector": 98.7,
+    "supervivencia": 98.6,
+    "recolector+recolector": 99.7,
+    "recolector+cooperativo": 98.9,
+    "recolector+recolector+recolector": 98.6,
+    "recolector+cooperativo+supervivencia": 98.5
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.739,
+    "amenazas": 0.733
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     -0.23,
+     0.211,
+     -0.443,
+     0.418
+    ],
+    "constructor amenazas": [
+     0.02,
+     0.236,
+     0.064,
+     0.485
+    ],
+    "cooperativo pacifico": [
+     -0.12,
+     0.26,
+     -0.203,
+     0.135
+    ],
+    "cooperativo amenazas": [
+     -0.043,
+     0.265,
+     -0.227,
+     0.225
+    ],
+    "explorador pacifico": [
+     -0.18,
+     0.163,
+     -0.126,
+     0.114
+    ],
+    "explorador amenazas": [
+     -0.133,
+     0.2,
+     -0.093,
+     0.146
+    ],
+    "recolector pacifico": [
+     -0.21,
+     0.176,
+     -0.21,
+     0.176
+    ],
+    "recolector amenazas": [
+     -0.103,
+     0.237,
+     -0.119,
+     0.256
+    ],
+    "supervivencia pacifico": [
+     0.183,
+     0.221,
+     0.035,
+     0.094
+    ],
+    "supervivencia amenazas": [
+     0.19,
+     0.236,
+     -0.005,
+     0.441
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     -0.25,
+     0.354
+    ],
+    "recolector+recolector amenazas": [
+     -0.03,
+     0.388
+    ],
+    "recolector+cooperativo pacifico": [
+     0.437,
+     0.452
+    ],
+    "recolector+cooperativo amenazas": [
+     0.08,
+     0.469
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.427,
+     0.481
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.16,
+     0.521
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     -0.263,
+     0.828
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     -0.423,
+     0.851
+    ]
+   }
+  },
+  "original_s0": {
+   "nota": 549.61,
+   "fidelidad_guion": {
+    "constructor": 96.1,
+    "cooperativo": 98.2,
+    "explorador": 98.0,
+    "recolector": 98.4,
+    "supervivencia": 97.8,
+    "recolector+recolector": 99.4,
+    "recolector+cooperativo": 99.2,
+    "recolector+recolector+recolector": 98.8,
+    "recolector+cooperativo+supervivencia": 97.6
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.697,
+    "amenazas": 0.696
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     -0.283,
+     0.241,
+     -0.547,
+     0.48
+    ],
+    "constructor amenazas": [
+     -0.12,
+     0.288,
+     -0.175,
+     0.596
+    ],
+    "cooperativo pacifico": [
+     0.923,
+     0.355,
+     -0.326,
+     0.234
+    ],
+    "cooperativo amenazas": [
+     1.043,
+     0.334,
+     -0.384,
+     0.296
+    ],
+    "explorador pacifico": [
+     -0.33,
+     0.208,
+     -0.231,
+     0.146
+    ],
+    "explorador amenazas": [
+     -0.1,
+     0.239,
+     -0.072,
+     0.174
+    ],
+    "recolector pacifico": [
+     -0.23,
+     0.177,
+     -0.23,
+     0.177
+    ],
+    "recolector amenazas": [
+     0.047,
+     0.248,
+     0.048,
+     0.276
+    ],
+    "supervivencia pacifico": [
+     0.47,
+     0.277,
+     0.191,
+     0.12
+    ],
+    "supervivencia amenazas": [
+     0.357,
+     0.283,
+     0.228,
+     0.317
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     -0.153,
+     0.243
+    ],
+    "recolector+recolector amenazas": [
+     0.053,
+     0.342
+    ],
+    "recolector+cooperativo pacifico": [
+     0.347,
+     0.527
+    ],
+    "recolector+cooperativo amenazas": [
+     0.013,
+     0.541
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.527,
+     0.479
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.24,
+     0.598
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     0.557,
+     0.928
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     0.233,
+     0.926
+    ]
+   },
+   "frente_a_referencia": {
+    "referencia": "actual",
+    "total_perfiles_R": [
+     -0.169,
+     1.44
+    ],
+    "total_equipos_R": [
+     -1.222,
+     1.744
+    ],
+    "por_fila_R": {
+     "constructor pacifico": [
+      -0.104,
+      0.587
+     ],
+     "constructor amenazas": [
+      -0.239,
+      0.691
+     ],
+     "cooperativo pacifico": [
+      -0.122,
+      0.215
+     ],
+     "cooperativo amenazas": [
+      -0.158,
+      0.281
+     ],
+     "explorador pacifico": [
+      -0.105,
+      0.104
+     ],
+     "explorador amenazas": [
+      0.022,
+      0.12
+     ],
+     "recolector pacifico": [
+      -0.02,
+      0.181
+     ],
+     "recolector amenazas": [
+      0.168,
+      0.267
+     ],
+     "supervivencia pacifico": [
+      0.156,
+      0.117
+     ],
+     "supervivencia amenazas": [
+      0.233,
+      0.32
+     ],
+     "recolector+recolector pacifico": [
+      0.097,
+      0.244
+     ],
+     "recolector+recolector amenazas": [
+      0.154,
+      0.321
+     ],
+     "recolector+cooperativo pacifico": [
+      -0.733,
+      0.531
+     ],
+     "recolector+cooperativo amenazas": [
+      -0.669,
+      0.633
+     ],
+     "recolector+recolector+recolector pacifico": [
+      -0.1,
+      0.396
+     ],
+     "recolector+recolector+recolector amenazas": [
+      -0.185,
+      0.526
+     ],
+     "recolector+cooperativo+supervivencia pacifico": [
+      -0.01,
+      0.712
+     ],
+     "recolector+cooperativo+supervivencia amenazas": [
+      0.224,
+      0.894
+     ]
+    },
+    "filas_peores_z3": [],
+    "fidelidad_baja": [
+     "constructor"
+    ],
+    "junto_cooperativo_baja": [
+     "pacifico",
+     "amenazas"
+    ],
+    "veredicto": "no iguala"
+   }
+  },
+  "rapida_s0": {
+   "nota": 551.17,
+   "fidelidad_guion": {
+    "constructor": 98.2,
+    "cooperativo": 98.2,
+    "explorador": 98.7,
+    "recolector": 98.6,
+    "supervivencia": 98.6,
+    "recolector+recolector": 98.4,
+    "recolector+cooperativo": 99.5,
+    "recolector+recolector+recolector": 98.6,
+    "recolector+cooperativo+supervivencia": 97.1
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.695,
+    "amenazas": 0.698
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     -0.06,
+     0.118,
+     -0.109,
+     0.229
+    ],
+    "constructor amenazas": [
+     0.173,
+     0.246,
+     0.388,
+     0.511
+    ],
+    "cooperativo pacifico": [
+     0.91,
+     0.355,
+     -0.345,
+     0.259
+    ],
+    "cooperativo amenazas": [
+     1.037,
+     0.306,
+     -0.382,
+     0.311
+    ],
+    "explorador pacifico": [
+     -0.003,
+     0.045,
+     -0.002,
+     0.031
+    ],
+    "explorador amenazas": [
+     -0.07,
+     0.158,
+     -0.054,
+     0.11
+    ],
+    "recolector pacifico": [
+     -0.08,
+     0.106,
+     -0.08,
+     0.106
+    ],
+    "recolector amenazas": [
+     -0.08,
+     0.263,
+     -0.099,
+     0.299
+    ],
+    "supervivencia pacifico": [
+     1.037,
+     0.3,
+     0.361,
+     0.127
+    ],
+    "supervivencia amenazas": [
+     0.907,
+     0.345,
+     0.321,
+     0.394
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     0.137,
+     0.282
+    ],
+    "recolector+recolector amenazas": [
+     -0.127,
+     0.387
+    ],
+    "recolector+cooperativo pacifico": [
+     0.597,
+     0.545
+    ],
+    "recolector+cooperativo amenazas": [
+     0.157,
+     0.56
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.23,
+     0.462
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.233,
+     0.546
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     1.987,
+     0.953
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     1.61,
+     0.928
+    ]
+   },
+   "frente_a_referencia": {
+    "referencia": "actual",
+    "total_perfiles_R": [
+     1.325,
+     1.117
+    ],
+    "total_equipos_R": [
+     -1.181,
+     1.833
+    ],
+    "por_fila_R": {
+     "constructor pacifico": [
+      0.334,
+      0.389
+     ],
+     "constructor amenazas": [
+      0.323,
+      0.57
+     ],
+     "cooperativo pacifico": [
+      -0.142,
+      0.24
+     ],
+     "cooperativo amenazas": [
+      -0.155,
+      0.292
+     ],
+     "explorador pacifico": [
+      0.124,
+      0.118
+     ],
+     "explorador amenazas": [
+      0.039,
+      0.134
+     ],
+     "recolector pacifico": [
+      0.13,
+      0.191
+     ],
+     "recolector amenazas": [
+      0.021,
+      0.232
+     ],
+     "supervivencia pacifico": [
+      0.326,
+      0.118
+     ],
+     "supervivencia amenazas": [
+      0.326,
+      0.383
+     ],
+     "recolector+recolector pacifico": [
+      0.387,
+      0.307
+     ],
+     "recolector+recolector amenazas": [
+      -0.071,
+      0.428
+     ],
+     "recolector+cooperativo pacifico": [
+      -0.745,
+      0.523
+     ],
+     "recolector+cooperativo amenazas": [
+      -1.111,
+      0.622
+     ],
+     "recolector+recolector+recolector pacifico": [
+      0.197,
+      0.397
+     ],
+     "recolector+recolector+recolector amenazas": [
+      -0.103,
+      0.547
+     ],
+     "recolector+cooperativo+supervivencia pacifico": [
+      0.145,
+      0.748
+     ],
+     "recolector+cooperativo+supervivencia amenazas": [
+      0.122,
+      0.977
+     ]
+    },
+    "filas_peores_z3": [
+     "recolector+cooperativo amenazas"
+    ],
+    "fidelidad_baja": [],
+    "junto_cooperativo_baja": [
+     "pacifico",
+     "amenazas"
+    ],
+    "veredicto": "no iguala"
+   }
+  },
+  "rapida_s1": {
+   "nota": 553.45,
+   "fidelidad_guion": {
+    "constructor": 98.9,
+    "cooperativo": 98.9,
+    "explorador": 99.8,
+    "recolector": 99.5,
+    "supervivencia": 96.5,
+    "recolector+recolector": 99.0,
+    "recolector+cooperativo": 99.1,
+    "recolector+recolector+recolector": 99.0,
+    "recolector+cooperativo+supervivencia": 97.8
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.702,
+    "amenazas": 0.701
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     -0.167,
+     0.163,
+     -0.322,
+     0.32
+    ],
+    "constructor amenazas": [
+     0.133,
+     0.27,
+     0.293,
+     0.574
+    ],
+    "cooperativo pacifico": [
+     0.887,
+     0.393,
+     -0.253,
+     0.203
+    ],
+    "cooperativo amenazas": [
+     1.073,
+     0.358,
+     -0.191,
+     0.254
+    ],
+    "explorador pacifico": [
+     -0.033,
+     0.037,
+     -0.023,
+     0.026
+    ],
+    "explorador amenazas": [
+     0.203,
+     0.172,
+     0.149,
+     0.124
+    ],
+    "recolector pacifico": [
+     -0.02,
+     0.078,
+     -0.02,
+     0.078
+    ],
+    "recolector amenazas": [
+     0.32,
+     0.242,
+     0.357,
+     0.284
+    ],
+    "supervivencia pacifico": [
+     1.353,
+     0.472,
+     0.493,
+     0.207
+    ],
+    "supervivencia amenazas": [
+     1.213,
+     0.455,
+     0.271,
+     0.408
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     0.193,
+     0.29
+    ],
+    "recolector+recolector amenazas": [
+     0.173,
+     0.349
+    ],
+    "recolector+cooperativo pacifico": [
+     0.703,
+     0.529
+    ],
+    "recolector+cooperativo amenazas": [
+     0.25,
+     0.534
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.323,
+     0.445
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.123,
+     0.561
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     1.917,
+     1.039
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     1.61,
+     0.897
+    ]
+   },
+   "frente_a_referencia": {
+    "referencia": "actual",
+    "total_perfiles_R": [
+     2.08,
+     1.277
+    ],
+    "total_equipos_R": [
+     0.356,
+     1.857
+    ],
+    "por_fila_R": {
+     "constructor pacifico": [
+      0.121,
+      0.458
+     ],
+     "constructor amenazas": [
+      0.229,
+      0.614
+     ],
+     "cooperativo pacifico": [
+      -0.05,
+      0.184
+     ],
+     "cooperativo amenazas": [
+      0.036,
+      0.224
+     ],
+     "explorador pacifico": [
+      0.103,
+      0.108
+     ],
+     "explorador amenazas": [
+      0.242,
+      0.154
+     ],
+     "recolector pacifico": [
+      0.19,
+      0.173
+     ],
+     "recolector amenazas": [
+      0.476,
+      0.285
+     ],
+     "supervivencia pacifico": [
+      0.458,
+      0.199
+     ],
+     "supervivencia amenazas": [
+      0.276,
+      0.41
+     ],
+     "recolector+recolector pacifico": [
+      0.443,
+      0.317
+     ],
+     "recolector+recolector amenazas": [
+      0.299,
+      0.386
+     ],
+     "recolector+cooperativo pacifico": [
+      -0.552,
+      0.502
+     ],
+     "recolector+cooperativo amenazas": [
+      -0.489,
+      0.583
+     ],
+     "recolector+recolector+recolector pacifico": [
+      0.103,
+      0.429
+     ],
+     "recolector+recolector+recolector amenazas": [
+      -0.005,
+      0.521
+     ],
+     "recolector+cooperativo+supervivencia pacifico": [
+      0.017,
+      0.797
+     ],
+     "recolector+cooperativo+supervivencia amenazas": [
+      0.539,
+      0.876
+     ]
+    },
+    "filas_peores_z3": [],
+    "fidelidad_baja": [
+     "supervivencia"
+    ],
+    "junto_cooperativo_baja": [
+     "pacifico",
+     "amenazas"
+    ],
+    "veredicto": "no iguala"
+   }
+  },
+  "rapida_s2": {
+   "nota": 551.7,
+   "fidelidad_guion": {
+    "constructor": 99.6,
+    "cooperativo": 98.0,
+    "explorador": 99.5,
+    "recolector": 99.6,
+    "supervivencia": 94.0,
+    "recolector+recolector": 99.6,
+    "recolector+cooperativo": 98.9,
+    "recolector+recolector+recolector": 97.8,
+    "recolector+cooperativo+supervivencia": 97.0
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.695,
+    "amenazas": 0.704
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     -0.077,
+     0.075,
+     -0.148,
+     0.143
+    ],
+    "constructor amenazas": [
+     0.057,
+     0.272,
+     0.145,
+     0.564
+    ],
+    "cooperativo pacifico": [
+     0.81,
+     0.374,
+     -0.399,
+     0.256
+    ],
+    "cooperativo amenazas": [
+     0.907,
+     0.334,
+     -0.201,
+     0.219
+    ],
+    "explorador pacifico": [
+     0.03,
+     0.131,
+     0.021,
+     0.092
+    ],
+    "explorador amenazas": [
+     0.2,
+     0.242,
+     0.139,
+     0.183
+    ],
+    "recolector pacifico": [
+     -0.053,
+     0.072,
+     -0.053,
+     0.072
+    ],
+    "recolector amenazas": [
+     0.1,
+     0.254,
+     0.091,
+     0.294
+    ],
+    "supervivencia pacifico": [
+     1.833,
+     0.528,
+     0.678,
+     0.226
+    ],
+    "supervivencia amenazas": [
+     1.457,
+     0.503,
+     0.501,
+     0.381
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     -0.373,
+     0.322
+    ],
+    "recolector+recolector amenazas": [
+     -0.03,
+     0.368
+    ],
+    "recolector+cooperativo pacifico": [
+     0.35,
+     0.516
+    ],
+    "recolector+cooperativo amenazas": [
+     0.35,
+     0.555
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.543,
+     0.52
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.363,
+     0.605
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     2.057,
+     1.079
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     1.607,
+     0.956
+    ]
+   },
+   "frente_a_referencia": {
+    "referencia": "actual",
+    "total_perfiles_R": [
+     2.103,
+     1.272
+    ],
+    "total_equipos_R": [
+     -1.414,
+     1.89
+    ],
+    "por_fila_R": {
+     "constructor pacifico": [
+      0.295,
+      0.405
+     ],
+     "constructor amenazas": [
+      0.081,
+      0.612
+     ],
+     "cooperativo pacifico": [
+      -0.195,
+      0.243
+     ],
+     "cooperativo amenazas": [
+      0.026,
+      0.262
+     ],
+     "explorador pacifico": [
+      0.147,
+      0.14
+     ],
+     "explorador amenazas": [
+      0.233,
+      0.207
+     ],
+     "recolector pacifico": [
+      0.157,
+      0.168
+     ],
+     "recolector amenazas": [
+      0.211,
+      0.27
+     ],
+     "supervivencia pacifico": [
+      0.642,
+      0.217
+     ],
+     "supervivencia amenazas": [
+      0.506,
+      0.357
+     ],
+     "recolector+recolector pacifico": [
+      -0.123,
+      0.333
+     ],
+     "recolector+recolector amenazas": [
+      0.029,
+      0.415
+     ],
+     "recolector+cooperativo pacifico": [
+      -0.552,
+      0.499
+     ],
+     "recolector+cooperativo amenazas": [
+      -0.18,
+      0.57
+     ],
+     "recolector+recolector+recolector pacifico": [
+      -0.116,
+      0.338
+     ],
+     "recolector+recolector+recolector amenazas": [
+      -0.212,
+      0.542
+     ],
+     "recolector+cooperativo+supervivencia pacifico": [
+      -0.392,
+      0.808
+     ],
+     "recolector+cooperativo+supervivencia amenazas": [
+      0.134,
+      1.0
+     ]
+    },
+    "filas_peores_z3": [],
+    "fidelidad_baja": [
+     "supervivencia"
+    ],
+    "junto_cooperativo_baja": [
+     "pacifico",
+     "amenazas"
+    ],
+    "veredicto": "no iguala"
+   }
+  },
+  "rapida_s3": {
+   "nota": 549.35,
+   "fidelidad_guion": {
+    "constructor": 96.9,
+    "cooperativo": 97.0,
+    "explorador": 99.5,
+    "recolector": 98.3,
+    "supervivencia": 97.9,
+    "recolector+recolector": 99.2,
+    "recolector+cooperativo": 98.8,
+    "recolector+recolector+recolector": 98.7,
+    "recolector+cooperativo+supervivencia": 96.8
+   },
+   "junto_cooperativo": {
+    "pacifico": 0.676,
+    "amenazas": 0.671
+   },
+   "red_menos_guion": {
+    "constructor pacifico": [
+     0.03,
+     0.064,
+     0.047,
+     0.127
+    ],
+    "constructor amenazas": [
+     0.073,
+     0.242,
+     0.158,
+     0.512
+    ],
+    "cooperativo pacifico": [
+     1.2,
+     0.444,
+     -0.491,
+     0.281
+    ],
+    "cooperativo amenazas": [
+     1.423,
+     0.495,
+     -0.426,
+     0.304
+    ],
+    "explorador pacifico": [
+     0.007,
+     0.074,
+     0.005,
+     0.052
+    ],
+    "explorador amenazas": [
+     0.043,
+     0.215,
+     0.027,
+     0.161
+    ],
+    "recolector pacifico": [
+     -0.017,
+     0.046,
+     -0.017,
+     0.046
+    ],
+    "recolector amenazas": [
+     0.147,
+     0.186,
+     0.168,
+     0.229
+    ],
+    "supervivencia pacifico": [
+     0.99,
+     0.333,
+     0.363,
+     0.139
+    ],
+    "supervivencia amenazas": [
+     0.927,
+     0.352,
+     0.333,
+     0.402
+    ]
+   },
+   "equipo_menos_guion": {
+    "recolector+recolector pacifico": [
+     -0.137,
+     0.227
+    ],
+    "recolector+recolector amenazas": [
+     -0.21,
+     0.352
+    ],
+    "recolector+cooperativo pacifico": [
+     1.357,
+     0.687
+    ],
+    "recolector+cooperativo amenazas": [
+     0.913,
+     0.755
+    ],
+    "recolector+recolector+recolector pacifico": [
+     -0.543,
+     0.511
+    ],
+    "recolector+recolector+recolector amenazas": [
+     -0.163,
+     0.595
+    ],
+    "recolector+cooperativo+supervivencia pacifico": [
+     1.063,
+     0.972
+    ],
+    "recolector+cooperativo+supervivencia amenazas": [
+     1.0,
+     0.924
+    ]
+   },
+   "frente_a_referencia": {
+    "referencia": "actual",
+    "total_perfiles_R": [
+     1.495,
+     1.198
+    ],
+    "total_equipos_R": [
+     -3.177,
+     2.084
+    ],
+    "por_fila_R": {
+     "constructor pacifico": [
+      0.49,
+      0.436
+     ],
+     "constructor amenazas": [
+      0.094,
+      0.6
+     ],
+     "cooperativo pacifico": [
+      -0.287,
+      0.263
+     ],
+     "cooperativo amenazas": [
+      -0.199,
+      0.272
+     ],
+     "explorador pacifico": [
+      0.131,
+      0.119
+     ],
+     "explorador amenazas": [
+      0.12,
+      0.161
+     ],
+     "recolector pacifico": [
+      0.193,
+      0.173
+     ],
+     "recolector amenazas": [
+      0.287,
+      0.244
+     ],
+     "supervivencia pacifico": [
+      0.327,
+      0.127
+     ],
+     "supervivencia amenazas": [
+      0.339,
+      0.367
+     ],
+     "recolector+recolector pacifico": [
+      0.114,
+      0.304
+     ],
+     "recolector+recolector amenazas": [
+      -0.162,
+      0.422
+     ],
+     "recolector+cooperativo pacifico": [
+      -1.078,
+      0.665
+     ],
+     "recolector+cooperativo amenazas": [
+      -1.305,
+      0.783
+     ],
+     "recolector+recolector+recolector pacifico": [
+      -0.117,
+      0.436
+     ],
+     "recolector+recolector+recolector amenazas": [
+      -0.053,
+      0.598
+     ],
+     "recolector+cooperativo+supervivencia pacifico": [
+      -0.33,
+      0.769
+     ],
+     "recolector+cooperativo+supervivencia amenazas": [
+      -0.246,
+      0.955
+     ]
+    },
+    "filas_peores_z3": [
+     "recolector+cooperativo pacifico",
+     "recolector+cooperativo amenazas"
+    ],
+    "fidelidad_baja": [],
+    "junto_cooperativo_baja": [
+     "pacifico",
+     "amenazas"
+    ],
+    "veredicto": "no iguala"
+   }
+  }
+ }
+}

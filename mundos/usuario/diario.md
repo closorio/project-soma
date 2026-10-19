@@ -1,0 +1,1 @@
+../../mente/diario.md

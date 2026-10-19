@@ -1,0 +1,1 @@
+- (2026-10-18 00:21) explorar: si no hay destino seco con cielo en ningún rumbo (cueva o túnel cerrado), subir en columna con bloques del inventario o picar hacia arriba/escalera hasta el cielo; ahora Alma pasa el día 2 entero encerrada con 23 de piedra encima.

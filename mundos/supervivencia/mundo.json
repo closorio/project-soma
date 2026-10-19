@@ -1,0 +1,105 @@
+{
+ "semilla": 20261015,
+ "aparicion_original": [
+  0,
+  71,
+  0
+ ],
+ "aparicion": [
+  96,
+  66,
+  -64
+ ],
+ "movida_al_bosque": true,
+ "bosque_mas_cercano": {
+  "bioma": "minecraft:forest",
+  "x": 96,
+  "z": -64,
+  "distancia": 115
+ },
+ "reglas": [
+  "Gamerule pvp is now set to: false",
+  "Gamerule spawn_monsters is now set to: true",
+  "The difficulty did not change; it is already set to normal"
+ ],
+ "locate": {
+  "minecraft:forest": "The nearest minecraft:forest is at [96, 71, -64] (115 blocks away)",
+  "minecraft:birch_forest": "The nearest minecraft:birch_forest is at [448, 71, 448] (633 blocks away)",
+  "minecraft:flower_forest": "The nearest minecraft:flower_forest is at [832, 71, -608] (1030 blocks away)"
+ },
+ "fecha": "2026-10-15 03:57",
+ "nota": "aparicion_original recuperada a mano (2026-10-15 03:58) del marcador que dejó suelto el primer preparar.py (se invocó antes de que cargara el chunk); arreglado en preparar.py",
+ "campamento": [
+  96,
+  67,
+  -56
+ ],
+ "puntos": [
+  [
+   82,
+   67,
+   -42
+  ],
+  [
+   82,
+   64,
+   -70
+  ],
+  [
+   117,
+   64,
+   -35
+  ],
+  [
+   66,
+   68,
+   -56
+  ]
+ ],
+ "nota_puntos": "F7.5 (2026-10-15 20:55, probar_noche.py): campamento llano (≥ 70 % de 5×5 a ±1) y sin agua ni lava en 8 bloques, a ≤ 40 de la aparición; puntos a 15-30 del campamento, sin agua ni lava en 8 bloques",
+ "carga": {
+  "fecha": "2026-10-15 21:25",
+  "segundos": 325,
+  "bots": 1,
+  "cliente_abierto": false,
+  "memoria_disponible_mb_al_acabar": 4918,
+  "etiqueta": "noche recolector",
+  "muestras": 65,
+  "cpu_servidor": {
+   "media": 28.7,
+   "p95": 46.6,
+   "max": 112.5
+  },
+  "cpu_bots": {
+   "media": 21.5,
+   "p95": 125.9,
+   "max": 133.9
+  },
+  "mb_servidor": {
+   "media": 1020.7,
+   "p95": 1026.0,
+   "max": 1026.0
+  },
+  "mb_bots": {
+   "media": 178.6,
+   "p95": 299.6,
+   "max": 306.0
+  },
+  "tick_ms": {
+   "media": 9.9,
+   "p95": 10.8,
+   "max": 11.3
+  },
+  "tick_p95": {
+   "media": 13.4,
+   "p95": 16.1,
+   "max": 18.8
+  },
+  "tick_p99": {
+   "media": 18.4,
+   "p95": 27.9,
+   "max": 66.9
+  },
+  "salida": "entrenamiento/ejecuciones/carga-20261015-2120.jsonl"
+ }
+}

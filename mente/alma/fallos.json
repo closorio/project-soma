@@ -1,0 +1,110 @@
+{
+ "ir_a_arbol|bloqueado": {
+  "n": 6,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:44"
+ },
+ "ir_a_arbol|pasos agotados": {
+  "n": 1,
+  "sesion": "20261015-025314",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:04"
+ },
+ "ir_a_arbol|sin árbol": {
+  "n": 2,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:44"
+ },
+ "ir_a_jugador|sin camino": {
+  "n": 10,
+  "sesion": "20261015-025314",
+  "n_sesion": 10,
+  "ultimo": "2026-10-15 03:04"
+ },
+ "ir_a_jugador|tiempo agotado": {
+  "n": 1,
+  "sesion": "20261015-025314",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:04"
+ },
+ "depositar|tiempo agotado": {
+  "n": 1,
+  "sesion": "20261015-025314",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:07"
+ },
+ "explorar|tiempo agotado": {
+  "n": 3,
+  "sesion": "20261015-034021",
+  "n_sesion": 3,
+  "ultimo": "2026-10-15 03:49",
+  "pos": [
+   325,
+   62,
+   -39
+  ]
+ },
+ "minar|nada que minar aquí": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:40",
+  "pos": [
+   298,
+   62,
+   -22
+  ]
+ },
+ "construir|no pude colocar en 304,65,-18": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:40",
+  "pos": [
+   302,
+   63,
+   -21
+  ]
+ },
+ "recoger|no llegó": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:44"
+ },
+ "deshacer|a medias": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:44",
+  "pos": [
+   298,
+   63,
+   -2
+  ]
+ },
+ "explorar|agua": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:46",
+  "pos": [
+   303,
+   63,
+   -24
+  ]
+ },
+ "explorar|sin suelo seco": {
+  "n": 1,
+  "sesion": "20261015-034021",
+  "n_sesion": 1,
+  "ultimo": "2026-10-15 03:47",
+  "pos": [
+   330,
+   62,
+   -39
+  ]
+ }
+}

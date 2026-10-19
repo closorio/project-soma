@@ -1,0 +1,217 @@
+{
+ "picar_tronco|tronco fuera de alcance": {
+  "n": 8,
+  "sesion": "20261017-200331",
+  "n_sesion": 8,
+  "ultimo": "2026-10-17 20:06"
+ },
+ "ir_a_arbol|sin árbol": {
+  "n": 18,
+  "sesion": "20261017-235137",
+  "n_sesion": 10,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "recoger|no llegó": {
+  "n": 11,
+  "sesion": "20261017-235137",
+  "n_sesion": 4,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "recoger|nada que recoger": {
+  "n": 1,
+  "sesion": "20261017-200331",
+  "n_sesion": 1,
+  "ultimo": "2026-10-17 20:13"
+ },
+ "ir_a_arbol|bloqueado": {
+  "n": 6,
+  "sesion": "20261017-235137",
+  "n_sesion": 2,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "ir_a_arbol|cancelado": {
+  "n": 3,
+  "sesion": "20261017-235137",
+  "n_sesion": 2,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "explorar|sin suelo seco": {
+  "n": 3,
+  "sesion": "20261017-200331",
+  "n_sesion": 3,
+  "ultimo": "2026-10-17 20:31",
+  "pos": [
+   29,
+   63,
+   -107
+  ]
+ },
+ "refugiarse|no pude tapar la boca (sin bloques)": {
+  "n": 1,
+  "sesion": "20261017-200331",
+  "n_sesion": 1,
+  "ultimo": "2026-10-17 20:13",
+  "pos": [
+   56,
+   60,
+   -101
+  ]
+ },
+ "refugiarse|sin bloques ni pico": {
+  "n": 12,
+  "sesion": "20261017-200331",
+  "n_sesion": 12,
+  "ultimo": "2026-10-17 20:23",
+  "pos": [
+   56,
+   60,
+   -101
+  ]
+ },
+ "explorar|sin suelo seco/sin camino": {
+  "n": 57,
+  "sesion": "20261017-235137",
+  "n_sesion": 28,
+  "ultimo": "2026-10-18 00:42",
+  "pos": [
+   -153,
+   108,
+   243
+  ]
+ },
+ "salir_del_refugio|cancelado": {
+  "n": 2,
+  "sesion": "20261017-235137",
+  "n_sesion": 1,
+  "ultimo": "2026-10-18 00:35",
+  "pos": [
+   56,
+   60,
+   -101
+  ]
+ },
+ "salir_del_refugio|tiempo agotado": {
+  "n": 1,
+  "sesion": "20261017-200331",
+  "n_sesion": 1,
+  "ultimo": "2026-10-17 20:31",
+  "pos": [
+   56,
+   60,
+   -101
+  ]
+ },
+ "picar_tronco|no se rompió": {
+  "n": 1,
+  "sesion": "20261017-200331",
+  "n_sesion": 1,
+  "ultimo": "2026-10-17 20:31",
+  "pos": [
+   -59,
+   66,
+   -215
+  ]
+ },
+ "dormir|es de día": {
+  "n": 5,
+  "sesion": "20261017-200331",
+  "n_sesion": 5,
+  "ultimo": "2026-10-17 20:33"
+ },
+ "fabricar|faltan materiales": {
+  "n": 1,
+  "sesion": "20261017-221801",
+  "n_sesion": 1,
+  "ultimo": "2026-10-17 22:19"
+ },
+ "apartarse|sin camino": {
+  "n": 10,
+  "sesion": "20261017-235137",
+  "n_sesion": 6,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "ir_a_arbol|tronco fuera de alcance": {
+  "n": 22,
+  "sesion": "20261017-235137",
+  "n_sesion": 22,
+  "ultimo": "2026-10-18 00:16"
+ },
+ "explorar|agua": {
+  "n": 16,
+  "sesion": "20261017-235137",
+  "n_sesion": 16,
+  "ultimo": "2026-10-18 00:16",
+  "pos": [
+   -155,
+   105,
+   252
+  ]
+ },
+ "explorar|cancelado": {
+  "n": 3,
+  "sesion": "20261017-235137",
+  "n_sesion": 3,
+  "ultimo": "2026-10-18 00:35",
+  "pos": [
+   -153,
+   108,
+   243
+  ]
+ },
+ "minar|nada que minar aquí": {
+  "n": 6,
+  "sesion": "20261017-235137",
+  "n_sesion": 6,
+  "ultimo": "2026-10-18 00:16",
+  "pos": [
+   -24,
+   80,
+   57
+  ]
+ },
+ "refugiarse|suelo peligroso": {
+  "n": 14,
+  "sesion": "20261017-235137",
+  "n_sesion": 14,
+  "ultimo": "2026-10-18 00:16",
+  "pos": [
+   -155,
+   105,
+   252
+  ]
+ },
+ "explorar|sin camino/sin suelo seco": {
+  "n": 138,
+  "sesion": "20261017-235137",
+  "n_sesion": 138,
+  "ultimo": "2026-10-18 00:42",
+  "pos": [
+   -153,
+   108,
+   243
+  ]
+ },
+ "construir|sin parcela": {
+  "n": 1,
+  "sesion": "20261017-235137",
+  "n_sesion": 1,
+  "ultimo": "2026-10-18 00:17"
+ },
+ "refugiarse|cancelado": {
+  "n": 1,
+  "sesion": "20261017-235137",
+  "n_sesion": 1,
+  "ultimo": "2026-10-18 00:21",
+  "pos": [
+   -153,
+   108,
+   243
+  ]
+ },
+ "dormir|cancelado": {
+  "n": 1,
+  "sesion": "20261017-235137",
+  "n_sesion": 1,
+  "ultimo": "2026-10-18 00:50"
+ }
+}

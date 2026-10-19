@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Experimento A · Informe para todos los públicos</title>
+<style>
+@page { size: A4; margin: 16mm 16mm 18mm; }
+*{box-sizing:border-box}
+body{font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif;font-size:10.4pt;line-height:1.5;color:#1d2330}
+h1{font-size:23pt;margin:0 0 3pt;color:#0f2a4a;line-height:1.15}
+.sub{color:#5a6577;margin-bottom:10pt;font-size:10.5pt}
+h2{font-size:14pt;color:#0f2a4a;border-bottom:1.6px solid #c9d3e3;padding-bottom:2pt;margin:16pt 0 6pt;page-break-after:avoid}
+h3{font-size:11pt;margin:9pt 0 2pt;color:#23406b;page-break-after:avoid}
+p{margin:4pt 0}
+.caja{background:#f4f7fc;border-left:4px solid #3b6fb6;padding:6pt 10pt;margin:8pt 0;page-break-inside:avoid}
+.aviso{background:#fff7e8;border-left:4px solid #d99a2b;padding:6pt 10pt;margin:8pt 0;page-break-inside:avoid}
+table{border-collapse:collapse;width:100%;margin:6pt 0;font-size:9.6pt;page-break-inside:avoid}
+th,td{border:1px solid #d3dbe8;padding:4pt 6pt;text-align:left;vertical-align:top}
+th{background:#eef2f9}
+.num{text-align:right;white-space:nowrap}
+ul{margin:3pt 0 3pt 16pt;padding:0} li{margin:2pt 0}
+.dos{display:flex;gap:10pt;margin:8pt 0;page-break-inside:avoid}
+.col{flex:1;border:1.5px solid #c9d3e3;border-radius:6pt;padding:7pt 9pt;background:#fafcff}
+.col b.t{display:block;font-size:11pt;color:#0f2a4a;margin-bottom:2pt}
+.pers{display:flex;gap:7pt;margin:6pt 0;page-break-inside:avoid}
+.pers div{flex:1;border:1px solid #d3dbe8;border-radius:6pt;padding:6pt 8pt;background:#fff}
+.pers b{color:#0f2a4a;display:block;font-size:11pt}
+.pie{margin-top:14pt;color:#6b7587;font-size:8.6pt;border-top:1px solid #d3dbe8;padding-top:5pt}
+.gl dt{font-weight:bold;color:#23406b;margin-top:4pt} .gl dd{margin:0 0 2pt 0}
+</style></head><body>
+
+<h1>Experimento A: enseñar a personajes de Minecraft a pensar y moverse por sí mismos</h1>
+<div class="sub">Informe para todos los públicos · 15 de octubre de 2026 · Proyecto «Mundo simulado»</div>
+
+<h2>1. En pocas palabras</h2>
+<p>Hemos construido, dentro del videojuego Minecraft, un pequeño equipo de <b>personajes controlados por inteligencia artificial</b>. Cada uno puede ver su entorno, decidir qué hacer (talar un árbol, recoger madera, seguir a un jugador, huir de un peligro, guardar lo recogido en un cofre) y hacerlo, <b>sin que nadie le dirija paso a paso</b>.</p>
+<p>Lo especial es que el «cerebro» de estos personajes <b>no es un servicio de internet</b>: es una red neuronal diminuta, de unos cien kilobytes, que se ha entrenado en el propio ordenador y que decide en una fracción de segundo y sin coste.</p>
+<div class="caja"><b>La pregunta que queremos responder:</b> ¿puede un modelo pequeño y propio encargarse de lo que un cuerpo hace de forma automática, y dejar a una inteligencia mayor solo lo que exige pensar, planificar y recordar?</div>
+
+<h2>2. La idea: un cuerpo y una mente</h2>
+<p>Los seres vivos no piensan cada paso que dan: caminar, esquivar o frenar ocurre por <b>reflejos</b>. Decidir adónde ir o qué construir ocurre en la <b>mente</b>. Hemos copiado esa división.</p>
+<div class="dos">
+<div class="col"><b class="t">El cuerpo (la red entrenada)</b>Rápido, gratuito y siempre disponible. Mira 25 datos de su entorno (por ejemplo, a qué distancia está el árbol o el jugador), los pasa por una red pequeña y elige una de 6 acciones. No planifica a largo plazo.</div>
+<div class="col"><b class="t">La mente (una sesión de Claude)</b>Más lenta y con coste, pero capaz de fijar metas, recordar lo que ocurrió, aprender de los fallos y explicarse. No mueve al personaje: le da objetivos y revisa cómo le va.</div>
+</div>
+<p>Entre las dos partes hay un «sistema nervioso» sencillo: órdenes en lenguaje corriente («tala 20 troncos», «guarda en el cofre») y un informe periódico de lo que el cuerpo ha hecho y ha visto.</p>
+
+<h2>3. El reparto</h2>
+<div class="pers">
+<div><b>Soma</b>El cuerpo de pruebas. Antes se llamaba Io. Hoy acompaña al jugador.</div>
+<div><b>Eco</b>Recolector: tala, recoge y guarda madera.</div>
+<div><b>Iris</b>Recolectora, con el mismo modelo que los demás.</div>
+<div><b>Alma</b>La mente. Es el personaje que gobierna directamente una sesión de Claude.</div>
+</div>
+<p>Los cuatro comparten <b>la misma red neuronal</b>. Lo que los distingue es su <b>perfil</b>, es decir, qué les importa más: la madera (recolector), estar cerca del jugador (cooperativo), mantenerse a salvo (supervivencia), etc. Un perfil es, en realidad, un conjunto de cuatro números que se le entregan a la red como dato más.</p>
+<p>Además hay dos piezas de apoyo, también de IA: <b>Ío</b>, el asistente de voz del usuario, que coordina y cuenta cómo va todo, y un equipo de <b>trabajadores</b> (otras sesiones de IA) que ejecutan tareas largas: Fable planifica y Opus ejecuta.</p>
+
+<h2>4. Cómo aprenden</h2>
+<ul>
+<li><b>En un simulador.</b> Primero practican en una versión simplificada del juego, que se juega miles de veces en pocos minutos. Allí aprenden imitando un «guion» que escribimos a mano y mejorándolo con la experiencia.</li>
+<li><b>En Minecraft de verdad.</b> Después se prueban en el juego real y se mide todo: cuántos troncos sacan, si se atascan, si pisan zonas prohibidas.</li>
+<li><b>Mucho más rápido.</b> Una mejora reciente permite entrenar en unos 17 minutos lo que antes tardaba casi 2 horas, usando todos los núcleos del ordenador.</li>
+</ul>
+<div class="aviso"><b>Un matiz honesto:</b> lo que se construye en el mundo del usuario no cambia el entrenamiento (va aparte), pero sí cambia las <i>pruebas</i>. Si aparece un charco o desaparece un árbol, las medidas salen distintas. Por eso las mediciones usan puntos fijos y zonas excluidas.</div>
+
+<h2>5. Qué hemos medido</h2>
+<h3>La red iguala a un guion hecho a mano</h3>
+<table><tr><th>Situación (4 minutos de prueba)</th><th>Red entrenada</th><th>Guion a mano</th></tr>
+<tr><td>Un personaje solo (troncos)</td><td class="num">52</td><td class="num">53</td></tr>
+<tr><td>Dos personajes juntos (troncos en total)</td><td class="num">87</td><td class="num">87</td></tr>
+<tr><td>Tres personajes juntos (troncos en total)</td><td class="num">98</td><td class="num">99</td></tr></table>
+<p>Es decir, <b>un solo modelo pequeño se comporta tan bien como el guion</b> que lo enseñó, tanto solo como en equipo.</p>
+
+<h3>Con la misma red, los perfiles se comportan distinto</h3>
+<p>Se hicieron 72 pruebas de 4 minutos cada una en el juego real.</p>
+<table><tr><th>Perfil</th><th>Troncos (pacífico)</th><th>Tiempo junto al jugador</th><th>Huye con la amenaza a la vista</th></tr>
+<tr><td>Recolector</td><td class="num">≈ 51</td><td class="num">0 %</td><td class="num">44-54 %</td></tr>
+<tr><td>Cooperativo</td><td class="num">≈ 1</td><td class="num">73 %</td><td class="num">52 %</td></tr>
+<tr><td>Supervivencia</td><td class="num">≈ 53</td><td class="num">0 %</td><td class="num">92 %</td></tr>
+<tr><td>Constructor y explorador</td><td class="num">44-53</td><td class="num">0-20 %</td><td class="num">39-49 %</td></tr></table>
+<p>El cooperativo prefiere acompañar a talar; el de supervivencia huye casi siempre ante el peligro. <b>Constructor y explorador todavía se parecen al recolector</b>, porque aún no tienen habilidades propias (construir y explorar).</p>
+
+<h3>La mente funciona</h3>
+<p>En su primera prueba completa, Alma (con una sesión de Claude detrás) fijó metas y mandó órdenes durante <b>13 minutos y 10 turnos</b>: taló <b>24 troncos nuevos</b>, 20 de ellos en dos minutos y sin un solo fallo, en una zona lejana a las obras del usuario. También supo que debía evitar un pantano que la frenó tres veces.</p>
+
+<h2>6. Seguridad y cuidado del mundo</h2>
+<ul>
+<li><b>Zonas protegidas.</b> El usuario ha marcado sitios que sus personajes no pueden talar ni pisar (el gran árbol, un estanque y su casa). Se respetan en todas las órdenes, y las pruebas verifican que no se toque nada.</li>
+<li><b>Cofres.</b> Lo recogido se guarda en dos cofres grandes fuera de esas zonas. Los personajes los usan solos cuando llevan el inventario lleno.</li>
+<li><b>Tras las pruebas se repone lo talado.</b> Se han repuesto cientos de troncos y dos hojas del gran árbol, siempre con permiso para lo que estaba cerca de lo protegido.</li>
+<li><b>Todo es local.</b> El servidor solo acepta conexiones desde el propio ordenador y no se usa ninguna clave de servicios externos.</li>
+</ul>
+
+<h2>7. Lo que ha salido mal (y lo que enseñó)</h2>
+<ul>
+<li><b>Medir bien cuesta tanto como entrenar bien.</b> Con pocas pruebas, casi todas las «mejoras» eran suerte. Hubo que subir a 60 pruebas y a puntos fijos.</li>
+<li><b>El banco de pruebas también se equivoca.</b> Llegó a talar el arbolado que medía, y lanzaba al personaje a las copas o al mar. Cada fallo se corrigió y las cifras anteriores se repitieron.</li>
+<li><b>Los accidentes ocurren.</b> En alguna prueba un personaje pisó unos segundos el borde de una zona, se hundió en un lago o dejó caer unas hojas del gran árbol. No se rompió nada de forma permanente, y cada caso quedó anotado y reparado o pendiente de permiso.</li>
+<li><b>La memoria del ordenador es un límite real.</b> Con el juego, el servidor, los bots y varias sesiones de IA abiertas, el sistema se queda sin memoria y todo se ve «a tirones».</li>
+</ul>
+
+<h2>8. Qué viene ahora</h2>
+<table><tr><th>Siguiente paso</th><th>Para qué</th></tr>
+<tr><td><b>Supervivencia en un mundo normal</b> (con monstruos, noche y hambre), en un mundo aparte</td><td>Que los personajes aprendan a comer, defenderse, refugiarse y sobrevivir de verdad. El plan ya está escrito y aprobado; se ejecutará por fases.</td></tr>
+<tr><td><b>Habilidades nuevas</b>: explorar, minar y construir</td><td>Que constructor y explorador dejen de ser un recolector con otro nombre.</td></tr>
+<tr><td><b>Mente más capaz</b></td><td>Que Alma recuerde entre sesiones, aproveche mejor al cuerpo y mida si aporta más que la red sola.</td></tr>
+<tr><td><b>Un servidor para amigos</b></td><td>Compartir el mundo, con acceso solo a personas de confianza. Queda para el final.</td></tr></table>
+
+<h2>9. Oportunidades de mejora</h2>
+<p>Repasamos el proyecto por áreas. Cada punto sale de algo que ocurrió o se midió, no de una opinión.</p>
+
+<h3>El modelo (la red neuronal)</h3>
+<ul>
+<li><b>Es pequeño a propósito, y eso limita.</b> Con 25 datos de entrada y 6 acciones solo puede resolver lo que se le haya enseñado a ver. Para sobrevivir en un mundo normal necesitará más sentidos (hambre, luz, monstruos con su tipo) y más acciones (comer, atacar, refugiarse), y por tanto una red nueva.</li>
+<li><b>Aprende a imitar más que a descubrir.</b> Hoy iguala al guion hecho a mano, pero no lo supera. Para que aporte algo propio hacen falta metas que el guion no sepa resolver o recompensas más ricas.</li>
+<li><b>Depende de la suerte del punto de control.</b> Dos entrenamientos casi idénticos dieron resultados algo distintos (por ejemplo, el cooperativo estuvo entre el 70 y el 74 % del tiempo junto al jugador). Conviene elegir la versión final también por lo fiel que es al comportamiento deseado, no solo por la puntuación.</li>
+</ul>
+
+<h3>El entrenamiento y el simulador</h3>
+<ul>
+<li><b>La brecha entre simulador y juego real.</b> En el simulador salen unos 17 troncos en 5 minutos; en Minecraft, unos 60. Cada vez que el juego sorprende hay que corregir el simulador. Calibrarlo con datos reales de forma sistemática reduciría las sorpresas.</li>
+<li><b>El simulador aún no tiene noche, hambre ni monstruos de verdad.</b> Es la pieza que más falta para la supervivencia.</li>
+<li><b>El cuello de botella es el aprendizaje, no el juego.</b> Ya se ha acelerado 6,5 veces; lo siguiente sería procesar lotes más grandes o compilar el paso de aprendizaje.</li>
+</ul>
+
+<h3>La medición</h3>
+<ul>
+<li><b>Más repeticiones y más puntos.</b> Con 4 puntos y 4 minutos, las diferencias pequeñas no se pueden afirmar. Un criterio de decisión fijado antes de medir, como el de los últimos experimentos, evita engañarse.</li>
+<li><b>Un mundo de pruebas estable.</b> Si el mundo cambia (charcos, árboles, construcciones del usuario), las cifras no son comparables. El mundo aparte de supervivencia, con semilla fija y copias, lo resuelve.</li>
+<li><b>Métricas por añadir:</b> muertes reales, noches sobrevividas, comida conseguida, distancia recorrida y tiempo atascado.</li>
+</ul>
+
+<h3>Las habilidades y los perfiles</h3>
+<ul>
+<li><b>Constructor y explorador no se distinguen del recolector</b> porque les faltan habilidades propias: explorar, minar y construir.</li>
+<li><b>Los bots se atascan en el agua y en los pasillos estrechos.</b> El pantano y el charco de nenúfares aparecieron una y otra vez. Un mejor movimiento sobre agua, o la memoria de «este sitio no avanza», mejoraría las pruebas.</li>
+<li><b>Recoger lo caído sigue siendo frágil</b> cuando varios personajes talan juntos: los troncos caen junto a quien está más cerca y las cuentas por personaje se mezclan.</li>
+</ul>
+
+<h3>La mente (Alma y Claude)</h3>
+<ul>
+<li><b>Solo hay una prueba completa.</b> Funcionó, pero hay que repetirla con metas más largas (construir una cabaña, conseguir herramientas) y compararla con el cuerpo solo para saber qué aporta de verdad.</li>
+<li><b>Contabilidad con un fallo conocido:</b> el contador de troncos de la sesión se reinicia si el bot se reconecta y marcó 2 en vez de 24.</li>
+<li><b>La memoria entre sesiones</b> es básica. Mejorarla permitiría que Alma no repita errores, por ejemplo ir otra vez al pantano.</li>
+</ul>
+
+<h3>Seguridad y cuidado del mundo</h3>
+<ul>
+<li><b>El navegador de los bots evita las zonas protegidas con un «coste», no con una prohibición.</b> Una vez pisaron unos segundos el borde de una. Convertirlo en prohibición firme, y evitar talar árboles cuyas hojas caen dentro de una zona, cerraría el riesgo.</li>
+<li><b>Cualquier jugador que entre al servidor puede dar órdenes a los bots.</b> Conviene una lista de quién manda, sobre todo si se abre a amigos.</li>
+<li><b>Los cambios del usuario y los de los bots se mezclan</b> en las fotos del mundo. Registrar qué hace cada uno facilitaría separar lo que debe restaurarse.</li>
+</ul>
+
+<h3>Recursos del ordenador</h3>
+<ul>
+<li><b>La memoria es el límite real.</b> Con el juego, el servidor, los bots y varias sesiones de IA abiertas, el sistema llegó a agotar la memoria y el intercambio, y los movimientos se veían a tirones. Los procesos de los bots pueden separarse (uno por personaje) y los servidores no deben coincidir con el juego abierto.</li>
+<li><b>La tarjeta gráfica no ayuda hoy:</b> la red es demasiado pequeña. Cobrará sentido si algún día se usan redes mayores o imágenes.</li>
+</ul>
+
+<h3>La forma de trabajar</h3>
+<ul>
+<li><b>Muchas sesiones de IA a la vez compiten por el mismo servidor y los mismos archivos.</b> Hubo reinicios de bots por parte de otra sesión en plena prueba. Una «cola» o un cerrojo de quién usa el servidor evitaría pisarse.</li>
+<li><b>El coste de uso es limitado.</b> Convendría reservar el modelo más capaz para planificar y decidir, y el más barato para ejecutar planes ya concretos, como ya se está haciendo.</li>
+<li><b>La documentación se queda atrás</b> cuando se renombran personajes o se cambian puertos; hay alias temporales que conviene retirar.</li>
+</ul>
+
+<h3>La experiencia de uso por voz</h3>
+<ul>
+<li>Se mejoraron la pausa de fin de frase y el agrupado en párrafos, pero queda margen: avisos sonoros más claros, respuestas más cortas y un modo «grabación» para presentaciones.</li>
+</ul>
+
+<h2>10. Recomendaciones</h2>
+<table><tr><th>Plazo</th><th>Recomendación</th><th>Por qué</th></tr>
+<tr><td><b>Ahora</b><br>(1-2 días)</td><td>1. Separar los datos del mundo del usuario y del de supervivencia.<br>2. Convertir las zonas protegidas en prohibiciones firmes para el navegador.<br>3. Poner una lista de quién puede dar órdenes a los bots.<br>4. Arreglar el contador de la mente tras reconexiones y borrar la memoria de árboles entre pruebas.</td><td>Son baratas, reducen riesgos y dan fiabilidad a todo lo demás.</td></tr>
+<tr><td><b>Corto plazo</b><br>(1-2 semanas)</td><td>5. Primer arranque y calibración del mundo de supervivencia.<br>6. Sentidos y habilidades de supervivencia (comer, atacar, refugiarse).<br>7. Simulador con noche, hambre y monstruos; entrenar la red nueva.<br>8. Un bot por proceso para suavizar el movimiento.</td><td>Es el siguiente gran salto y depende de los puntos anteriores.</td></tr>
+<tr><td><b>Medio plazo</b><br>(1-2 meses)</td><td>9. Habilidades de explorar, minar y construir, para que cada perfil sea distinto de verdad.<br>10. Pruebas largas de la mente con metas de varios pasos y comparación con el cuerpo solo.<br>11. Más repeticiones y métricas de muerte, comida y distancia.</td><td>Muestra si la mente y los perfiles aportan valor medible.</td></tr>
+<tr><td><b>Al final</b></td><td>12. Servidor para amigos, con red privada, lista blanca y mundo separado del de experimentos.</td><td>Compartir sin poner en riesgo las pruebas ni las obras del usuario.</td></tr></table>
+<div class="aviso"><b>Regla general:</b> antes de cada mejora, escribir qué cifra debe cambiar y cuánto, y medir con las mismas pruebas antes y después. Si no se cumple, se descarta.</div>
+
+<h2>11. Conclusión</h2>
+<p>El proyecto ha demostrado que <b>un modelo pequeño, propio y gratuito puede encargarse de lo automático</b> en un juego complejo: con una sola red, cuatro personajes, tres perfiles distintos y órdenes por chat o por voz, se igualó el rendimiento de un guion escrito a mano, solos y en equipo. También se ha demostrado que una mente basada en Claude puede ponerse por encima de ese cuerpo, fijar metas y obtener resultados en su primera prueba.</p>
+<p>Lo aprendido más valioso no son las cifras, sino el método: <b>medir con cuidado, desconfiar de las mejoras fáciles, proteger lo que es del usuario y repetir las pruebas</b> cuando algo falla. Los fallos de estos días, desde un charco que atrapaba a los bots hasta unas hojas caídas, se anotaron, se repararon o se dejaron pendientes con permiso.</p>
+<p>El siguiente reto es el más ambicioso: que los personajes <b>sobrevivan en un mundo normal</b>, con noche, hambre y monstruos. Para ello hay un plan aprobado, un mundo de pruebas aparte ya comprobado y una división clara del trabajo entre el cuerpo, la mente y el equipo de apoyo. Con los cuidados descritos en este informe, el camino es razonable y la parte más difícil ya está bien orientada.</p>
+
+<h2>12. Pequeño glosario</h2>
+<dl class="gl">
+<dt>Red neuronal</dt><dd>Programa que aprende a partir de ejemplos. La nuestra tiene 25 entradas, dos capas de 64 neuronas y 6 salidas (las acciones).</dd>
+<dt>Simulador</dt><dd>Versión simplificada del juego donde se practica rápido, sin riesgos y miles de veces.</dd>
+<dt>Perfil</dt><dd>Lo que más le importa a un personaje: madera, compañía, seguridad o rapidez.</dd>
+<dt>Modo libre / modo órdenes</dt><dd>En libre decide solo; en órdenes hace lo que se le pide por el chat o por voz.</dd>
+<dt>Mente</dt><dd>Una sesión de Claude que fija metas al cuerpo y aprende de lo que ocurre.</dd>
+<dt>Zona protegida</dt><dd>Espacio del mundo que los personajes nunca talan ni pisan.</dd>
+</dl>
+
+<div class="pie">Informe generado por Ío, el asistente de voz del proyecto, a partir del diario y de los informes de los trabajadores. Las cifras corresponden a pruebas reales en el servidor local del 14 y 15 de octubre de 2026; los resultados de 4 minutos son aproximados y tienen un margen de error que depende de cada prueba.</div>
+</body></html>

@@ -1,0 +1,215 @@
+{
+ "permitido": {
+  "x1": 452,
+  "z1": -26,
+  "x2": 475,
+  "z2": -3,
+  "nota": "PROVISIONAL (2026-10-15): meseta de las colinas del este (y≈79), a más de 100 bloques de las obras del usuario (pidió a Ío que Alma se mantenga fuera de x 182..421, z -100..122); se llega a pie por el este (Alma llegó sola a 453,68,25). Elegido con las alturas de la copia del mundo (73 % llano). El definitivo lo confirma el usuario."
+ },
+ "obras": [
+  {
+   "id": "pilar-mv9afbkb",
+   "nombre": "pilar",
+   "plano": "pilar",
+   "personaje": "Alma",
+   "materia": "tablones",
+   "origen": [
+    304,
+    64,
+    -18
+   ],
+   "inicio": "2026-10-15 03:39:29",
+   "fin": "2026-10-15 03:44:24",
+   "estado": "a medias",
+   "bloques": [
+    [
+     304,
+     64,
+     -18,
+     "oak_planks"
+    ]
+   ]
+  },
+  {
+   "id": "pilar-mv9b5p7u",
+   "nombre": "pilar",
+   "plano": "pilar",
+   "personaje": "Alma",
+   "materia": "tablones",
+   "origen": [
+    458,
+    79,
+    -4
+   ],
+   "inicio": "2026-10-15 03:59:59",
+   "fin": "2026-10-15 04:00:19",
+   "estado": "a medias",
+   "bloques": []
+  },
+  {
+   "id": "pilar-mv9b6xml",
+   "nombre": "pilar",
+   "plano": "pilar",
+   "personaje": "Alma",
+   "materia": "tablones",
+   "origen": [
+    463,
+    80,
+    -10
+   ],
+   "inicio": "2026-10-15 04:00:57",
+   "fin": "2026-10-15 04:01:36",
+   "estado": "deshecha",
+   "bloques": []
+  },
+  {
+   "id": "cabana-mv9bd0fh",
+   "nombre": "cabana",
+   "plano": "cabana",
+   "personaje": "Alma",
+   "materia": "tablones",
+   "origen": [
+    464,
+    80,
+    -13
+   ],
+   "inicio": "2026-10-15 04:05:40",
+   "fin": null,
+   "estado": "en curso",
+   "bloques": [
+    [
+     467,
+     79,
+     -12,
+     "oak_planks"
+    ],
+    [
+     467,
+     79,
+     -11,
+     "oak_planks"
+    ],
+    [
+     467,
+     79,
+     -10,
+     "oak_planks"
+    ],
+    [
+     467,
+     79,
+     -9,
+     "oak_planks"
+    ],
+    [
+     468,
+     79,
+     -12,
+     "oak_planks"
+    ],
+    [
+     468,
+     79,
+     -11,
+     "oak_planks"
+    ],
+    [
+     468,
+     79,
+     -10,
+     "oak_planks"
+    ],
+    [
+     468,
+     79,
+     -9,
+     "oak_planks"
+    ],
+    [
+     464,
+     80,
+     -13,
+     "oak_planks"
+    ],
+    [
+     465,
+     80,
+     -13,
+     "oak_planks"
+    ],
+    [
+     466,
+     80,
+     -13,
+     "oak_planks"
+    ],
+    [
+     467,
+     80,
+     -13,
+     "oak_planks"
+    ],
+    [
+     468,
+     80,
+     -13,
+     "oak_planks"
+    ],
+    [
+     468,
+     80,
+     -12,
+     "birch_planks"
+    ],
+    [
+     468,
+     80,
+     -11,
+     "oak_planks"
+    ],
+    [
+     468,
+     80,
+     -10,
+     "oak_planks"
+    ],
+    [
+     468,
+     80,
+     -9,
+     "oak_planks"
+    ]
+   ]
+  }
+ ],
+ "minados": [
+  {
+   "t": "2026-10-15 03:59:47",
+   "personaje": "Alma",
+   "x": 452,
+   "y": 74,
+   "z": -3,
+   "tipo": "dirt",
+   "herramienta": "oak_log"
+  },
+  {
+   "t": "2026-10-15 03:59:48",
+   "personaje": "Alma",
+   "x": 452,
+   "y": 75,
+   "z": -3,
+   "tipo": "dirt",
+   "herramienta": "oak_log"
+  },
+  {
+   "t": "2026-10-15 03:59:50",
+   "personaje": "Alma",
+   "x": 453,
+   "y": 74,
+   "z": -3,
+   "tipo": "dirt",
+   "herramienta": "oak_log"
+  }
+ ],
+ "nota": "Libro de obras (F6, bot/obras.js): «permitido» es el rectángulo donde los personajes pueden construir y minar (fuera del arbolado de pruebas x 239..367, z -32..96, de las zonas de zonas.json y de los cofres); sin él, construir y minar se niegan. «obras» lleva cada bloque puesto (para deshacer) y «minados» cada bloque roto por minar (para reponer)."
+}

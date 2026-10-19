@@ -1,0 +1,246 @@
+{
+ "nota": "F7.6c: 6 árboles por punto de partida (servidor-supervivencia/reponer_arboles.py); base = casilla del tronco más bajo",
+ "fecha": "2026-10-17 23:51:28",
+ "arboles": [
+  {
+   "punto": 0,
+   "n": 0,
+   "especie": "oak",
+   "base": [
+    90,
+    77,
+    -40
+   ]
+  },
+  {
+   "punto": 0,
+   "n": 1,
+   "especie": "birch",
+   "base": [
+    81,
+    72,
+    -34
+   ]
+  },
+  {
+   "punto": 0,
+   "n": 2,
+   "especie": "oak",
+   "base": [
+    72,
+    75,
+    -39
+   ]
+  },
+  {
+   "punto": 0,
+   "n": 3,
+   "especie": "birch",
+   "base": [
+    75,
+    76,
+    -52
+   ]
+  },
+  {
+   "punto": 0,
+   "n": 4,
+   "especie": "oak",
+   "base": [
+    90,
+    75,
+    -53
+   ]
+  },
+  {
+   "punto": 0,
+   "n": 5,
+   "especie": "birch",
+   "base": [
+    92,
+    80,
+    -46
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 0,
+   "especie": "oak",
+   "base": [
+    88,
+    73,
+    -68
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 1,
+   "especie": "birch",
+   "base": [
+    81,
+    73,
+    -62
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 2,
+   "especie": "oak",
+   "base": [
+    72,
+    79,
+    -67
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 3,
+   "especie": "birch",
+   "base": [
+    75,
+    76,
+    -80
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 4,
+   "especie": "oak",
+   "base": [
+    90,
+    75,
+    -79
+   ]
+  },
+  {
+   "punto": 1,
+   "n": 5,
+   "especie": "birch",
+   "base": [
+    92,
+    77,
+    -74
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 0,
+   "especie": "oak",
+   "base": [
+    123,
+    69,
+    -33
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 1,
+   "especie": "birch",
+   "base": [
+    116,
+    72,
+    -27
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 2,
+   "especie": "oak",
+   "base": [
+    107,
+    70,
+    -32
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 3,
+   "especie": "birch",
+   "base": [
+    112,
+    77,
+    -45
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 4,
+   "especie": "oak",
+   "base": [
+    125,
+    63,
+    -46
+   ]
+  },
+  {
+   "punto": 2,
+   "n": 5,
+   "especie": "birch",
+   "base": [
+    127,
+    75,
+    -39
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 0,
+   "especie": "oak",
+   "base": [
+    72,
+    78,
+    -54
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 1,
+   "especie": "birch",
+   "base": [
+    65,
+    76,
+    -48
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 2,
+   "especie": "oak",
+   "base": [
+    56,
+    69,
+    -53
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 3,
+   "especie": "birch",
+   "base": [
+    59,
+    79,
+    -66
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 4,
+   "especie": "oak",
+   "base": [
+    74,
+    78,
+    -67
+   ]
+  },
+  {
+   "punto": 3,
+   "n": 5,
+   "especie": "birch",
+   "base": [
+    76,
+    80,
+    -60
+   ]
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Experimento A · Informe 2 · Supervivencia</title>
+<style>
+@page { size: A4; margin: 16mm 16mm 18mm; }
+*{box-sizing:border-box}
+body{font-family:"DejaVu Sans","Liberation Sans",Arial,sans-serif;font-size:10.4pt;line-height:1.5;color:#1d2330}
+h1{font-size:23pt;margin:0 0 3pt;color:#0f2a4a;line-height:1.15}
+.sub{color:#5a6577;margin-bottom:10pt;font-size:10.5pt}
+h2{font-size:14pt;color:#0f2a4a;border-bottom:1.6px solid #c9d3e3;padding-bottom:2pt;margin:16pt 0 6pt;page-break-after:avoid}
+h3{font-size:11pt;margin:9pt 0 2pt;color:#23406b;page-break-after:avoid}
+p{margin:4pt 0}
+.caja{background:#f4f7fc;border-left:4px solid #3b6fb6;padding:6pt 10pt;margin:8pt 0;page-break-inside:avoid}
+.aviso{background:#fff7e8;border-left:4px solid #d99a2b;padding:6pt 10pt;margin:8pt 0;page-break-inside:avoid}
+table{border-collapse:collapse;width:100%;margin:6pt 0;font-size:9.6pt;page-break-inside:avoid}
+th,td{border:1px solid #d3dbe8;padding:4pt 6pt;text-align:left;vertical-align:top}
+th{background:#eef2f9}
+.num{text-align:right;white-space:nowrap}
+ul{margin:3pt 0 3pt 16pt;padding:0} li{margin:2pt 0}
+.dos{display:flex;gap:10pt;margin:8pt 0;page-break-inside:avoid}
+.col{flex:1;border:1.5px solid #c9d3e3;border-radius:6pt;padding:7pt 9pt;background:#fafcff}
+.col b.t{display:block;font-size:11pt;color:#0f2a4a;margin-bottom:2pt}
+.pers{display:flex;gap:7pt;margin:6pt 0;page-break-inside:avoid}
+.pers div{flex:1;border:1px solid #d3dbe8;border-radius:6pt;padding:6pt 8pt;background:#fff}
+.pers b{color:#0f2a4a;display:block;font-size:11pt}
+.pie{margin-top:14pt;color:#6b7587;font-size:8.6pt;border-top:1px solid #d3dbe8;padding-top:5pt}
+.gl dt{font-weight:bold;color:#23406b;margin-top:4pt} .gl dd{margin:0 0 2pt 0}
+</style></head><body>
+<h1>Experimento A, segunda parte: aprender a sobrevivir</h1>
+<div class="sub">Informe para todos los públicos · 18 de octubre de 2026 · Cubre lo ocurrido desde el informe del 15 de octubre · Proyecto «Mundo simulado»</div>
+
+<h2>1. En pocas palabras</h2>
+<p>En el primer informe, los personajes ya sabían talar árboles y obedecer órdenes en un mundo tranquilo. Desde entonces les hemos puesto <b>un reto mucho más duro</b>: un mundo aparte, con <b>noche, zombis, hambre y peligros</b>, donde si no hacen las cosas bien, mueren.</p>
+<p>El resultado, en una frase: <b>el cuerpo ya sobrevive solo</b> (16 noches de 16 y 24 encuentros con enemigos de 24 sin perder), y <b>una «mente» que planifica por encima mejora el avance</b> (en dos pruebas reales, la espada de piedra a los 3 días y al día 1, sin morir), aunque todavía con pocas pruebas y con fallos por pulir.</p>
+<div class="caja"><b>Idea clave para entenderlo todo:</b> el personaje tiene un <b>cuerpo</b> (reflejos rápidos, aprendidos por una red pequeña) y una <b>mente</b> (una IA grande que decide metas, como «hoy: conseguir herramientas de piedra»). Esta parte del trabajo ha sido hacer que ambos funcionen en un mundo que intenta matarlos.</div>
+
+<h2>2. Qué se hizo, paso a paso</h2>
+<table>
+<tr><th>Etapa</th><th>Qué significa, con un ejemplo</th></tr>
+<tr><td><b>Mundo aparte</b></td><td>Un segundo mundo de Minecraft solo para pruebas, para no estropear el tuyo. Como un campo de entrenamiento al lado de casa.</td></tr>
+<tr><td><b>Sentidos nuevos</b></td><td>Antes veían árboles y distancias. Ahora también <b>hambre, luz, hora del día, monstruos cerca y equipo</b>. Es como pasar de «ver» a «ver, tener hambre y notar que anochece».</td></tr>
+<tr><td><b>Habilidades nuevas</b></td><td>Comer, pelear, refugiarse, dormir, fabricar, equiparse, apartarse. Cada una es un «movimiento aprendido», como saber nadar antes de cruzar un río.</td></tr>
+<tr><td><b>Simulador</b></td><td>Una versión de juguete de un día entero, donde entrenar millones de veces sin esperar a Minecraft. Es como practicar en un simulador de vuelo.</td></tr>
+<tr><td><b>Entrenamiento</b></td><td>La red aprende a decidir. Aquí hubo el mayor aprendizaje (sección 3).</td></tr>
+<tr><td><b>Medición real</b></td><td>Noches y encuentros en Minecraft de verdad, con criterios fijados antes, para no engañarnos.</td></tr>
+<tr><td><b>La mente en supervivencia</b></td><td>La IA grande dirige a Alma en el mundo peligroso y la comparamos con el cuerpo solo.</td></tr>
+</table>
+
+<h2>3. Cómo aprende la red: tres ideas sencillas</h2>
+<h3>a) Copiar al maestro</h3>
+<p>Tenemos un «guion» escrito a mano que sabe sobrevivir. La red lo observa y copia sus decisiones. <b>Ejemplo:</b> un aprendiz que mira cómo cocina el chef y repite los gestos. Con esto coincidió con el guion el 93-96 % de las veces.</p>
+<h3>b) El problema del aprendiz que se equivoca (DAgger)</h3>
+<p>Si el aprendiz copia bien pero un día se desvía un poco, acaba en situaciones que el chef nunca le enseñó. <b>Ejemplo:</b> un conductor novato que cae en una calle desconocida. La solución se llama <b>DAgger</b>: el aprendiz conduce y el maestro le dice, en cada situación, qué habría hecho. Así aprende también de <i>sus propios errores</i>. Con esto la red coincidió con el guion en el <b>99 %</b> de las decisiones.</p>
+<h3>c) Cuando la recompensa enseña lo que no queríamos</h3>
+<p>Primero probamos a premiar con puntos (más madera, más puntos). Pero <b>morir costaba pocos puntos</b> al lado de un día de madera, así que la red no aprendió prudencia. <b>Ejemplo:</b> pagar a un obrero por ladrillos colocados sin penalizarle por las caídas del andamio: acabará arriesgando. Por eso elegimos copiar y corregir en vez de puntuar.</p>
+
+<h2>4. Los zombis y la regla de huir</h2>
+<p>En las primeras pruebas, con <b>tres zombis a la vez</b> los personajes morían. Tú diste la regla que lo arregló:</p>
+<ul>
+<li><b>Hasta 2 enemigos y buena salud:</b> se defienden.</li>
+<li><b>Más de 2 enemigos, o salud baja (menos de 8):</b> huyen.</li>
+<li><b>Creeper</b> (el que explota): nunca pelean, se apartan.</li>
+<li><b>Tras huir de noche:</b> se refugian y recuperan vida.</li>
+</ul>
+<p><b>Ejemplo:</b> como un guardia que, si le atacan tres a la vez, retrocede a la puerta en vez de hacerse el héroe.</p>
+<div class="caja"><b>Resultado de esta etapa:</b> la red oficial pasó <b>16 de 16 noches</b> y <b>24 de 24 encuentros</b> con creeper, vida baja y un zombi.</div>
+
+<h2>5. Entra la mente: la comparación real</h2>
+<p>Probamos tres días de Minecraft con cuatro personajes a la vez: <b>Alma</b> con mente y <b>Soma, Eco e Iris</b> solo con cuerpo, en el mismo mundo, para que la noche y los monstruos fueran iguales para todos. Dos rondas:</p>
+<table>
+<tr><th>Ronda</th><th>Alma (mente)</th><th>Cuerpos solos</th></tr>
+<tr><td><b>Ronda 1</b></td><td>Espada de piedra el <b>día 3</b>. Sin muertes.</td><td>Espada de madera el día 1. Sin muertes.</td></tr>
+<tr><td><b>Ronda 2</b></td><td>Espada de piedra el <b>día 1</b>. Sin muertes.</td><td>Espada de madera. Eco murió el día 1 (parece que ahogado).</td></tr>
+</table>
+<div class="aviso"><b>Dos cautelas honestas.</b> (1) Son solo <b>dos rondas</b> de las cuatro previstas: sirve de indicio, no de prueba. (2) En la ronda 1 quien hizo de «mente» ayudó a mano en un par de apuros (sacar a Alma de un pozo); en la ronda 2 no hubo ayuda, solo se miró qué pasaba.</div>
+<p><b>Ejemplo para entenderlo:</b> el cuerpo es un excursionista con buenos reflejos que se sabe cuidar; la mente es el guía que dice «hoy sube a la cantera y consigue piedra». Con guía llegan antes a la herramienta mejor, sin correr más riesgo.</p>
+
+<h2>6. Lo que falló, y lo que enseñó</h2>
+<table>
+<tr><th>Fallo</th><th>Ejemplo cotidiano</th><th>Estado</th></tr>
+<tr><td><b>Picar piedra a través de la pared</b>: rompía bloques sin camino hasta ellos y lo que soltaba caía en huecos cerrados (recogía 7 de 50).</td><td>Cavar un túnel para sacar un tesoro que luego no cabes por recoger.</td><td><b>Arreglado</b>: ahora recoge 8 de 8.</td></tr>
+<tr><td><b>Salir del pozo de arena</b>: la arena no sirve para subir.</td><td>Intentar trepar por una duna que se desmorona.</td><td>Arreglado (usa tablones). Falta probarlo con arena real.</td></tr>
+<tr><td><b>Talar en laderas</b>: ve el árbol pero el tronco queda fuera de alcance.</td><td>Ver la fruta en lo alto de un talud y no llegar.</td><td>Mejor, <b>no resuelto</b>.</td></tr>
+<tr><td><b>Atrapada en un túnel</b>: Alma pasó dos días encerrada en un monte, segura pero sin avanzar.</td><td>Un excursionista que se mete en una cueva y no encuentra la salida.</td><td>Sin arreglar; idea: subir picando hacia arriba.</td></tr>
+<tr><td><b>Agua</b>: «sin suelo seco» junto a ríos anchos.</td><td>Dudar ante un río por si no sabe nadar.</td><td>Sin arreglar (nadar de noche es arriesgado).</td></tr>
+<tr><td><b>Alejarse</b> hasta 400 bloques del campamento.</td><td>Salir a pasear y acabar en otro pueblo.</td><td>Sin arreglar.</td></tr>
+</table>
+<p>Una lección general: <b>cada fallo real se traslada al simulador</b>. El simulador y la realidad nunca coinciden del todo, y por eso se mide en Minecraft de verdad.</p>
+
+<h2>7. Cuánto cuesta</h2>
+<p>Todo esto se hizo con trabajadores de Opus que van por su cuenta. Esta etapa gastó <b>unos tres puntos del cupo semanal</b> (del 7 % al 9 % de antes más la rotación 1, aprox.). Cada medición real, con servidor, cuesta alrededor de un punto: es la parte cara. El entrenamiento y las pruebas en seco, mucho menos.</p>
+
+<h2>8. Dónde estamos (estimación honesta)</h2>
+<table>
+<tr><th>Pieza</th><th class="num">Avance</th><th>Por qué</th></tr>
+<tr><td>Movilidad y habilidades</td><td class="num">~90 %</td><td>Funcionan y están medidas.</td></tr>
+<tr><td>Red de supervivencia en simulador</td><td class="num">~85 %</td><td>16/16 noches y 24/24 encuentros.</td></tr>
+<tr><td>Supervivencia real en Minecraft</td><td class="num">~50-55 %</td><td>Dos rondas medidas; faltan comida, refugio fijo y arreglos.</td></tr>
+<tr><td>Mente de Alma</td><td class="num">~50 %</td><td>Buenos indicios, pocas pruebas.</td></tr>
+<tr><td><b>Conjunto</b></td><td class="num"><b>~65 %</b></td><td>Es una estimación mía, no una métrica.</td></tr>
+</table>
+
+<h2>9. Qué falta y recomendaciones</h2>
+<ul>
+<li><b>Dos rondas más</b> (las 2 y 3) para tener cuatro y poder fiarnos del resultado.</li>
+<li><b>Medir comida y refugio fijo</b>: en todas las pruebas el hambre no bajó, así que no se llegó a cazar ni a construir. Hay que quitar la «saturación» inicial.</li>
+<li><b>Arreglar el cuerpo</b>: salir de túneles, el agua falsa al explorar, la tala en laderas, y que el registro apunte la causa de cada muerte.</li>
+<li><b>Orden recomendado:</b> arreglar primero lo barato (en seco), medir después. No gastar cupo midiendo con fallos conocidos.</li>
+</ul>
+
+<h2>10. Pequeño glosario</h2>
+<dl class="gl">
+<dt>Red neuronal</dt><dd>Programa pequeño que aprende de ejemplos en vez de seguir reglas escritas.</dd>
+<dt>Guion</dt><dd>Reglas escritas a mano que sirven de maestro.</dd>
+<dt>DAgger</dt><dd>Entrenar dejando que el alumno conduzca y el maestro corrija.</dd>
+<dt>Recompensa</dt><dd>Puntos que se dan por hacer algo bien; si están mal puestos, enseñan lo equivocado.</dd>
+<dt>Ronda / rotación</dt><dd>Una prueba de tres días con los cuatro personajes a la vez.</dd>
+<dt>Mente</dt><dd>La IA grande que fija metas; el cuerpo hace el trabajo fino.</dd>
+<dt>Simulador</dt><dd>Versión rápida de juguete para entrenar sin esperar a Minecraft.</dd>
+</dl>
+<div class="pie">Informe generado por Ío a partir de los informes de los trabajadores del 15 al 18 de octubre de 2026. Las cifras de coste y avance global son estimaciones.</div>
+</body></html>

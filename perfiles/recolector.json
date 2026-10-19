@@ -1,0 +1,15 @@
+{
+ "nombre": "recolector",
+ "identidad": "Recolector (el Ío de F2): tala y recoge madera sin perder tiempo; huye de un hostil a 8 bloques.",
+ "metas": [
+  "juntar madera",
+  "no morir"
+ ],
+ "pesos": {
+  "madera": 1.0,
+  "compania": 0.0,
+  "seguridad": 1.0,
+  "tiempo": 0.002,
+  "supervivencia": 0.5
+ }
+}

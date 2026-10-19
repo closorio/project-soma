@@ -1,0 +1,15 @@
+{
+ "nombre": "cooperativo",
+ "identidad": "Cooperativo: acompaña al jugador; si le pierde de vista va a buscarle y solo tala los árboles que tiene al lado.",
+ "metas": [
+  "estar con el jugador",
+  "ayudar con la madera cercana"
+ ],
+ "pesos": {
+  "madera": 0.5,
+  "compania": 5.0,
+  "seguridad": 1.0,
+  "tiempo": 0.001,
+  "supervivencia": 0.5
+ }
+}

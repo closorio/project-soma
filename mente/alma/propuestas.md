@@ -1,0 +1,4 @@
+# Propuestas de la mente (qué reentrenar o qué habilidad falta), con evidencia
+- (2026-10-15 03:53) «tala N troncos» no admite un área o un margen: con la regla de 100 bloques podría volver al tronco libre más cercano aunque esté dentro del margen (junto al cofre me llevó a 6 bloques del GRANARBOL). Propongo un «margen» en zonas.json o una zona de trabajo para talarN/ir_a_arbol (evidencia: sesión 20261015-034021, 298,63,-2).
+- (2026-10-15 03:53) mente.py cuenta los troncos de la sesión con cofre.guardados, que se pone a 0 al reconectar el bot (22 → 0 tras la desconexión de las 03:44): el balance de fin sale mal (+2 en vez de +24). Contar desde el contenido real de los cofres o persistir guardados.
+- (2026-10-15 03:53) explorar en pantano: «norte 80» desde 330,-39 agotó los 90 s con 5 bloques; convendría abandonar antes un tramo sin avance (p. ej., 20 s) y probar el desvío siguiente.

@@ -1,0 +1,163 @@
+## Sesión 20261017-200331 · meta: día 1 de 3: cadena mínima hasta espada de piedra (troncos, mesa, espada y pico de madera, piedra) y refugiarse al anochecer · contrato 39.0 min, 60 turnos
+- 20:03:37 · turno 1 · ORDEN «tala 8 troncos» · porque: paso 1 de la cadena; árbol a 6 bloques
+- 20:05:30 · turno 1 · resultado de «tala 8 troncos»: Llevo 0 de 8 troncos: no veo árboles fuera de las zonas protegidas.
+- 20:07:21 · turno 2 · ORDEN «explora hacia el oeste 30» · porque: los árboles de la ladera quedan fuera de alcance; al oeste hay un roble a nivel (56,69,-53)
+- 20:07:31 · turno 2 · resultado de «explora hacia el oeste 30»: Exploré 31 bloques. Estoy en 61, 67, -46 (plains). He visto: 77 troncos, agua, 59 copper_ore, 150 coal_ore, 18 iron_ore, 10 lapis_ore.
+- 20:07:31 · turno 3 · ORDEN «tala 8 troncos» · porque: paso 1 de la cadena
+- 20:08:40 · turno 3 · resultado de «tala 8 troncos»: Llevo 1 de 8 troncos: no veo árboles fuera de las zonas protegidas.
+- 20:08:55 · turno 4 · ORDEN «recoge» · porque: quedaron troncos picados en el suelo
+- 20:08:55 · turno 4 · resultado de «recoge»: No hay nada que recoger cerca.
+- 20:08:55 · turno 5 · ORDEN «tala 7 troncos» · porque: paso 1 de la cadena
+- 20:09:56 · turno 5 · resultado de «tala 7 troncos»: Llevo 0 de 7 troncos: no veo árboles fuera de las zonas protegidas.
+- 20:10:05 · turno 6 · META libre · perfil recolector · 3.0 min · espero: +5 troncos · porque: la orden tala no encuentra árbol; que la red explore y tale
+- 20:13:15 · turno 6 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +0 troncos · cofre 0 viajes · recoger 0/1 explorar 1/1 ir_a_arbol 0/1
+- 20:13:25 · turno 7 · ORDEN «vuelve al campamento» · porque: regla del anochecer
+- 20:13:25 · turno 7 · resultado de «vuelve al campamento»: No llego al campamento: sin suelo seco.
+- 20:13:25 · turno 8 · META libre · perfil supervivencia · 11.0 min · espero: refugiada toda la noche · porque: anochecer
+- 20:13:58 · turno 8 · esperé → evento: noche · hecho: +0 troncos · cofre 0 viajes · refugiarse 0/1
+- 20:14:07 · turno 9 · ORDEN «refúgiate» · porque: es de noche y no está dentro del refugio
+- 20:14:48 · turno 9 · resultado de «refúgiate»: No pude refugiarme: sin bloques ni pico (tapiar: faltan bloques (1, llevo 0); cavar: sin pico).
+- 20:15:05 · turno 10 · META libre · perfil supervivencia · 9.0 min · espero: pasar la noche sin morir · porque: no puede tapiar ni cavar; que la red y los reflejos la defiendan
+- 20:20:15 · turno 10 · esperé → tiempo máximo (300 s) · hecho: +0 troncos · cofre 0 viajes · refugiarse 0/7
+- 20:23:10 · turno 10 · esperé → evento: dia · hecho: +0 troncos · cofre 0 viajes · refugiarse 0/3 ir_a_arbol 0/5 explorar 0/15
+- 20:23:24 · turno 11 · ORDEN «sal del refugio»
+- 20:23:44 · turno 11 · resultado de «sal del refugio»: ERROR timed out
+- 20:23:44 · turno 12 · ORDEN «explora hacia el norte 40» · porque: volver a la zona de bosque junto al campamento
+- 20:23:44 · turno 12 · resultado de «explora hacia el norte 40»: No pude seguir: sin suelo seco/sin camino (0 bloques). Estoy en 56, 60, -101 (plains). He visto: agua, 3 lapis_ore, 14 copper_ore.
+- 20:23:45 · turno 13 · META libre · perfil recolector · 6.0 min · espero: +8 troncos, mesa y espada de madera · porque: en libre los cuerpos solos talan y fabrican; la orden tala falla en laderas
+- 20:24:15 · turno 14 · ORDEN «sal del refugio» · porque: está en un pozo 1x1 de 2 de hondo
+- 20:24:41 · turno 14 · resultado de «sal del refugio»: No pude salir: tiempo agotado.
+- 20:25:37 · turno 15 · ORDEN «fabrica tablones» · porque: los tablones sí se pueden poner: trepar fuera del pozo
+- 20:25:37 · turno 15 · resultado de «fabrica tablones»: Fabricado: 4 oak planks.
+- 20:25:37 · turno 16 · ORDEN «sal del refugio»
+- 20:25:38 · turno 16 · resultado de «sal del refugio»: Fuera.
+- 20:25:47 · turno 17 · ORDEN «explora hacia el norte 40» · porque: volver al bosque junto al campamento
+- 20:25:59 · turno 17 · resultado de «explora hacia el norte 40»: No pude seguir: sin suelo seco (28 bloques). Estoy en 29, 63, -107 (plains). He visto: agua, 3 lapis_ore, 16 copper_ore, 10 iron_ore, 36 coal_ore.
+- 20:25:59 · turno 18 · META libre · perfil recolector · 6.0 min · espero: +8 troncos, mesa y espada de madera · porque: en libre los cuerpos solos talan y fabrican
+- 20:31:26 · turno 18 · esperé → tiempo máximo (300 s) · hecho: +40 troncos · cofre 0 viajes · explorar 2/18 salir_del_refugio 1/3 fabricar 2/2 ir_a_arbol 6/10 picar_tronco 44/44 recoger 9/9
+- 20:31:38 · turno 19 · ORDEN «fabrica un pico» · porque: paso 3 de la cadena
+- 20:31:44 · turno 19 · resultado de «fabrica un pico»: Fabricado: 1 acacia planks, 1 wooden pickaxe.
+- 20:31:54 · turno 20 · META libre · perfil supervivencia · 11.0 min · espero: refugiada toda la noche · porque: anochecer; el campamento está a 222 bloques: se queda aquí
+- 20:33:01 · turno 20 · esperé → evento: anochecer (hora 11539: regla del anochecer) · hecho: +1 troncos · cofre 0 viajes · refugiarse 2/2 salir_del_refugio 1/1 ir_a_arbol 1/1 picar_tronco 1/1 dormir 0/5
+- 20:33:56 · turno 20 · esperé → evento: noche · evento 20:33:47 noche {"hora": 12499}
+- 20:41:46 · turno 20 · esperé → tiempo máximo (440 s) · ahora: pos -70,61,-209 · salud 20 · hambre 20 · noche · inv: 43 troncos, 3 tablones, herr: wooden_sword,wooden_pickaxe, comida 0, otros: 1 crafting table, 2 dirt, 1 gravel, 2 sand, 1 stick, 25 huecos 
+- 20:41:55 · fin · 38 min, 20 turnos · troncos talados en la sesión: 51 (inventario+cofre +43) · meta: día 1 de 3: cadena mínima hasta espada de piedra (troncos, mesa, espada y pico de madera, piedra) y refugiarse al anochecer · Alma pasó los dos primeros días sin morir. El primer día la tala falló en las laderas y solo juntó un tronco; durmió en un pozo de arena del que no podía salir hasta que hizo tablones. El segundo día, en modo libre, juntó cuarenta y tres troncos e hizo la mesa, la espada y el pico de madera, y pasó la noche refugiada. Le falta la piedra: está fuera del rectángulo de obras, a doscientos veinte bloques del campamento.
+## Sesión 20261017-221801 · meta: día 3 de 3: piedra y espada de piedra donde esté (ya se puede minar fuera del rectángulo), luego meta libre y no morir · contrato 19.0 min, 30 turnos
+- 22:18:08 · turno 1 · ORDEN «sal del refugio»
+- 22:18:11 · turno 1 · resultado de «sal del refugio»: Fuera.
+- 22:18:18 · turno 2 · ORDEN «mina 8 piedras» · porque: con el pico de madera, la piedra es lo siguiente de la cadena; ya se permite minar aquí
+- 22:19:11 · turno 2 · resultado de «mina 8 piedras»: Miné 8 de stone.
+- 22:19:16 · turno 3 · ORDEN «fabrica una espada de piedra» · porque: criterio principal: espada de piedra en ≤3 días
+- 22:19:16 · turno 3 · resultado de «fabrica una espada de piedra»: No pude fabricar: faltan materiales: piedra (0 de 2).
+- 22:20:07 · turno 4 · ORDEN «recoge todo» · porque: la piedra minada quedó en el hoyo, 2-4 bloques más abajo
+- 22:20:07 · turno 4 · resultado de «recoge todo»: No pude recoger: no llegó.
+- 22:20:53 · turno 5 · ORDEN «mina 12 piedras» · porque: la piedra de antes cayó a un hueco al que no llega; picando lo de alrededor se abre paso
+- 22:21:51 · turno 5 · resultado de «mina 12 piedras»: Miné 12 de stone.
+- 22:23:13 · turno 6 · ORDEN «refúgiate» · porque: el pozo cae al hueco donde quedó la piedra minada; además falta poco para el anochecer
+- 22:23:18 · turno 6 · resultado de «refúgiate»: Refugiado (cavado, 1 bloques).
+- 22:23:27 · turno 7 · ORDEN «recoge todo» · porque: desde el pozo, la piedra queda un bloque más abajo y al lado
+- 22:23:29 · turno 7 · resultado de «recoge todo»: No pude recoger: no llegó.
+- 22:23:45 · turno 8 · ORDEN «mina 8 piedras» · porque: desde dentro del pozo, lo que pica cae a su lado
+- 22:24:09 · turno 8 · resultado de «mina 8 piedras»: Miné 8 de stone.
+- 22:25:12 · turno 9 · ORDEN «mina 12 tierra» · porque: abrir el pozo hasta los huecos donde quedó la piedra
+- 22:25:39 · turno 9 · resultado de «mina 12 tierra»: Miné 12 de dirt.
+- 22:25:39 · turno 10 · ORDEN «recoge todo» · porque: con el pozo abierto, la piedra queda a su alcance
+- 22:25:39 · turno 10 · resultado de «recoge todo»: No pude recoger: no llegó.
+- 22:25:53 · turno 11 · ORDEN «fabrica una espada de piedra» · porque: ya tiene 7 de piedra: criterio principal
+- 22:25:59 · turno 11 · resultado de «fabrica una espada de piedra»: Fabricado: 1 stone sword.
+- 22:26:08 · turno 12 · ORDEN «mina 6 piedras» · porque: completar 8 de piedra; sigue en su pozo
+- 22:26:27 · turno 12 · resultado de «mina 6 piedras»: Miné 6 de stone.
+- 22:26:34 · turno 13 · ORDEN «mina 4 piedras» · porque: le falta 1 para las 8 de piedra
+- 22:26:44 · turno 13 · resultado de «mina 4 piedras»: Miné 4 de stone.
+- 22:26:53 · turno 14 · ORDEN «recoge todo» · porque: último intento por la octava piedra antes del anochecer, sin salir del pozo
+- 22:26:53 · turno 14 · resultado de «recoge todo»: No pude recoger: no llegó.
+- 22:26:53 · turno 15 · META libre · perfil supervivencia · 11.0 min · espero: refugiada toda la noche · porque: anochecer
+- 22:27:25 · turno 15 · esperé → evento: anochecer (hora 11610: regla del anochecer) · hecho: +0 troncos · cofre 0 viajes · recoger 0/1 refugiarse 1/1
+- 22:28:18 · turno 15 · esperé → evento: noche · evento 22:28:07 noche {"hora": 12490}
+- 22:35:42 · turno 15 · esperé → tiempo máximo (420 s) · ahora: pos -66,63,-217 · salud 20 · hambre 20 · noche · inv: 43 troncos, 3 tablones, herr: stone_sword,wooden_sword,wooden_pickaxe, comida 0, otros: 7 cobblestone, 1 crafting table, 10 dirt, 1 gravel,
+- 22:35:51 · fin · 18 min, 15 turnos · troncos talados en la sesión: 0 (inventario+cofre +0) · meta: día 3 de 3: piedra y espada de piedra donde esté (ya se puede minar fuera del rectángulo), luego meta libre y no morir · El tercer día Alma tenía que conseguir la piedra y la espada de piedra donde estaba, ahora que se le permite minar fuera del rectángulo. Lo consiguió: la espada de piedra llegó antes del anochecer y pasó la noche refugiada en su pozo sin perder vida. Lo que falló es que el cuerpo pica piedra a través de la pared y la deja caer en huecos cerrados, así que de veintiocho bloques minados solo recogió siete; lo resolví abriendo el pozo con tierra. Propongo que minar solo pique bloques con aire al lado y que recoger avise si el objeto está encerrado.
+## Sesión 20261017-235137 · meta: días 1-3 de 3 (rotación 1): cadena mínima hasta espada de piedra con meta libre sobre todo; refugiarse cada anochecer; no morir · contrato 59.0 min, 90 turnos
+- 23:51:37 · turno 1 · META libre · perfil recolector · 4.0 min · espero: +8 troncos · porque: paso 1 de la cadena; en r0 la meta libre rindió más que tala
+- 23:53:08 · turno 1 · esperé → evento: agua · hecho: +0 troncos · cofre 0 viajes · ir_a_arbol 0/10 explorar 0/1
+- 23:53:38 · turno 1 · esperé → evento: agua · hecho: +0 troncos · cofre 0 viajes · ir_a_arbol 0/3 explorar 0/1
+- 23:55:52 · turno 1 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +3 troncos · cofre 0 viajes · explorar 2/2 ir_a_arbol 1/2 picar_tronco 5/5 fabricar 1/1 recoger 1/1
+- 23:55:57 · turno 2 · ORDEN «fabrica un pico» · porque: paso 3: pico de madera para la piedra
+- 23:56:03 · turno 2 · resultado de «fabrica un pico»: Fabricado: 1 oak planks, 1 wooden pickaxe.
+- 23:56:06 · turno 3 · ORDEN «mina 8 piedras» · porque: paso 4: piedra; está en una loma (y=80)
+- 23:56:07 · turno 3 · resultado de «mina 8 piedras»: No miné nada: nada que minar aquí.
+- 23:56:16 · turno 4 · ORDEN «mina 4 tierra» · porque: destapar la piedra bajo la loma (guía)
+- 23:56:17 · turno 4 · resultado de «mina 4 tierra»: No miné nada: nada que minar aquí.
+- 23:56:17 · turno 5 · ORDEN «mina 8 piedras» · porque: paso 4
+- 23:56:17 · turno 5 · resultado de «mina 8 piedras»: No miné nada: nada que minar aquí.
+- 23:56:42 · turno 6 · ORDEN «vuelve al campamento» · porque: aquí no hay piedra a la vista; junto al campamento sí, y quedan 4-5 min de día
+- 23:56:42 · turno 6 · resultado de «vuelve al campamento»: No llego al campamento: agua.
+- 23:56:53 · turno 7 · META libre · perfil recolector · 3.5 min · espero: +6 troncos y terreno nuevo · porque: el agua corta el camino al campamento; troncos para tablones y tapar el pozo
+- 00:00:29 · turno 7 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +11 troncos · cofre 0 viajes · explorar 6/7 ir_a_arbol 1/3 picar_tronco 12/12 recoger 3/5 fabricar 1/1
+- 00:00:33 · turno 8 · ORDEN «mina 8 piedras» · porque: monte a y=108: puede haber roca a la vista; queda 1 min para el anochecer
+- 00:00:53 · turno 8 · resultado de «mina 8 piedras»: Miné 6 de stone (no quedan bloques que valgan).
+- 00:00:57 · turno 9 · ORDEN «fabrica una espada de piedra» · porque: paso 5, criterio principal
+- 00:01:02 · turno 9 · resultado de «fabrica una espada de piedra»: Fabricado: 1 stone sword.
+- 00:01:09 · turno 10 · META libre · perfil supervivencia · 11.0 min · espero: refugiada toda la noche · porque: anochecer; campamento a 399 bloques, se queda
+- 00:01:16 · turno 10 · esperé → evento: anochecer (hora 11648: regla del anochecer) · hecho: +0 troncos · cofre 0 viajes · refugiarse 0/5
+- 00:01:25 · turno 11 · ORDEN «explora hacia el norte 15» · porque: refugiarse falla ×5 por suelo peligroso (borde de monte); busco suelo llano antes de la noche
+- 00:01:25 · turno 11 · resultado de «explora hacia el norte 15»: No pude seguir: agua (0 bloques). Estoy en -155, 105, 252 (plains). He visto: 3 troncos, 23 iron_ore, 256 coal_ore, 26 copper_ore, 1 horse.
+- 00:01:25 · turno 12 · ORDEN «refúgiate» · porque: anochecer
+- 00:01:25 · turno 12 · resultado de «refúgiate»: No pude refugiarme: suelo peligroso (tapiar: sin apoyo; cavar: suelo peligroso: cueva al lado (air)).
+- 00:01:29 · turno 13 · ORDEN «explora hacia el este 12» · porque: salir del borde de la cueva
+- 00:01:29 · turno 13 · resultado de «explora hacia el este 12»: No pude seguir: agua (0 bloques). Estoy en -155, 105, 252 (plains). He visto: 3 troncos, 23 iron_ore, 256 coal_ore, 26 copper_ore, 1 horse.
+- 00:01:29 · turno 14 · ORDEN «explora hacia el sur 12» · porque: salir del borde de la cueva
+- 00:01:30 · turno 14 · resultado de «explora hacia el sur 12»: No pude seguir: agua (0 bloques). Estoy en -155, 105, 252 (plains). He visto: 3 troncos, 23 iron_ore, 256 coal_ore, 26 copper_ore, 1 horse.
+- 00:01:30 · turno 15 · ORDEN «explora hacia el oeste 12» · porque: salir del borde de la cueva
+- 00:01:30 · turno 15 · resultado de «explora hacia el oeste 12»: No pude seguir: agua (0 bloques). Estoy en -155, 105, 252 (plains). He visto: 3 troncos, 23 iron_ore, 256 coal_ore, 26 copper_ore, 1 horse.
+- 00:01:30 · turno 16 · ORDEN «refúgiate» · porque: anochecer
+- 00:01:30 · turno 16 · resultado de «refúgiate»: No pude refugiarme: suelo peligroso (tapiar: sin apoyo; cavar: suelo peligroso: cueva al lado (air)).
+- 00:01:48 · turno 17 · ORDEN «explora hacia el norte 15 nadando» · porque: atrapada en borde de cueva; buscar suelo para el pozo
+- 00:01:59 · turno 17 · resultado de «explora hacia el norte 15 nadando»: Exploré 15 bloques. Estoy en -156, 109, 237 (plains). He visto: 3 troncos, 39 iron_ore, 256 coal_ore, 26 copper_ore, 1 sheep, 3 horse.
+- 00:01:59 · turno 18 · ORDEN «refúgiate» · porque: noche
+- 00:02:04 · turno 18 · resultado de «refúgiate»: Refugiado (cavado, 1 bloques).
+- 00:11:20 · turno 18 · esperé → evento: dia · evento 00:02:05 refugiado [-156, 109, 243]
+- 00:11:31 · turno 19 · ORDEN «mina 8 piedras» · porque: día 2: piedra (8 a la vez) desde el pozo, en monte rocoso
+- 00:11:48 · turno 19 · resultado de «mina 8 piedras»: Miné 8 de stone.
+- 00:12:00 · turno 20 · META libre · perfil recolector · 3.0 min · espero: +8 troncos para la cabaña · porque: día 2: refugio fijo (cabaña, ~18 troncos); tengo 13
+- 00:15:13 · turno 20 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +0 troncos · cofre 0 viajes · ir_a_arbol 0/1 explorar 0/59
+- 00:15:19 · turno 21 · ORDEN «explora hacia el este 25 nadando» · porque: la red no sale de aquí (sin suelo seco ×59); anoche nadando sí salió
+- 00:15:19 · turno 21 · resultado de «explora hacia el este 25 nadando»: No pude seguir: sin camino/sin suelo seco (0 bloques). Estoy en -154, 110, 243 (plains). He visto: 3 troncos, 192 coal_ore, 36 iron_ore, 10 copper_ore, 1 sheep, 2 horse.
+- 00:15:20 · turno 22 · ORDEN «tala 8 troncos» · porque: troncos para la cabaña
+- 00:16:23 · turno 22 · resultado de «tala 8 troncos»: Llevo 0 de 8 troncos: no veo árboles fuera de las zonas protegidas.
+- 00:16:29 · turno 23 · ORDEN «explora hacia el norte 25 nadando» · porque: salir del alto
+- 00:16:29 · turno 23 · resultado de «explora hacia el norte 25 nadando»: No pude seguir: sin camino/sin suelo seco (0 bloques). Estoy en -156, 109, 243 (plains). He visto: 3 troncos, 206 coal_ore, 34 iron_ore, 19 copper_ore, 1 chicken, 1 sheep, 1 horse.
+- 00:16:30 · turno 24 · ORDEN «explora hacia el sur 25 nadando» · porque: salir del alto
+- 00:16:31 · turno 24 · resultado de «explora hacia el sur 25 nadando»: No pude seguir: sin camino/sin suelo seco (0 bloques). Estoy en -156, 109, 243 (plains). He visto: 3 troncos, 206 coal_ore, 34 iron_ore, 19 copper_ore, 1 chicken, 1 sheep, 1 horse.
+- 00:16:31 · turno 25 · ORDEN «explora hacia el oeste 25 nadando» · porque: salir del alto
+- 00:16:31 · turno 25 · resultado de «explora hacia el oeste 25 nadando»: No pude seguir: sin suelo seco/sin camino (0 bloques). Estoy en -156, 109, 243 (plains). He visto: 3 troncos, 206 coal_ore, 34 iron_ore, 19 copper_ore, 1 chicken, 1 sheep, 1 horse.
+- 00:16:36 · turno 26 · ORDEN «sal del refugio» · porque: parece que sigue en el pozo (luz 0, no se mueve)
+- 00:16:36 · turno 26 · resultado de «sal del refugio»: Ya estoy fuera.
+- 00:16:36 · turno 27 · ORDEN «explora hacia el este 25» · porque: buscar árboles y suelo llano
+- 00:16:36 · turno 27 · resultado de «explora hacia el este 25»: No pude seguir: sin suelo seco/sin camino (0 bloques). Estoy en -156, 109, 243 (plains). He visto: 3 troncos, 206 coal_ore, 34 iron_ore, 19 copper_ore, 1 chicken, 1 sheep, 2 horse.
+- 00:16:54 · turno 28 · ORDEN «construye una cabaña con techo» · porque: refugio fijo aquí mismo: no consigo moverme (sin suelo seco en todos los rumbos)
+- 00:16:54 · turno 28 · resultado de «construye una cabaña con techo»: No terminé cabana_techada: sin parcela: sin suelo natural y llano ×580, desnivel 10 ×8, desnivel 9 ×6, desnivel 8 ×5, desnivel 12 ×5, desnivel 11 ×5, desnivel 13 ×4, desnivel 14 ×3, desnivel 7 ×3, desnivel 15 ×2, desnivel 6 ×2, desnivel 5 ×2.
+- 00:17:03 · turno 29 · ORDEN «mina 8 piedras» · porque: abrir hueco alrededor y más piedra
+- 00:17:19 · turno 29 · resultado de «mina 8 piedras»: Miné 8 de stone.
+- 00:17:20 · turno 30 · ORDEN «explora hacia el norte 30 nadando» · porque: salir del monte
+- 00:17:20 · turno 30 · resultado de «explora hacia el norte 30 nadando»: No pude seguir: sin camino/sin suelo seco (0 bloques). Estoy en -153, 110, 243 (plains). He visto: 3 troncos, 199 coal_ore, 39 iron_ore, 10 copper_ore, 1 chicken, 1 sheep, 2 horse.
+- 00:17:42 · turno 31 · ORDEN «explora 30 nadando» · porque: rumbo libre para salir de la cueva
+- 00:17:43 · turno 31 · resultado de «explora 30 nadando»: No pude seguir: sin camino/sin suelo seco (0 bloques). Estoy en -153, 110, 243 (plains). He visto: 3 troncos, 199 coal_ore, 39 iron_ore, 10 copper_ore, 1 chicken, 1 sheep, 2 horse.
+- 00:17:43 · turno 32 · META libre · perfil supervivencia · 3.0 min · espero: que la red encuentre salida · porque: las órdenes no sacan a Alma de la cueva
+- 00:20:56 · turno 32 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +0 troncos · cofre 0 viajes · explorar 0/32 refugiarse 16/16 salir_del_refugio 16/16
+- 00:21:04 · turno 33 · META libre · perfil supervivencia · 11.0 min · espero: refugiada toda la noche · porque: anochecer día 2
+- 00:21:15 · turno 33 · esperé → evento: anochecer (hora 11628: regla del anochecer) · hecho: +0 troncos · cofre 0 viajes · refugiarse 2/3 salir_del_refugio 1/1 explorar 0/1
+- 00:22:09 · turno 33 · esperé → evento: noche · evento 00:21:55 noche {"hora": 12488}
+- 00:31:22 · turno 33 · esperé → evento: dia · evento 00:31:07 dia {"hora": 23528}
+- 00:32:17 · turno 33 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · hecho: +0 troncos · cofre 0 viajes · dormir 1/1 salir_del_refugio 3/3 explorar 0/3 refugiarse 3/3
+- 00:35:39 · turno 33 · esperé → tiempo máximo (180 s) · hecho: +0 troncos · cofre 0 viajes · salir_del_refugio 0/1 explorar 0/1
+- 00:35:45 · turno 34 · ORDEN «sal del refugio» · porque: creeper a 21; día 3, intentar salir de la cueva
+- 00:35:48 · turno 34 · resultado de «sal del refugio»: Fuera.
+- 00:35:48 · turno 35 · ORDEN «explora hacia el sur 20 nadando» · porque: volver por donde entró (vino del sur)
+- 00:35:49 · turno 35 · resultado de «explora hacia el sur 20 nadando»: No pude seguir: sin suelo seco/sin camino (0 bloques). Estoy en -153, 108, 243 (plains). He visto: 3 troncos, 257 coal_ore, 40 iron_ore, 30 copper_ore, 1 chicken, 1 sheep, 2 horse.
+- 00:35:55 · turno 36 · ORDEN «refúgiate» · porque: sin salida de la cueva y con un creeper cerca: el día 3 toca no morir
+- 00:35:55 · turno 36 · resultado de «refúgiate»: Refugiado (tapiado, 1 bloques).
+- 00:41:15 · turno 36 · esperé → evento: anochecer (hora 11648: regla del anochecer) · hecho: +0 troncos · cofre 0 viajes · salir_del_refugio 1/1 explorar 0/1 refugiarse 1/1
+- 00:41:20 · turno 37 · META libre · perfil supervivencia · 8.5 min · espero: refugiada toda la noche · porque: anochecer día 3
+- 00:42:09 · turno 37 · esperé → evento: noche · hecho: +0 troncos · cofre 0 viajes · salir_del_refugio 5/5 explorar 0/5 refugiarse 5/5
+- 00:49:57 · turno 37 · esperé → fin de la meta libre (el cuerpo queda en órdenes) · ahora: pos -153,108,243 · salud 20 · hambre 20 · noche · inv: 13 troncos, 4 tablones, herr: wooden_pickaxe,wooden_sword,stone_sword, comida 0, otros: 24 cobblestone, 1 crafting table, 29 huecos · cofr
+- 00:50:04 · fin · 58 min, 37 turnos · troncos talados en la sesión: 17 (inventario+cofre +13) · meta: días 1-3 de 3 (rotación 1): cadena mínima hasta espada de piedra con meta libre sobre todo; refugiarse cada anochecer; no morir · Rotación 1: Alma consiguió el primer día troncos, mesa, espada y pico de madera y la espada de piedra, y el segundo día ocho de piedra. Pasó los tres días y las tres noches sin morir ni perder vida. Desde la tarde del día 1 quedó en lo alto de un monte y luego en un túnel cerrado: explorar no encontraba salida en ningún rumbo, ni nadando, y no había suelo llano para la cabaña; por eso no llegó al refugio fijo ni a la comida.
