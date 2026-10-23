@@ -27,3 +27,8 @@ entrenamiento/ejecuciones/
 # secretos y registros
 .env*
 *.log
+# hub de contexto compartido: base de datos, cursores y configuración por máquina
+compartido/hub.db*
+compartido/.cursor-*
+compartido/local.json
+.claude/settings.local.json
