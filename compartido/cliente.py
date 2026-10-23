@@ -54,12 +54,12 @@ def configuracion():
     return cfg
 
 
-def pedir(cfg, metodo, ruta, cuerpo=None):
+def pedir(cfg, metodo, ruta, cuerpo=None, tiempo=TIEMPO):
     datos = json.dumps(cuerpo, ensure_ascii=False).encode() if cuerpo is not None else None
     req = urllib.request.Request(cfg["SOMA_HUB"] + ruta, data=datos, method=metodo,
                                  headers={"X-Soma-Token": cfg["SOMA_HUB_TOKEN"], "Content-Type": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=TIEMPO) as r:
+        with urllib.request.urlopen(req, timeout=tiempo) as r:
             return json.loads(r.read() or b"null")
     except urllib.error.HTTPError as e:
         try:

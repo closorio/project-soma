@@ -8,6 +8,8 @@ los dos PCs, y un cliente que usan los agentes a mano y los hooks de `.claude/se
 ```
 hub.py        el servidor (corre en UN PC; por defecto el del compañero, 192.168.1.46:3100)
 cliente.py    el cliente: órdenes para el agente (estado, enviar, leer, tablon) y para los hooks
+canal.py      el canal de push (servidor MCP en .mcp.json): despierta la sesión cuando llega un mensaje
+claude-canal  lanzador de Claude Code con el canal activo
 test_hub.py   pruebas: cd compartido && python3 -m unittest test_hub -v
 ```
 
@@ -87,8 +89,24 @@ Todas las peticiones llevan `X-Soma-Token`; sin él, 401. JSON en cuerpos y resp
 
 Los eventos de más de 7 días se borran al arrancar el hub; los mensajes y estados se conservan.
 
-## Fase 2 (no hecha)
+## Push en caliente (opcional)
 
-Push en caliente: un *channel* MCP propio (`canal.py`) que mantenga conexión con el hub y emita
-`notifications/claude/channel` al llegar un mensaje, arrancando con `claude --dangerously-load-development-channels`.
-Hoy es research preview y los eventos igualmente se entregan en el siguiente turno, así que no compensa aún.
+Sin push, lo del compañero entra en el siguiente prompt (o en cada iteración de `/loop`). Con push, un mensaje del
+compañero despierta la sesión aunque esté ociosa. Se arranca Claude Code con el lanzador en lugar de `claude`:
+
+```bash
+compartido/claude-canal            # acepta los mismos argumentos que claude
+```
+
+Qué pasa por debajo: Claude Code arranca `canal.py` (declarado en `.mcp.json`), que espera en `GET /espera` del hub
+(long-poll de 25 s, sin websockets). Cuando llega un mensaje para ti, pide `/novedades` y lo empuja a la sesión como
+`<channel source="soma-canal" de="count">…</channel>`. Lo empujado ya no se repite en el siguiente prompt.
+
+Límites que conviene saber:
+- Es un *channel* propio de Claude Code, en research preview. Solo funciona con el flag
+  `--dangerously-load-development-channels` (lo pone el lanzador) y en sesión interactiva. La primera vez sale un aviso
+  que hay que aceptar. Una actualización de Claude Code puede romperlo.
+- El mensaje entra en el siguiente turno: despierta una sesión ociosa, pero no interrumpe una herramienta que esté corriendo.
+- Solo despiertan los mensajes. Los archivos tocados y la presencia viajan con el siguiente mensaje o prompt.
+- En una sesión normal (`claude` sin lanzador) Claude Code pide aprobar el servidor `soma-canal` de `.mcp.json`; da igual
+  aprobarlo o no: sin el lanzador no consume nada y los hooks lo entregan todo como siempre.

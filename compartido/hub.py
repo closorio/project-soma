@@ -13,10 +13,12 @@ Rutas:
   GET  /mensajes?para=X[&desde=ID]     mensajes para X con id > ID
   POST /eventos   {agente, tipo, dato} tipo: archivo | presencia (dato: en_linea | fuera)
   GET  /eventos?excepto=X[&desde=ID]   eventos de los demás con id > ID
+  GET  /espera?agente=X[&max=25]       long-poll: {hay: true} en cuanto X tenga un mensaje sin ver, {hay: false} al vencer
+                                       max s (tope 60); no consume nada (lo usa compartido/canal.py)
   GET  /novedades?agente=X             lo que X aún no vio (mensajes para él, eventos de los demás) + estados de los demás;
                                        avanza los cursores de X (la segunda llamada seguida no repite nada)
 Los eventos de más de 7 días se borran al arrancar; los mensajes y estados se conservan."""
-import argparse, json, os, sqlite3, sys, threading
+import argparse, json, os, sqlite3, sys, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -25,6 +27,7 @@ AQUI = Path(__file__).resolve().parent
 DB_POR_DEFECTO = AQUI / "hub.db"
 PUERTO = 3100
 DIAS_EVENTOS = 7
+MAX_ESPERA = 60  # s como mucho que /espera retiene una petición
 
 ESQUEMA = """
 CREATE TABLE IF NOT EXISTS mensajes (id INTEGER PRIMARY KEY AUTOINCREMENT, de TEXT NOT NULL, para TEXT NOT NULL,
@@ -44,6 +47,7 @@ class Almacen:
     def __init__(self, ruta):
         self.ruta = str(ruta)
         self.cerrojo = threading.Lock()
+        self.aviso = threading.Condition()  # despierta a los /espera cuando llega un mensaje
         with self._con() as con:
             con.executescript(ESQUEMA)
 
@@ -73,7 +77,27 @@ class Almacen:
 
     def enviar(self, de, para, texto):
         with self.cerrojo, self._con() as con:
-            return con.execute("INSERT INTO mensajes (de, para, texto) VALUES (?, ?, ?)", (de, para, texto)).lastrowid
+            nuevo = con.execute("INSERT INTO mensajes (de, para, texto) VALUES (?, ?, ?)", (de, para, texto)).lastrowid
+        with self.aviso:
+            self.aviso.notify_all()
+        return nuevo
+
+    def _hay_pendiente(self, agente):
+        with self.cerrojo, self._con() as con:
+            cur = con.execute("SELECT ultimo_mensaje FROM cursores WHERE lector=?", (agente,)).fetchone()
+            return con.execute("SELECT 1 FROM mensajes WHERE para=? AND id>? LIMIT 1", (agente, cur[0] if cur else 0)).fetchone() is not None
+
+    def esperar(self, agente, max_s):
+        """True en cuanto haya un mensaje para `agente` que aún no vio en /novedades; False si vencen max_s. No avanza cursores."""
+        limite = time.monotonic() + min(max(max_s, 0), MAX_ESPERA)
+        with self.aviso:
+            while True:
+                if self._hay_pendiente(agente):
+                    return True
+                queda = limite - time.monotonic()
+                if queda <= 0:
+                    return False
+                self.aviso.wait(queda)
 
     def mensajes(self, para, desde=0):
         with self.cerrojo, self._con() as con:
@@ -170,6 +194,10 @@ class Manejador(BaseHTTPRequestHandler):
                 if "excepto" not in q:
                     raise PeticionMala("falta ?excepto=")
                 return self._responder(200, a.eventos(q["excepto"], desde))
+            if metodo == "GET" and partes == ["espera"]:
+                if "agente" not in q:
+                    raise PeticionMala("falta ?agente=")
+                return self._responder(200, {"hay": a.esperar(q["agente"], float(q.get("max", 25)))})
             if metodo == "GET" and partes == ["novedades"]:
                 if "agente" not in q:
                     raise PeticionMala("falta ?agente=")

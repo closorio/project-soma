@@ -1,0 +1,6 @@
+#!/bin/sh
+# Claude Code con el canal de push del hub (compartido/canal.py) activo: los mensajes del agente del compañero despiertan
+# la sesión aunque esté ociosa. Uso, desde la raíz del repo: compartido/claude-canal [otros argumentos de claude]
+# SOMA_CANAL=1 activa canal.py; sin el flag de desarrollo Claude Code descartaría sus avisos, por eso van siempre juntos.
+cd "$(dirname "$0")/.." || exit 1
+SOMA_CANAL=1 exec claude --dangerously-load-development-channels server:soma-canal "$@"

@@ -1,7 +1,7 @@
 """Pruebas del hub (compartido/hub.py) y del cliente (compartido/cliente.py): el hub arranca en un hilo en un puerto libre con
 una base de datos temporal; el cliente se invoca por main([...]) con las variables de entorno apuntando a ese hub.
 Ejecutar: python3 -m unittest compartido/test_hub.py -v"""
-import json, os, tempfile, threading, unittest, urllib.error, urllib.request
+import json, os, tempfile, threading, time, unittest, urllib.error, urllib.request
 from pathlib import Path
 
 import hub
@@ -122,6 +122,38 @@ class PruebasHub(unittest.TestCase):
         self.h.pedir("POST", "/eventos", {"agente": "count", "tipo": "presencia", "dato": "fuera"})
         _, salud = self.h.pedir("GET", "/salud")
         self.assertEqual(salud["agentes_en_linea"], ["seppuq"])
+
+    # --- long-poll para el canal ---
+
+    def test_espera_vence_sin_mensajes(self):
+        t0 = time.time()
+        estado, r = self.h.pedir("GET", "/espera?agente=count&max=0.3")
+        self.assertEqual(estado, 200)
+        self.assertEqual(r, {"hay": False})
+        self.assertGreaterEqual(time.time() - t0, 0.25)
+
+    def test_espera_despierta_al_llegar_un_mensaje(self):
+        threading.Timer(0.2, lambda: self.h.pedir("POST", "/mensajes", {"de": "seppuq", "para": "count", "texto": "ya"})).start()
+        t0 = time.time()
+        _, r = self.h.pedir("GET", "/espera?agente=count&max=5")
+        self.assertEqual(r, {"hay": True})
+        self.assertLess(time.time() - t0, 2)
+
+    def test_espera_no_cuenta_mensajes_ya_vistos_ni_eventos(self):
+        self.h.pedir("POST", "/mensajes", {"de": "seppuq", "para": "count", "texto": "visto"})
+        self.h.pedir("GET", "/novedades?agente=count")
+        threading.Timer(0.1, lambda: self.h.pedir("POST", "/eventos", {"agente": "seppuq", "tipo": "archivo", "dato": "x.py"})).start()
+        _, r = self.h.pedir("GET", "/espera?agente=count&max=0.4")
+        self.assertEqual(r, {"hay": False})
+
+    def test_espera_con_mensaje_pendiente_vuelve_enseguida(self):
+        self.h.pedir("POST", "/mensajes", {"de": "seppuq", "para": "count", "texto": "pendiente"})
+        t0 = time.time()
+        _, r = self.h.pedir("GET", "/espera?agente=count&max=5")
+        self.assertEqual(r, {"hay": True})
+        self.assertLess(time.time() - t0, 1)
+        _, n = self.h.pedir("GET", "/novedades?agente=count")  # esperar no consume
+        self.assertEqual([m["texto"] for m in n["mensajes"]], ["pendiente"])
 
     def test_eventos_viejos_se_borran_al_arrancar(self):
         self.h.pedir("POST", "/eventos", {"agente": "seppuq", "tipo": "archivo", "dato": "viejo.py"})
@@ -275,6 +307,121 @@ class PruebasCliente(unittest.TestCase):
 
     def test_hook_con_stdin_roto_calla(self):
         self.assertEqual(self.correr(["hook-novedades"], "esto no es json"), (0, ""))
+
+
+import queue, subprocess
+
+CANAL = Path(__file__).resolve().parent / "canal.py"
+
+
+class CanalEnMarcha:
+    """canal.py como subproceso (como lo lanza Claude Code), con un hilo que recoge cada línea de su stdout en una cola."""
+
+    def __init__(self, entorno):
+        self.p = subprocess.Popen([sys.executable, str(CANAL)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                  stderr=subprocess.DEVNULL, text=True, env=entorno)
+        self.lineas = queue.Queue()
+        threading.Thread(target=self._leer, daemon=True).start()
+
+    def _leer(self):
+        for linea in self.p.stdout:
+            self.lineas.put(json.loads(linea))
+
+    def mandar(self, mensaje):
+        self.p.stdin.write(json.dumps(mensaje) + "\n")
+        self.p.stdin.flush()
+
+    def siguiente(self, espera=3):
+        return self.lineas.get(timeout=espera)
+
+    def saludar(self):
+        """El arranque que hace Claude Code 2.1.309: sonda server/discover, initialize 2025-11-25 y initialized."""
+        self.mandar({"jsonrpc": "2.0", "id": "server-discover-probe-1", "method": "server/discover", "params": {}})
+        sonda = self.siguiente()
+        self.mandar({"jsonrpc": "2.0", "id": 0, "method": "initialize",
+                     "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "prueba", "version": "0"}}})
+        inicio = self.siguiente()
+        self.mandar({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        return sonda, inicio
+
+    def cerrar(self):
+        if self.p.poll() is None:
+            self.p.kill()
+        self.p.wait(timeout=5)
+        for f in (self.p.stdin, self.p.stdout):
+            try:
+                f.close()
+            except Exception:
+                pass
+
+
+class PruebasCanal(unittest.TestCase):
+    def setUp(self):
+        self.h = HubEnMarcha()
+        self.addCleanup(self.h.cerrar)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.entorno = dict(os.environ, SOMA_AGENTE="seppuq", SOMA_HUB=self.h.url, SOMA_HUB_TOKEN=TOKEN, SOMA_COMPANERO="count",
+                            SOMA_CANAL="1", SOMA_ESPERA="1")
+
+    def canal(self, **cambios):
+        entorno = dict(self.entorno, **cambios)
+        for k in [k for k, v in entorno.items() if v is None]:
+            del entorno[k]
+        c = CanalEnMarcha(entorno)
+        self.addCleanup(c.cerrar)
+        return c
+
+    def test_initialize_declara_canal_y_rechaza_la_sonda_nueva(self):
+        sonda, inicio = self.canal().saludar()
+        self.assertEqual(sonda["error"]["code"], -32601)  # así Claude Code cae a initialize y registra el canal
+        r = inicio["result"]
+        self.assertEqual(r["protocolVersion"], "2025-11-25")
+        self.assertIn("claude/channel", r["capabilities"]["experimental"])
+        self.assertIn("cliente.py enviar", r["instructions"])
+
+    def test_responde_a_ping_y_tools_list(self):
+        c = self.canal()
+        c.saludar()
+        c.mandar({"jsonrpc": "2.0", "id": 7, "method": "ping"})
+        self.assertEqual(c.siguiente(), {"jsonrpc": "2.0", "id": 7, "result": {}})
+        c.mandar({"jsonrpc": "2.0", "id": 8, "method": "tools/list"})
+        self.assertEqual(c.siguiente()["result"], {"tools": []})
+
+    def test_un_mensaje_del_companero_se_empuja_y_no_se_repite_en_el_hook(self):
+        c = self.canal()
+        c.saludar()
+        time.sleep(0.3)  # que el canal ya esté esperando en /espera
+        self.h.pedir("POST", "/mensajes", {"de": "count", "para": "seppuq", "texto": "ya está el endpoint"})
+        n = c.siguiente(espera=5)
+        self.assertEqual(n["method"], "notifications/claude/channel")
+        self.assertNotIn("id", n)
+        self.assertIn("ya está el endpoint", n["params"]["content"])
+        self.assertEqual(n["params"]["meta"], {"de": "count"})
+        _, otra = self.h.pedir("GET", "/novedades?agente=seppuq")
+        self.assertEqual(otra["mensajes"], [])
+
+    def test_sin_soma_canal_no_consume_nada(self):
+        c = self.canal(SOMA_CANAL=None)
+        c.saludar()
+        self.h.pedir("POST", "/mensajes", {"de": "count", "para": "seppuq", "texto": "para el hook"})
+        with self.assertRaises(queue.Empty):
+            c.siguiente(espera=1.5)
+        _, n = self.h.pedir("GET", "/novedades?agente=seppuq")
+        self.assertEqual([m["texto"] for m in n["mensajes"]], ["para el hook"])
+
+    def test_hub_caido_no_ensucia_stdout(self):
+        c = self.canal(SOMA_HUB="http://127.0.0.1:9")
+        c.saludar()
+        with self.assertRaises(queue.Empty):
+            c.siguiente(espera=1.5)
+        self.assertIsNone(c.p.poll())  # sigue vivo, reintentando
+
+    def test_termina_al_cerrar_stdin(self):
+        c = self.canal()
+        c.saludar()
+        c.p.stdin.close()
+        self.assertEqual(c.p.wait(timeout=5), 0)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "soma-canal": {
+      "command": "python3",
+      "args": ["compartido/canal.py"]
+    }
+  }
+}
