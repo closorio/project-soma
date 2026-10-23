@@ -1,0 +1,42 @@
+filters:
+  and:
+    - file.inFolder("experimentos")
+    - 'tipo == "experimento"'
+properties:
+  note.entorno:
+    displayName: Entorno
+  note.politica:
+    displayName: Política
+  note.metrica:
+    displayName: Métrica
+  note.valor:
+    displayName: Valor
+  note.base:
+    displayName: Frente a
+  note.veredicto:
+    displayName: Veredicto
+views:
+  - type: table
+    name: Experimentos
+    order:
+      - note.fecha
+      - file.name
+      - note.entorno
+      - note.politica
+      - note.metrica
+      - note.valor
+      - note.base
+      - note.veredicto
+      - note.autor
+    sort:
+      - property: note.fecha
+        direction: DESC
+  - type: table
+    name: Sin conclusión
+    filters:
+      and:
+        - 'veredicto == "pendiente"'
+    order:
+      - note.fecha
+      - file.name
+      - note.autor

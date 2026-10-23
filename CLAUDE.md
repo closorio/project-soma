@@ -30,3 +30,25 @@ Usa `enviar` para lo que el otro agente debe leer sí o sí (ya está listo X, n
 
 No arranques el hub ni cambies su configuración por tu cuenta: eso lo decide cada persona en su máquina.
 Si el hub no responde, los hooks callan y `cliente.py` lo dice con `ERROR:`; sigue trabajando y díselo a tu usuario.
+
+## Conocimiento compartido (vault de Obsidian en `conocimiento/`)
+
+Lo inmediato va por el hub; lo que debe durar va al vault, que viaja por git. Al arrancar la sesión recibes un resumen
+(fases en curso, últimas decisiones, último experimento). Las personas lo leen en Obsidian; tú escribe Markdown con el
+frontmatter de `conocimiento/plantillas/` (copia la plantilla, rellena `autor` con tu `SOMA_AGENTE`).
+
+| Cuándo | Dónde |
+|---|---|
+| Decides algo que afecta al otro (interfaz, puerto, convención, criterio de medida) | `decisiones/AAAA-MM-DD-titulo.md` |
+| Termina una medida o un entrenamiento | `python3 conocimiento/herramientas/experimento.py RUTA.json`, y luego rellena «Conclusión» y `veredicto` |
+| Descubres algo que no conviene redescubrir (un fallo con causa, un límite de una librería) | `aprendizajes/Titulo.md` |
+| Cambia el estado o el siguiente paso de una fase | el frontmatter de su nota en `roadmap/` (`estado`, `siguiente`, `actualizado`) |
+| Al cerrar la sesión, si hubo trabajo | `diario/<SOMA_AGENTE>/AAAA-MM-DD.md`, unas líneas |
+
+Reglas:
+- Una nota por cosa. No reescribas decisiones ni experimentos: crea otra y marca la vieja `estado: sustituida`.
+  No toques el diario del otro.
+- No copies diarios brutos ni salidas largas: resume y enlaza la ruta.
+- `git pull` antes de escribir en el vault; al terminar, commit y push solo de esas notas, y avisa con
+  `cliente.py enviar "nueva decisión: [[nombre]]"`. Si tu usuario no quiere commits automáticos, déjalas sin commitear y díselo.
+- `PLAN.md` y `PLAN_F7_supervivencia.md` siguen siendo el detalle técnico: no los muevas al vault.

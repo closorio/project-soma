@@ -1,0 +1,28 @@
+filters:
+  and:
+    - file.inFolder("decisiones")
+    - 'tipo == "decision"'
+views:
+  - type: table
+    name: Vigentes
+    filters:
+      and:
+        - 'estado == "vigente"'
+    order:
+      - note.fecha
+      - file.name
+      - note.autor
+      - note.fases
+    sort:
+      - property: note.fecha
+        direction: DESC
+  - type: table
+    name: Todas
+    order:
+      - note.fecha
+      - file.name
+      - note.estado
+      - note.autor
+    sort:
+      - property: note.fecha
+        direction: DESC

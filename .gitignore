@@ -32,3 +32,9 @@ compartido/hub.db*
 compartido/.cursor-*
 compartido/local.json
 .claude/settings.local.json
+# vault de Obsidian (conocimiento/): solo viaja la configuración compartida, no la de ventanas ni la personal
+conocimiento/.obsidian/*
+!conocimiento/.obsidian/app.json
+!conocimiento/.obsidian/core-plugins.json
+!conocimiento/.obsidian/templates.json
+conocimiento/.trash/

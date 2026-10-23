@@ -1,0 +1,34 @@
+filters:
+  and:
+    - file.inFolder("roadmap")
+    - 'tipo == "roadmap"'
+properties:
+  note.estado:
+    displayName: Estado
+  note.responsable:
+    displayName: Responsable
+  note.siguiente:
+    displayName: Siguiente paso
+  note.actualizado:
+    displayName: Actualizado
+views:
+  - type: table
+    name: Roadmap por estado
+    groupBy:
+      property: note.estado
+      direction: ASC
+    order:
+      - file.name
+      - note.estado
+      - note.responsable
+      - note.siguiente
+      - note.actualizado
+  - type: table
+    name: En curso
+    filters:
+      and:
+        - 'estado == "en-curso"'
+    order:
+      - file.name
+      - note.responsable
+      - note.siguiente
