@@ -252,7 +252,7 @@ class Personaje {
       const r = await marcha
       // depositar no es una acción de la red: no cambia la «habilidad anterior» de la observación
       if (nombre !== 'depositar') observacion.anotarHabilidad(this.bot, nombre, r.exito)
-      this.ev(`[hab] ${nombre} ${a || ''} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms)`)
+      this.ev(`[hab] ${nombre} ${args.join(' ')} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms)`)
       this.terreno(nombre, r)
       try { persistente.trasHabilidad(this.bot) } catch (e) { this.ev('[memoria] no se pudo guardar: ' + e.message) }
       this.anotarHabilidad(nombre, args.join(' '), r, tarea)
