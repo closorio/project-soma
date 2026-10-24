@@ -56,6 +56,7 @@ const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
+const persistente = require('./memoria_persistente') // F8.0a: lo que sobrevive a reiniciar (fuera del mundo del usuario)
 const rutinas = require('./rutinas') // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
@@ -86,6 +87,7 @@ class Personaje {
     this.visible = nombre === 'Io' ? 'Ío' : nombre
     this.quieto = FEMENINAS.has(nombre) ? 'quieta' : 'quieto'
     this.yo = { nombre } // memoria del personaje: cada bot nuevo (reconexiones) recibe la misma
+    persistente.alArrancar(this.yo) // F8.0a: base y refugio de la sesión anterior (mundos/<mundo>/memoria_<nombre>.json)
     // Tarea en marcha (cerebro o habilidad): `para` o una tarea nueva la cancelan, para que no se pisen dos bucles.
     this.tarea = { cancelada: false }
     // F4: modo («ordenes» | «libre»), qué hace al terminar una orden («quieto» | «libre»), la orden en curso, la última y lo que
@@ -152,7 +154,10 @@ class Personaje {
     })
     bot.on('playerJoined', (p) => { if (p.username !== bot.username) this.ev(`[mc] ${p.username} entró`) })
     bot.on('playerLeft', (p) => this.ev(`[mc] ${p.username} salió`))
-    bot.on('death', () => { this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray()) })
+    bot.on('death', () => {
+      this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
+      try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
+    })
     bot.on('health', () => {
       if (bot.health < 8) { this.ev(`[mc] salud baja: ${bot.health}`); if (!this.saludBaja) informe.evento(bot, 'salud_baja', bot.health) }
       this.saludBaja = bot.health < 8 // un aviso por cada bajada por debajo de 8, no uno por golpe
@@ -249,6 +254,7 @@ class Personaje {
       if (nombre !== 'depositar') observacion.anotarHabilidad(this.bot, nombre, r.exito)
       this.ev(`[hab] ${nombre} ${a || ''} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms)`)
       this.terreno(nombre, r)
+      try { persistente.trasHabilidad(this.bot) } catch (e) { this.ev('[memoria] no se pudo guardar: ' + e.message) }
       this.anotarHabilidad(nombre, args.join(' '), r, tarea)
       if (nombre !== 'depositar' && !tarea.cancelada) await (this.ocupado = this.reflejoGuardar(r, tarea))
       if (sv.activos(this.bot)) { // F7.2: huir, atacar y refugiarse ya responden a un golpe; después, los reflejos de supervivencia
@@ -1056,5 +1062,6 @@ lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.per
 // Al cerrar el bot (kill PID o Ctrl+C), el tramo de modo libre en curso se apunta en el diario antes de salir.
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
   for (const p of VIVOS.values()) try { p.cerrarTramo('bot cerrado') } catch (_) {}
+  for (const p of VIVOS.values()) try { persistente.guardar(p.yo.persistente) } catch (_) {}
   process.exit(0)
 })
