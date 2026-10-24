@@ -4,6 +4,9 @@
 //     (entrenamiento/ejecuciones/modos-AAAAMMDD.jsonl) pasadas por libre.decidir dan la misma habilidad, los mismos valores Q y los
 //     argumentos de la tabla de antes, sin salir del refugio; (2) en el mundo de mentira de probar_sentidos_seco.js, libre.decidir
 //     es observar + red.decidir + los argumentos de antes, también encerrado; (3) tramos de 300 s y nunca llama a observarSv.
+// C · decisores por personaje (F8.0a, bot/decisores.js), en un solo proceso sin IO_POLITICA ni IO_DECISOR: uno con la red del
+//     usuario (25 entradas, tramos de 300 s), otro con la red de supervivencia y otro con el guion de supervivencia (47, 1200 s);
+//     cada uno decide con lo suyo en los mismos mundos de mentira, el capataz se niega y «guion@RUTA» de la línea de órdenes vale.
 // B · supervivencia (IO_SERVIDOR=supervivencia, IO_POLITICA=entrenamiento/politica_supervivencia_dagger.json): observa con
 //     observarSv (47 entradas), tramos de 1200 s, todas las acciones con argumentos, fabricar sin objeto (siguienteFabricacion),
 //     y la salida del refugio de _necesita_salir() del simulador (solo dentro, y solo si la habilidad haría algo fuera).
@@ -28,8 +31,10 @@ if (!parte) {
   delete env.IO_POLITICA; delete env.IO_SERVIDOR
   const a = spawnSync(process.execPath, [__filename, 'usuario'], { env, stdio: 'inherit' })
   const b = spawnSync(process.execPath, [__filename, 'supervivencia'], { env: { ...env, IO_SERVIDOR: 'supervivencia', IO_POLITICA: DAGGER }, stdio: 'inherit' })
-  console.log(a.status === 0 && b.status === 0 ? 'probar_libre_seco: todo bien' : 'probar_libre_seco: HAY FALLOS')
-  process.exit(a.status === 0 && b.status === 0 ? 0 : 1)
+  const c = spawnSync(process.execPath, [__filename, 'decisores'], { env: { ...env, IO_SERVIDOR: 'supervivencia' }, stdio: 'inherit' })
+  const todo = a.status === 0 && b.status === 0 && c.status === 0
+  console.log(todo ? 'probar_libre_seco: todo bien' : 'probar_libre_seco: HAY FALLOS')
+  process.exit(todo ? 0 : 1)
 }
 
 const { mundoFalso, celda } = require('./probar_sentidos_seco')
@@ -85,6 +90,44 @@ if (parte === 'usuario') {
     console.log(`  2 · ${t}: ${x.d.habilidad} «${x.args}»`)
   }
   ok(llamadasSv === 0, `observarSv llamada ${llamadasSv} veces con la política del usuario`)
+  fin()
+}
+
+if (parte === 'decisores') {
+  const decisores = require('./decisores')
+  const guion = require('./guion_sv')
+  console.log('C · decisores por personaje')
+  const usuario = decisores.crear(), redSv = decisores.crear('red', DAGGER), guionSv = decisores.deTexto('guion@' + DAGGER)
+  ok(usuario.nombre === 'red' && path.basename(usuario.ruta) === 'politica_habilidades.json', `por defecto: ${usuario.nombre} ${usuario.ruta}`)
+  ok(guionSv.nombre === 'guion' && guionSv.ruta === DAGGER, `guion@RUTA: ${guionSv.nombre} ${guionSv.ruta}`)
+  ok(libre.tramo(usuario) === 300 && libre.tramo(redSv) === 1200 && libre.tramo(guionSv) === 1200,
+    `tramos ${libre.tramo(usuario)}, ${libre.tramo(redSv)}, ${libre.tramo(guionSv)} (esperaba 300, 1200, 1200)`)
+  ok(redSv.politica === guionSv.politica, 'la misma política no se carga dos veces')
+  const capataz = decisores.crear('capataz')
+  let negado = ''
+  try { capataz.preparar() } catch (e) { negado = e.message }
+  ok(/F8\.1/.test(negado), `el capataz debería negarse hasta F8.1 (dijo «${negado}»)`)
+  let mal = ''
+  try { decisores.crear('oraculo') } catch (e) { mal = e.message }
+  ok(/desconocido/.test(mal), 'un decisor desconocido se rechaza')
+  const mundos = {
+    'día con un árbol a 5': mundoFalso({ bloques: { '5,64,0': 'oak_log', '5,65,0': 'oak_log' } }),
+    'noche con un zombi a 6 y espada': mundoFalso({ hora: 18000, entidades: [{ name: 'zombie', pos: [6.5, 64, 0.5] }], inventario: [['wooden_sword', 1], ['dirt', 4]] }),
+    'atardecer con tierra': mundoFalso({ hora: 12600, inventario: [['dirt', 4], ['bread', 2]] }),
+    'hambre y una vaca': mundoFalso({ comida: 8, entidades: [{ name: 'cow', pos: [8.5, 64, 0.5] }] }),
+    'creeper a 4': mundoFalso({ hora: 18000, entidades: [{ name: 'creeper', pos: [4.5, 64, 0.5] }] }),
+    'noche sin nada y salud 6': mundoFalso({ hora: 13000, salud: 6 }),
+  }
+  let distintas = 0
+  for (const [t, bot] of Object.entries(mundos)) {
+    const u = libre.decidir(bot, usuario), r = libre.decidir(bot, redSv), g = libre.decidir(bot, guionSv)
+    ok(u.tipo === 'obs' && u.obs.length === 25 && igual(u.d, red.politica().decidir(u.obs)), `${t}: el del usuario no decide con su red de 25`)
+    ok(r.tipo === 'obs_sv' && igual(r.d, red.politica(DAGGER).decidir(r.obs)), `${t}: la red de supervivencia no decide con su política`)
+    ok(g.tipo === 'obs_sv' && igual(g.d, guion.decidir(g.obs)), `${t}: el guion no decide con guion_sv`)
+    if (r.d.habilidad !== g.d.habilidad) distintas++
+    console.log(`  ${t}: usuario ${u.d.habilidad} · red sv ${r.d.habilidad} · guion sv ${g.d.habilidad}`)
+  }
+  console.log(`  la red y el guion de supervivencia difieren en ${distintas} de ${Object.keys(mundos).length} mundos (informativo)`)
   fin()
 }
 

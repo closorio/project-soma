@@ -41,12 +41,8 @@ from entorno_supervivencia import (ACCIONES, CAL_SV, OBS, MundoSupervivencia, ca
                                    politica_guion_sv, vector_perfil)
 
 GAMMA, LOTE, NA, NO = 0.97, 256, len(ACCIONES), len(OBS)
+red_numpy.configurar(NO, NA)  # formas 47→64→64→11 para todo red_numpy (también en los procesos hijos, al importar)
 OCULTA = red_numpy.OCULTA
-red_numpy.NO, red_numpy.NA = NO, NA
-red_numpy.FORMAS = [(OCULTA, NO), (OCULTA,), (OCULTA, OCULTA), (OCULTA,), (NA, OCULTA), (NA,)]
-red_numpy.TAMANOS = [int(np.prod(f)) for f in red_numpy.FORMAS]
-red_numpy.N_PARAMETROS = sum(red_numpy.TAMANOS)
-red_numpy.MARGEN = (0.2 * (1 - np.eye(NA))).astype(np.float32)
 from red_numpy import Adam, a_json, adelante, de_json, gradiente, red_nueva  # noqa: E402 (después de cambiar las formas)
 
 MEMORIA, INICIO, CADA_OBJETIVO = 200_000, 5000, 2000

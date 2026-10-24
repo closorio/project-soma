@@ -33,7 +33,6 @@ const { PERSONAJES, esBot, pruebas, BOTS } = require('./habilidades/comun')
 const depositar = require('./habilidades/depositar')
 const cofres = require('./cofres')
 const arbolado = require('./arbolado')
-const red = require('./red')
 const ordenes = require('./ordenes')
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
@@ -57,6 +56,7 @@ const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
+const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
@@ -80,8 +80,8 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', quedate: () => 'M
 const FEMENINAS = new Set(['Alma'])
 
 class Personaje {
-  constructor(nombre, puerto, perfil, varios = false, modo = 'ordenes', despues = 'quieto') {
-    Object.assign(this, { nombre, puerto, varios })
+  constructor(nombre, puerto, perfil, varios = false, modo = 'ordenes', despues = 'quieto', decisor = decisores.crear()) {
+    Object.assign(this, { nombre, puerto, varios, decisor })
     this.visible = nombre === 'Io' ? 'Ío' : nombre
     this.quieto = FEMENINAS.has(nombre) ? 'quieta' : 'quieto'
     this.yo = { nombre } // memoria del personaje: cada bot nuevo (reconexiones) recibe la misma
@@ -375,7 +375,7 @@ class Personaje {
   // F7.5: con una política de supervivencia (obs_sv), libre.decidir observa con observarSv, los tramos duran un día de Minecraft
   // y, dentro del refugio, sale antes si la habilidad elegida lo necesita (como el simulador); con la del usuario, como siempre.
   async bucleLibre() {
-    try { red.cargar() } catch (e) {
+    try { this.decisor.preparar() } catch (e) {
       this.decir(`No puedo decidir solo: ${e.message}. Sigo en modo órdenes.`); this.ponerModo('ordenes', 'sin red'); return
     }
     const tarea = this.nuevaTarea(true)
@@ -388,7 +388,7 @@ class Personaje {
         if (this.reflejando) { await this.reflejando; continue } // F7.2: un reflejo en reposo: decidir cuando acabe
         if (!this.tramo || Date.now() - this.tramo.t0 >= this.tramo.T * 1000) { this.cerrarTramo('fin del tramo'); this.abrirTramo() }
         const t0 = Date.now()
-        const { obs, datos, d, args, salir } = libre.decidir(bot)
+        const { obs, datos, d, args, salir } = libre.decidir(bot, this.decisor)
         let r, salida = null
         if (salir) salida = await this.salirAntes(d.habilidad, tarea) // F7.5: solo con obs_sv, dentro del refugio
         try { r = await this.ejecutarHabilidad(d.habilidad, args, tarea) } catch (e) { r = { exito: false, causa: 'error: ' + e.message, ms: 0 } }
@@ -413,7 +413,7 @@ class Personaje {
   }
 
   abrirTramo() {
-    const T = libre.tramo()
+    const T = libre.tramo(this.decisor)
     observacion.iniciar(this.bot, T)
     this.tramo = { t0: Date.now(), T, inicio: registro.hora(), perfil: observacion.perfilDe(this.bot).nombre, troncos0: this.troncos(), decisiones: [] }
   }
@@ -540,7 +540,7 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
     }
-    const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true }
+    const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true }
     if (inmediata[o.tipo]) {
       const modoAntes = this.modo
       const r = this.ordenInmediata(o)
@@ -553,6 +553,15 @@ class Personaje {
     if (esperarFin) return (await fin).texto
     fin.catch(e => this.ev('[orden] fallo: ' + e.message))
     return AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.'
+  }
+
+  // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
+  ponerDecisor(nombre, ruta = null) {
+    let d
+    try { d = decisores.crear(nombre, ruta || this.decisor.ruta) } catch (e) { return { exito: false, texto: e.message + '.' } }
+    try { d.preparar() } catch (e) { return { exito: false, texto: `No puedo decidir con ${nombre}: ${e.message}.` } }
+    this.decisor = d
+    return { exito: true, texto: `Decido con ${d.nombre} (${path.basename(d.ruta)}).` }
   }
 
   ordenInmediata(o) {
@@ -572,9 +581,10 @@ class Personaje {
         observacion.ponerPerfil(this.bot, o.perfil)
         return { exito: true, texto: `Perfil ${o.perfil}: en modo libre decido como ${o.perfil}.` }
       }
+      case 'decisor': return this.ponerDecisor(o.decisor)
       case 'modo': {
         if (o.modo === 'libre') {
-          try { red.cargar() } catch (e) { return { exito: false, texto: `No puedo pasar a modo libre: ${e.message}.` } }
+          try { this.decisor.preparar() } catch (e) { return { exito: false, texto: `No puedo pasar a modo libre: ${e.message}.` } }
           this.ponerModo('libre', 'orden «modo libre»')
           return { exito: true, texto: `Modo libre: decido yo, con la red y el perfil ${observacion.perfilDe(this.bot).nombre}.` }
         }
@@ -888,7 +898,7 @@ class Personaje {
       modo: async (a) => {
         const p = (a || '').split(/\s+/).filter(Boolean)
         if (p[0] === 'libre' || p[0] === 'ordenes') {
-          if (p[0] === 'libre') red.cargar() // si la red no vale, falla aquí (y lo dice) en vez de quedarse en libre sin decidir
+          if (p[0] === 'libre') this.decisor.preparar() // si la red no vale, falla aquí (y lo dice) en vez de quedarse en libre sin decidir
           this.ponerModo(p[0], 'orden directa del puerto: modo ' + p[0])
         }
         const i = p.indexOf('despues')
@@ -995,8 +1005,14 @@ class Personaje {
         const p = observacion.perfilDe(this.bot)
         return JSON.stringify({ perfil: p.nombre, pesos: p.pesos, vector: p.vector, perfiles: observacion.perfiles() })
       },
+      // decisor [red|guion|capataz] [RUTA]: quién decide en libre y con qué política (F8.0a); sin nada, el actual
+      decisor: async (a) => {
+        const [nombre, ruta] = (a || '').split(/\s+/).filter(Boolean)
+        if (nombre) { const r = this.ponerDecisor(nombre, ruta ? path.resolve(ruta) : null); if (!r.exito) return r.texto }
+        return JSON.stringify({ decisor: this.decisor.nombre, politica: this.decisor.ruta, decisores: decisores.NOMBRES })
+      },
       // personajes: quién soy y qué otros personajes (bots) conozco, para no tomarlos por jugadores humanos
-      personajes: async () => JSON.stringify({ yo: this.nombre, puerto: this.puerto, perfil: observacion.perfilDe(this.bot).nombre,
+      personajes: async () => JSON.stringify({ yo: this.nombre, puerto: this.puerto, perfil: observacion.perfilDe(this.bot).nombre, decisor: this.decisor.nombre,
         personajes: [...PERSONAJES] }),
     }
     for (const n of Object.keys(habilidades.HABILIDADES)) O[n] = (a) => this.habilidad(n, a)
@@ -1013,21 +1029,24 @@ async function despachar(desde, texto, origen, esperarFin = false) {
   return quienes.length > 1 ? quienes.map((p, k) => `${p.visible}: ${String(rs[k]).replace(/\.$/, '')}`).join('; ') + '.' : rs[0]
 }
 
-// ---- Arranque: un Personaje por argumento (NOMBRE[:PUERTO[:PERFIL[:MODO]]]); puertos por defecto 3001, 3002… ----
+// ---- Arranque: un Personaje por argumento (NOMBRE[:PUERTO[:PERFIL[:MODO[:DECISOR[@RUTA]]]]]); puertos por defecto 3001, 3002… ----
+// DECISOR (F8.0a): red, guion o capataz, y con @RUTA su política; sin él, IO_DECISOR e IO_POLITICA (bot/decisores.js).
 const MODOS = ['ordenes', 'libre']
 const lista = (process.argv.length > 2 ? process.argv.slice(2) : ['Soma']).map((s, k) => {
-  const [nombre, puerto, perfil, modo] = s.split(':')
-  return { nombre, puerto: parseInt(puerto) || 3001 + k, perfil: perfil || 'recolector', modo: modo || process.env.IO_MODO || 'ordenes' }
+  const [nombre, puerto, perfil, modo, ...decisor] = s.split(':')
+  return { nombre, puerto: parseInt(puerto) || 3001 + k, perfil: perfil || 'recolector', modo: modo || process.env.IO_MODO || 'ordenes',
+    decisor: decisor.join(':') }
 })
 const DESPUES = process.env.IO_DESPUES === 'libre' ? 'libre' : 'quieto'
 for (const x of lista) {
   if (!observacion.perfiles().includes(x.perfil)) { console.error(`perfil desconocido para ${x.nombre}: ${x.perfil}`); process.exit(1) }
   if (!MODOS.includes(x.modo)) { console.error(`modo desconocido para ${x.nombre}: ${x.modo} (libre u ordenes)`); process.exit(1) }
+  try { x.decisor = decisores.deTexto(x.decisor) } catch (e) { console.error(`${x.nombre}: ${e.message}`); process.exit(1) }
   PERSONAJES.add(x.nombre)
 }
 registro.sesion.nombres = lista.map(x => x.nombre)
 // Entran de uno en uno (2 s entre ellos) para no saturar el servidor al conectar.
-lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES), 2000 * k))
+lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES, x.decisor), 2000 * k))
 // Al cerrar el bot (kill PID o Ctrl+C), el tramo de modo libre en curso se apunta en el diario antes de salir.
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
   for (const p of VIVOS.values()) try { p.cerrarTramo('bot cerrado') } catch (_) {}

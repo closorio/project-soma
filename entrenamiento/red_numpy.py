@@ -7,10 +7,21 @@ import numpy as np
 from entorno_habilidades import HABILIDADES, OBS
 
 NO, NA, OCULTA = len(OBS), len(HABILIDADES), 64
-FORMAS = [(OCULTA, NO), (OCULTA,), (OCULTA, OCULTA), (OCULTA,), (NA, OCULTA), (NA,)]
-TAMANOS = [int(np.prod(f)) for f in FORMAS]
-N_PARAMETROS = sum(TAMANOS)
-MARGEN = (0.2 * (1 - np.eye(NA))).astype(np.float32)  # MARGEN[g][j] = 0,2 si j ≠ g
+FORMAS = TAMANOS = N_PARAMETROS = MARGEN = None
+
+
+def configurar(no, na, oculta=64):
+    """Fija las formas de la red (no→oculta→oculta→na) para todo este módulo. Por defecto, la 25→64→64→6 de F2-F3; las redes
+    de supervivencia (47→11) y las de F8 (57→17) lo llaman al importar, en vez de sobrescribir las globales a mano."""
+    global NO, NA, OCULTA, FORMAS, TAMANOS, N_PARAMETROS, MARGEN
+    NO, NA, OCULTA = no, na, oculta
+    FORMAS = [(OCULTA, NO), (OCULTA,), (OCULTA, OCULTA), (OCULTA,), (NA, OCULTA), (NA,)]
+    TAMANOS = [int(np.prod(f)) for f in FORMAS]
+    N_PARAMETROS = sum(TAMANOS)
+    MARGEN = (0.2 * (1 - np.eye(NA))).astype(np.float32)  # MARGEN[g][j] = 0,2 si j ≠ g
+
+
+configurar(len(OBS), len(HABILIDADES))
 
 
 def red_nueva(rng):

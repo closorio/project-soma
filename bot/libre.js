@@ -8,14 +8,14 @@
 //            (SALEN y _necesita_salir()); si no, la habilidad falla dentro sin salir.
 // F7.6: con IO_DECISOR=guion (y una política de 47 entradas, que dice la observación), decide el guion de supervivencia
 // (guion_sv.js, copia de guion_sv_lote) en vez de la red; todo lo demás igual (para medir guion frente a red en Minecraft).
+// F8.0a: el decisor y su política son de cada personaje (bot/decisores.js); sin decir cuál, el del proceso (IO_DECISOR, IO_POLITICA).
 // fabricar va sin objeto: habilidades/fabricar.js elige el siguiente paso de la cadena con siguienteFabricacion(), el mismo que
 // siguiente_fabricacion() del simulador (lo comprueba bot/probar_habilidades_sv_seco.js).
-const red = require('./red')
 const observacion = require('./observacion')
 const { dist, encerrado } = require('./habilidades/comun')
 const sv = require('./habilidades/sv')
 const recogerComida = require('./habilidades/recoger_comida')
-const guion = require('./guion_sv')
+const decisores = require('./decisores')
 
 // Argumentos de cada habilidad como los pide ejecutor.py (y, las de supervivencia, como las hace el simulador): ir_a_arbol y
 // ir_a_otro_arbol hasta 80 bloques, recoger troncos a ≤ 8, huir del hostil más cercano (16 bloques, 20 s), atacar al más
@@ -29,7 +29,9 @@ const TRAMO = { obs: 300, obs_sv: 1200 } // s: un episodio de la red (una línea
 const SALEN = new Set(['ir_a_arbol', 'recoger', 'huir', 'atacar', 'recoger_comida', 'explorar'])
 const DETECCION = 16, RADIO_CAZA = 24
 
-const tramo = () => TRAMO[red.observacion()]
+let porDefecto = null // el decisor del proceso, para quien no lleve el suyo (y para las pruebas de siempre)
+const delProceso = () => porDefecto || (porDefecto = decisores.crear())
+const tramo = (decisor = delProceso()) => TRAMO[decisor.observacion()]
 
 // ¿La habilidad elegida, desde dentro del refugio, haría algo fuera? (_necesita_salir() del simulador). datos: los de observarSv.
 function necesitaSalir(bot, h, datos) {
@@ -45,10 +47,10 @@ function necesitaSalir(bot, h, datos) {
 }
 
 // La decisión: { tipo, obs, datos, d: { i, habilidad, q } de red.decidir, args, salir }.
-function decidir(bot) {
-  const tipo = red.observacion()
+function decidir(bot, decisor = delProceso()) {
+  const tipo = decisor.observacion()
   const { obs, datos } = tipo === 'obs_sv' ? observacion.observarSv(bot) : observacion.observar(bot)
-  const d = tipo === 'obs_sv' && process.env.IO_DECISOR === 'guion' ? guion.decidir(obs) : red.decidir(obs)
+  const d = decisor.decidir(obs, tipo)
   const salir = tipo === 'obs_sv' && encerrado(bot) && necesitaSalir(bot, d.habilidad, datos)
   return { tipo, obs, datos, d, args: ARGS[d.habilidad], salir }
 }

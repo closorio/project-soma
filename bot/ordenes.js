@@ -12,7 +12,7 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
   aranas: 'spider', creeper: 'creeper', creepers: 'creeper', bruja: 'witch', aldeano: 'villager', oveja: 'sheep', vaca: 'cow' }
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
-  'al terminar quieto o libre, perfil NOMBRE, estado, explora hacia el norte N [nadando] y, dentro del rectángulo de obras: mina N piedras, ' +
+  'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando] y, dentro del rectángulo de obras: mina N piedras, ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, refúgiate, ' +
   'sal del refugio, duerme, fabrica una espada, equípate, apártate, caza.'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
@@ -67,6 +67,7 @@ function interpretar(texto) {
   if (/\bmodo (?:de )?libre\b|\ba tu aire\b|\b(?:haz|haced) lo que quieras\b|^libres?$/.test(t)) return { tipo: 'modo', modo: 'libre' }
   if (/\bmodo (?:de )?ordene?s?\b|\bobedece|\ba mis ordenes\b/.test(t)) return { tipo: 'modo', modo: 'ordenes' }
   if ((m = t.match(/^(?:se |pon(?:te)? (?:el )?)?perfil (\w+)$/))) return { tipo: 'perfil', perfil: m[1] }
+  if ((m = t.match(/^(?:decide con (?:el |la )?|pon(?:te)? (?:el )?)?decisor (red|guion|capataz)$/))) return { tipo: 'decisor', decisor: m[1] } // F8.0a
   if (/\b(?:estado|informe)\b|^(?:como estas|que haces|donde estas|que tal)\b/.test(t)) return { tipo: 'estado' }
   if (/^(?:ayuda|que sabes hacer|ordenes)$/.test(t)) return { tipo: 'ayuda' }
   // F7.2: supervivencia (antes que «quédate», porque «espera al día» no es quedarse quieto, y que «tala», porque «consigue comida»
