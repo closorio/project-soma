@@ -57,7 +57,9 @@ const CHAT_ORDEN = new Set()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
 const persistente = require('./memoria_persistente') // F8.0a: lo que sobrevive a reiniciar (fuera del mundo del usuario)
-const rutinas = require('./rutinas') // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
+const rutinas = require('./rutinas')
+// Las habilidades que cambian el terreno: su línea [terreno] (rotos y puestos) deja al banco reponerlo (probar_noche.py).
+const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 'subir_a_superficie', 'desatascarse', 'explorar', 'verter']) // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
@@ -267,8 +269,8 @@ class Personaje {
 
   // F7.5: los bloques que cambian refugiarse y salir_del_refugio ([x, y, z, bloque]: rotos con lo que había, puestos con lo que
   // puso), una línea en el registro del bot, para que el banco (servidor-supervivencia/probar_noche.py) reponga el terreno.
-  terreno(nombre, r) {
-    if (!['refugiarse', 'salir_del_refugio'].includes(nombre) || !r || !((r.rotos || []).length || (r.puestos || []).length)) return
+  terreno(nombre, r) { // F8.0b: también las habilidades que cavan o ponen (TERRENO)
+    if (!TERRENO.has(nombre) || !r || !((r.rotos || []).length || (r.puestos || []).length)) return
     this.ev(`[terreno] ${JSON.stringify({ habilidad: nombre, rotos: r.rotos || [], puestos: r.puestos || [] })}`)
   }
 

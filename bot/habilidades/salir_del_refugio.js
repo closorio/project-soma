@@ -134,4 +134,5 @@ module.exports = async function salirDelRefugio(bot, args, tarea) {
   return { exito: false, causa: r, ...datos }
 }
 module.exports.enPozo = enPozo
+Object.assign(module.exports, { movimientos, foto, cambios, subirUno, subirPozo }) // F8.0b: escalera, desatascarse y explorar
 module.exports.paraSubir = paraSubir

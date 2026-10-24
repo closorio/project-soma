@@ -32,6 +32,14 @@ const HABILIDADES = {
   fundir: require('./fundir'),
   poner: require('./poner'),
   sacar_del_cofre: require('./sacar_del_cofre'),
+  // F8.0b: antorchas, escalera, salir de un atasco, caza de materiales y el cubo
+  iluminar: require('./iluminar'),
+  cavar_escalera: require('./escalera').cavarEscalera,
+  subir_a_superficie: require('./escalera').subirASuperficie,
+  desatascarse: require('./desatascarse'),
+  cazar: require('./cazar'),
+  recoger_agua: require('./agua').recogerAgua,
+  verter: require('./agua').verter,
 }
 
 // Interrupción por amenaza (como los «modos» de Mindcraft y como el simulador): un hostil a ≤ 6 bloques corta
@@ -42,7 +50,8 @@ const HABILIDADES = {
 // io.js decide si defenderse o huir). Y la interrupción corta solo la habilidad (una subtarea), no la tarea de quien la pidió: el
 // bucle libre o la orden siguen y deciden qué hacer. En el mundo del usuario todo sigue como antes.
 const RADIO_AMENAZA = 6
-const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar', 'poner', 'sacar_del_cofre']) // F8.0b: pasos cortos
+const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar', 'poner', 'sacar_del_cofre', 'iluminar', 'recoger_agua', 'verter',
+  'desatascarse', 'subir_a_superficie']) // F8.0b: pasos cortos o de salir de un sitio cerrado
 
 // Una tarea hija: cancelada si lo está la de fuera o si la cancela la alerta (sin tocar la de fuera).
 function subtarea(tarea) {

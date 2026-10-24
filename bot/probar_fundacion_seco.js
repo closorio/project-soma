@@ -83,6 +83,25 @@ const tarea = { cancelada: false }
   ok(cofres.registrar('Prueba-1-64-2', [[1, 64, 2]]) === true && cofres.esCofre(1, 64, 2), 'cofres.registrar no apunta el cofre')
   ok(cofres.registrar('otra vez', [[1, 64, 2]]) === false && cofres.lista().length === 1, 'cofres.registrar repite un cofre')
   console.log('  4 · poner: alias; cofres.registrar apunta una vez')
+
+  // 5 · escalera e iluminar en el mundo de mentira (sin picar ni poner: lo que deciden antes de tocar nada)
+  const { mundoFalso } = require('./probar_sentidos_seco')
+  const escalera = require('./habilidades/escalera')
+  const iluminar = require('./habilidades/iluminar')
+  const abierto = mundoFalso({}), tapado = mundoFalso({ bloques: { '0,70,0': 'stone' } })
+  ok(escalera.alCielo(abierto) && !escalera.alCielo(tapado), 'alCielo: al aire sí, con piedra 6 encima no')
+  const mira = (yaw) => { const b = mundoFalso({}); b.entity.yaw = yaw; return JSON.stringify(escalera.dirDe(b)) }
+  ok(mira(0) === '[0,-1]' && mira(Math.PI / 2) === '[-1,0]' && mira(Math.PI) === '[0,1]' && mira(-Math.PI / 2) === '[1,0]', 'dirDe por la mirada')
+  ok(JSON.stringify(escalera.dirDe(abierto, 'este')) === '[1,0]' && JSON.stringify(escalera.dirDe(abierto, 'norte')) === '[0,-1]', 'dirDe por el rumbo')
+  // bajar hacia el este con lava junto al escalón: se niega antes de picar
+  const lava = mundoFalso({ bloques: { '1,64,0': 'stone', '1,63,0': 'stone', '1,65,0': 'stone', '2,63,0': 'lava' } })
+  const ctx = { pasos: [], rotos: [], puestos: [], peligros: [], antorchas: 0 }
+  const r5 = await escalera.paso(lava, [1, 0], false, ctx, { cancelada: false })
+  ok(r5 === 'lava delante' && ctx.rotos.length === 0 && ctx.peligros[0].tipo === 'lava', `escalera junto a lava: ${r5} ${JSON.stringify(ctx)}`)
+  const c = abierto.entity.position.floored(), cas = iluminar.pisables(abierto, c, 6)
+  ok(cas.length > 80 && cas.every(v => v.y === 64), `pisables en el llano: ${cas.length}`)
+  ok(iluminar.manhattan(c, c.offset(3, 0, -4)) === 7, 'manhattan')
+  console.log(`  5 · escalera: rumbo, cielo y «lava delante» sin picar; iluminar ve ${cas.length} casillas pisables en radio 6`)
   fs.rmSync(tmp, { recursive: true, force: true })
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
   process.exit(fallos ? 1 : 0)
