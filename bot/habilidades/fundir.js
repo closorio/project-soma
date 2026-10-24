@@ -7,7 +7,7 @@
 // Devuelve { exito, causa, entrada, salida, obtenido, horno: [x, y, z], puesto }.
 const { goals } = require('mineflayer-pathfinder')
 const { conLimite, esperar, moverHasta, lejania } = require('./comun')
-const { colocar, sitioAlLado } = require('./colocar')
+const { colocarAlLado } = require('./colocar')
 const persistente = require('../memoria_persistente')
 
 // lo que entra → lo que sale (alias en español y en inglés)
@@ -55,12 +55,10 @@ async function hornoA(bot, tarea) {
     const r = await fabricar(bot, ['furnace'], tarea)
     if (!r.exito) return { causa: 'sin horno (' + r.causa + ')' }
   }
-  const sitio = sitioAlLado(bot)
-  if (!sitio) return { causa: 'sin sitio para el horno' }
-  const r = await colocar(bot, sitio, 'furnace')
+  const r = await colocarAlLado(bot, 'furnace')
   if (!r.exito) return { causa: 'no pude poner el horno: ' + r.causa }
   persistente.anotarLugar(bot, 'horno', r.pos)
-  return { b: bot.blockAt(sitio), puesto: true }
+  return { b: bot.blockAt(new (require('vec3').Vec3)(...r.pos)), puesto: true }
 }
 
 module.exports = async function fundir(bot, [pedido, cantidad, comb], tarea) {

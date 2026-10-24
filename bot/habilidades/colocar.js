@@ -36,15 +36,26 @@ async function colocar(bot, dest, item) {
   return { exito: false, causa: 'sin apoyo' }
 }
 
-// Una casilla a mi lado donde poner algo: libre (y libre encima), con suelo firme y que se pueda tocar.
-function sitioAlLado(bot) {
-  const b = nodo(bot)
+// Las casillas a mi lado donde poner algo: libres (y libre encima), con suelo firme y que se puedan tocar; las de los lados primero.
+function sitiosAlLado(bot) {
+  const b = nodo(bot), out = []
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
     if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
-    return v
+    out.push(v)
   }
-  return null
+  return out
+}
+const sitioAlLado = (bot) => sitiosAlLado(bot)[0] || null
+// Lo pone en la primera casilla de al lado donde entre (F8.0b: el banco vio fallar 1 de 10 hornos en la primera casilla, «sin apoyo»).
+async function colocarAlLado(bot, item) {
+  let ultimo = { exito: false, causa: 'sin sitio' }
+  for (const v of sitiosAlLado(bot).slice(0, 4)) {
+    ultimo = await colocar(bot, v, item)
+    if (ultimo.exito) return ultimo
+    await esperar(250)
+  }
+  return ultimo
 }
 
-module.exports = { colocar, sitioAlLado, esLoPuesto, APOYOS }
+module.exports = { colocar, sitioAlLado, sitiosAlLado, colocarAlLado, esLoPuesto, APOYOS }

@@ -135,4 +135,15 @@ async function elegirParcela(bot, dim, { radio = 24, margen = 10, desnivelMax = 
   return { mal: Object.entries(causas).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(', ') || 'sin candidatas' }
 }
 
-module.exports = { pisable, superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }
+// F8.0b: nadando, la superficie del agua en (x, z) cerca de yRef (agua con aire encima) también vale de destino de un tramo.
+function superficieAgua(bot, x, z, yRef, margen = 6) {
+  const y0 = Math.floor(yRef)
+  if (!bot.world.getColumn(x >> 4, z >> 4)) return null
+  for (let y = y0 + margen; y >= y0 - margen; y--) {
+    const b = bot.blockAt(new Vec3(x, y, z)), a = bot.blockAt(new Vec3(x, y + 1, z))
+    if (b && b.name === 'water' && libre(a)) return { y, bloque: 'water' }
+  }
+  return null
+}
+
+module.exports = { superficieAgua, pisable, superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }

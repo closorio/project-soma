@@ -28,15 +28,27 @@ function dirDe(bot, rumbo) {
   const yaw = bot.entity.yaw, x = -Math.sin(yaw), z = -Math.cos(yaw)
   return Math.abs(x) > Math.abs(z) ? [Math.sign(x), 0] : [0, Math.sign(z) || -1]
 }
-// ¿Ve el cielo? Nada sólido (ni líquido) en las CIELO casillas encima de la cabeza.
+// ¿Ve el cielo? Nada sólido (ni líquido) en las CIELO casillas encima de la cabeza; las hojas no cuentan (bajo un árbol no se
+// está encerrado: en el banco, bajo un manglar, desatascarse intentaba subir por la copa).
 function alCielo(bot) {
   const b = nodo(bot)
   for (let dy = 2; dy <= CIELO; dy++) {
     const k = bot.blockAt(b.offset(0, dy, 0))
+    if (k && /_leaves$/.test(k.name)) continue
     if (k && (sv.solido(k) || sv.esLiquido(k))) return false
   }
   return true
 }
+// ¿Puede salir andando? Una casilla de al lado libre (y libre encima), con suelo firme. Con el cielo a la vista pero en el fondo de
+// la zanja de su escalera, todavía no (F8.0b: en el banco paraba 2 bloques por debajo del suelo y no salía).
+function salidaLibre(bot) {
+  const b = nodo(bot)
+  return Object.values({ n: [0, -1], s: [0, 1], e: [1, 0], o: [-1, 0] }).some(([dx, dz]) => {
+    const v = b.offset(dx, 0, dz), a = bot.blockAt(v), c = bot.blockAt(v.offset(0, 1, 0)), s = bot.blockAt(v.offset(0, -1, 0))
+    return a && a.boundingBox === 'empty' && !sv.esLiquido(a) && c && c.boundingBox === 'empty' && sv.solido(s)
+  })
+}
+const fuera = (bot) => alCielo(bot) && salidaLibre(bot)
 const liquidoJunto = (bot, v) => {
   for (const [dx, dy, dz] of [[0, 0, 0], ...LADOS6]) {
     const k = bot.blockAt(v.offset(dx, dy, dz))
@@ -129,20 +141,20 @@ async function cavarEscalera(bot, [yArg, rumbo], tarea) {
 }
 
 async function subirASuperficie(bot, [rumbo], tarea) {
-  if (alCielo(bot)) return { exito: true, causa: 'ya fuera', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [] }
+  if (fuera(bot)) return { exito: true, causa: 'ya fuera', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [] }
   const ultima = memoria(bot).escalera
   const dir = rumbo ? dirDe(bot, rumbo) : ultima && !ultima.sube ? [-ultima.dir[0], -ultima.dir[1]] : dirDe(bot)
-  const r = await escalera(bot, { yMeta: Infinity, dir, hasta: () => alCielo(bot) }, tarea)
+  const r = await escalera(bot, { yMeta: Infinity, dir, hasta: () => fuera(bot) }, tarea)
   if (r.exito || r.causa === 'cancelado') return { ...r, modo: 'escalera' }
   // sin escalera (líquido delante, protegido…): pilar recto hacia arriba
   const { subirPozo, paraSubir } = require('./salir_del_refugio')
   if (!paraSubir(bot).length) return { ...r, modo: 'escalera' }
-  for (let k = 0; k < 4 && !alCielo(bot) && !(tarea && tarea.cancelada) && paraSubir(bot).length; k++) { // subirPozo: ≤ 8 por vez
+  for (let k = 0; k < 4 && !fuera(bot) && !(tarea && tarea.cancelada) && paraSubir(bot).length; k++) { // subirPozo: ≤ 8 por vez
     const y = nodo(bot).y
     await subirPozo(bot, nodo(bot).offset(0, CIELO, 0), tarea)
     if (nodo(bot).y === y) break
   }
-  return { ...r, exito: alCielo(bot), causa: alCielo(bot) ? 'fuera' : 'pilar: ' + r.causa, modo: 'pilar', y: nodo(bot).y }
+  return { ...r, exito: fuera(bot), causa: fuera(bot) ? 'fuera' : 'pilar: ' + r.causa, modo: 'pilar', y: nodo(bot).y }
 }
 
-module.exports = { cavarEscalera, subirASuperficie, alCielo, dirDe, paso, escalera, DIRS }
+module.exports = { cavarEscalera, subirASuperficie, alCielo, salidaLibre, fuera, dirDe, paso, escalera, DIRS }
