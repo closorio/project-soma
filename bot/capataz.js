@@ -1,0 +1,111 @@
+// El capataz (F8.1, PLAN_F8_perfiles.md): el guion de progresión sin tokens de los perfiles v2. Lee las etapas del rol
+// (perfiles/v2/<rol>.json, resueltas con perfil_v2.js) y, en cada decisión del modo libre, elige el siguiente paso:
+//   1. mantenimiento: de noche (reglas.noche = refugio) o con poca vida y monstruos (aprovechar_con_luz), rutina_noche; con hambre,
+//      comer o, sin comida y de día, recoger_comida;
+//   2. la etapa que toca (progresion.etapaActual): el siguiente paso de su `hacer` («minar iron_ore 3 12», «fundir iron 3»…), por
+//      turnos; un paso que falla 2 veces seguidas se salta, y si fallan todos, una alternativa según el tipo de etapa (explorar, o
+//      bajar por una escalera a por minerales) y se vuelve a empezar;
+//   3. sin etapas pendientes, explorar.
+// Con el resultado (alResultado) apunta la etapa como hecha cuando se cumple su objetivo, con el día y la hora del juego, en la
+// memoria persistente (etapas[rol][id]) o, en el mundo del usuario, en la RAM. Una orden de chat corta el paso en marcha (F4) y, al
+// volver a libre, el capataz sigue por la misma etapa.
+const memoria = require('./memoria')
+const persistente = require('./memoria_persistente')
+const perfilV2 = require('./perfil_v2')
+const progresion = require('./progresion')
+const sv = require('./habilidades/sv')
+const { nodo } = require('./habilidades/comun')
+
+const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000
+
+const roles = new Map() // nombre → { perfil, etapas } (las etapas resueltas una vez)
+function rol(nombre) {
+  if (!roles.has(nombre)) {
+    const perfil = perfilV2.cargar(nombre), cat = perfilV2.catalogo()
+    const errores = perfilV2.validar(perfil, cat, nombre)
+    if (errores.length) throw new Error(`el rol ${nombre} no vale: ${errores[0]}`)
+    roles.set(nombre, { perfil, etapas: perfilV2.resolver(perfil, cat) })
+  }
+  return roles.get(nombre)
+}
+const comprobar = (nombre) => { rol(nombre); return true }
+
+// Las etapas hechas del rol: en la memoria persistente si la hay (fuera del mundo del usuario); si no, en la RAM.
+function hechas(bot, nombre) {
+  const d = persistente.de(bot)
+  const donde = d ? (d.etapas = d.etapas || {}) : memoria(bot, 'etapas', () => ({}))
+  return (donde[nombre] = donde[nombre] || {})
+}
+const reloj = (bot) => ({ dia: bot.time && bot.time.day != null ? bot.time.day : null, hora: bot.time ? bot.time.timeOfDay : null })
+function marcarHecha(bot, nombre, id) {
+  const h = hechas(bot, nombre)
+  if (h[id]) return false
+  h[id] = { ...reloj(bot), t: new Date().toISOString() }
+  const d = persistente.de(bot)
+  if (d) persistente.guardar(d)
+  return true
+}
+const paso = (texto) => { const [habilidad, ...args] = texto.trim().split(/\s+/); return { habilidad, args } }
+const estadoCapataz = (bot) => memoria(bot, 'capataz', () => ({ etapa: null, paso: 0, fallos: {}, alternativas: 0 }))
+
+// Cuando todos los pasos de la etapa han fallado: algo que cambie la situación.
+function alternativa(bot, etapa, n) {
+  const y = nodo(bot).y
+  if (etapa.tipo === 'mineral' && n % 2 === 0 && y > 20) return { habilidad: 'cavar_escalera', args: [String(y - 12), '-'] }
+  return { habilidad: 'explorar', args: [] }
+}
+
+function decidir(bot, nombre) {
+  const { perfil, etapas } = rol(nombre)
+  const reglas = perfil.reglas || {}
+  const t = bot.time ? bot.time.timeOfDay : 6000
+  const atardecer = t >= ATARDECER && t < 12542
+  // 1 · mantenimiento
+  if (reglas.noche === 'refugio' && (sv.esNoche(bot) || atardecer)) return { habilidad: 'rutina_noche', args: ['900'], motivo: 'noche' }
+  if (reglas.noche !== 'refugio' && sv.esNoche(bot) && (bot.health < VIDA_REFUGIO || sv.aLaVista(bot).length >= 3))
+    return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }
+  const comida = sv.comidas(bot).length > 0
+  if (bot.food <= HAMBRE && comida) return { habilidad: 'comer', args: [], motivo: 'hambre' }
+  if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) return { habilidad: 'recoger_comida', args: [], motivo: 'hambre sin comida' }
+  // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
+  const e = progresion.estado(bot)
+  let et = progresion.etapaActual(etapas, e, hechas(bot, nombre))
+  for (let k = 0; et && et.yaCumple && k < etapas.length; k++) {
+    marcarHecha(bot, nombre, et.id)
+    et = progresion.etapaActual(etapas, e, hechas(bot, nombre))
+  }
+  if (!et) return { habilidad: 'explorar', args: [], motivo: 'rol completo' }
+  const st = estadoCapataz(bot)
+  if (st.etapa !== et.id) Object.assign(st, { etapa: et.id, paso: 0, fallos: {}, alternativas: 0 })
+  const pasos = et.hacer.filter(h => !h.startsWith('pendiente:'))
+  const datos = { etapa: et.id, falta: progresion.falta(et.objetivo, e) }
+  for (let k = 0; k < pasos.length; k++) {
+    const i = (st.paso + k) % pasos.length
+    if ((st.fallos[i] || 0) < FALLOS_PASO) return { ...paso(pasos[i]), paso: i, ...datos }
+  }
+  st.fallos = {}
+  return { ...alternativa(bot, et, st.alternativas++), alternativa: true, ...datos }
+}
+
+// Tras ejecutar lo decidido: cuenta el fallo o el acierto del paso, apunta la casa y las etapas que ya se cumplen.
+function alResultado(bot, nombre, d, r) {
+  const st = estadoCapataz(bot)
+  if (d.paso != null && st.etapa === d.etapa) {
+    if (r.exito) { st.fallos[d.paso] = 0; st.paso = d.paso + 1 } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
+  }
+  const dp = persistente.de(bot)
+  if (d.habilidad === 'construir' && r.exito && dp) { dp.casa = r.origen || nodo(bot).toArray(); persistente.guardar(dp) }
+  const { etapas } = rol(nombre), e = progresion.estado(bot), nuevas = []
+  for (const et of etapas) if (!hechas(bot, nombre)[et.id] && progresion.cumple(et.objetivo, e) && marcarHecha(bot, nombre, et.id)) nuevas.push(et.id)
+  return nuevas
+}
+
+// Para el puerto (orden `progreso`): rol, etapa que toca, lo que le falta y las hechas con su día.
+function progreso(bot, nombre) {
+  const { etapas } = rol(nombre), e = progresion.estado(bot), h = hechas(bot, nombre)
+  const et = progresion.etapaActual(etapas, e, h)
+  return { rol: nombre, etapa: et ? et.id : null, falta: et ? progresion.falta(et.objetivo, e) : [], hechas: h,
+    pendientes: etapas.filter(x => !h[x.id]).map(x => x.id), estado: e }
+}
+
+module.exports = { decidir, alResultado, progreso, comprobar, hechas, marcarHecha, rol }

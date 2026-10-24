@@ -24,7 +24,7 @@ const decisores = require('./decisores')
 const ARGS = { ir_a_arbol: '80', picar_tronco: '', recoger: '8 _log', ir_a_jugador: '', huir: '-', ir_a_otro_arbol: '80',
   // F7.2: las acciones nuevas de la red de supervivencia (ACCIONES de entorno_supervivencia.py), con sus valores por defecto
   comer: '', atacar: '-', refugiarse: '', dormir: '', fabricar: '', recoger_comida: '', explorar: '' }
-const TRAMO = { obs: 300, obs_sv: 1200 } // s: un episodio de la red (una línea en el diario): 5 min en F4, un día en F7.3
+const TRAMO = { obs: 300, obs_sv: 1200, capataz: 1200 } // s: un episodio de la red (una línea en el diario): 5 min en F4, un día en F7.3
 // Las de entorno_supervivencia.py: SALEN, DETECCION y el radio de recoger_comida (CAL_SV).
 const SALEN = new Set(['ir_a_arbol', 'recoger', 'huir', 'atacar', 'recoger_comida', 'explorar'])
 const DETECCION = 16, RADIO_CAZA = 24
@@ -48,6 +48,11 @@ function necesitaSalir(bot, h, datos) {
 
 // La decisión: { tipo, obs, datos, d: { i, habilidad, q } de red.decidir, args, salir }.
 function decidir(bot, decisor = delProceso()) {
+  if (decisor.pasoDe) { // F8.1: el capataz da el paso entero (habilidad y argumentos), sin observación ni red
+    const p = decisor.pasoDe(bot)
+    return { tipo: 'capataz', obs: null, datos: { perfil: decisor.rol, etapa: p.etapa || null, motivo: p.motivo || null, falta: p.falta || [] },
+      d: { i: null, habilidad: p.habilidad, q: null, paso: p.paso, etapa: p.etapa, alternativa: !!p.alternativa }, args: p.args.join(' '), salir: false }
+  }
   const tipo = decisor.observacion()
   const { obs, datos } = tipo === 'obs_sv' ? observacion.observarSv(bot) : observacion.observar(bot)
   const d = decisor.decidir(obs, tipo)

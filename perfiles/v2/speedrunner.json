@@ -45,7 +45,7 @@
     }
    },
    "hacer": [
-    "minar stone 11"
+    "minar stone 11 8"
    ]
   },
   {
@@ -60,7 +60,7 @@
     }
    },
    "hacer": [
-    "minar iron_ore 7",
+    "minar iron_ore 7 12",
     "fundir iron 7 tablones"
    ],
    "max_s": 1200,

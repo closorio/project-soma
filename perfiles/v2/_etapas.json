@@ -124,7 +124,7 @@
     }
    },
    "hacer": [
-    "minar stone 8"
+    "minar stone 8 8"
    ]
   },
   "herr_piedra": {
@@ -159,7 +159,8 @@
     }
    },
    "hacer": [
-    "minar coal_ore 8",
+    "minar coal_ore 8 12",
+    "fabricar antorcha",
     "fabricar antorcha"
    ]
   },
@@ -177,7 +178,7 @@
     }
    },
    "hacer": [
-    "minar iron_ore 3",
+    "minar iron_ore 3 12",
     "fundir iron 3"
    ],
    "max_s": 1800
@@ -223,7 +224,8 @@
     }
    },
    "hacer": [
-    "pendiente:construir_json casa_basica"
+    "construir cabana_techada",
+    "poner cama"
    ],
    "max_s": 2400
   },
@@ -253,7 +255,7 @@
     }
    },
    "hacer": [
-    "minar iron_ore 24",
+    "minar iron_ore 24 12",
     "fundir iron 24",
     "fabricar armadura_hierro",
     "equipar"

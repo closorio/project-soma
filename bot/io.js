@@ -416,6 +416,10 @@ class Personaje {
         if (salida) dec.salida = { exito: !!salida.exito, causa: String(salida.causa || ''), ms: salida.ms }
         if (r.reflejos) dec.reflejos = r.reflejos.map(x => `${x.habilidad}${x.exito ? '' : '✗'}`) // F7.5: lo que hizo el cuerpo después
         if (r.deposito) dec.cofre = { exito: !!r.deposito.exito, guardado: r.deposito.guardado || {} }
+        if (this.decisor.alResultado) { // F8.1: el capataz cuenta el paso y apunta las etapas hechas
+          try { const nuevas = this.decisor.alResultado(bot, d, r); if (nuevas && nuevas.length) { dec.etapas = nuevas; this.ev(`[capataz] etapas hechas: ${nuevas.join(', ')}`) } } catch (e) { this.ev('[capataz] ' + e.message) }
+          dec.etapa = d.etapa || datos.motivo
+        }
         if (r.pos) dec.pos = r.pos // el tronco picado (para comprobar que no es de una zona y para reponerlo tras una prueba)
         this.tramo.decisiones.push(dec)
         registro.jsonl({ tipo: 'decision', personaje: this.nombre, modo: 'libre', perfil: datos.perfil, ...dec, q: d.q, obs, datos }, this.ev.bind(this))
@@ -559,7 +563,7 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
     }
-    const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true }
+    const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true, rol: true }
     if (inmediata[o.tipo]) {
       const modoAntes = this.modo
       const r = this.ordenInmediata(o)
@@ -577,10 +581,11 @@ class Personaje {
   // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
   ponerDecisor(nombre, ruta = null) {
     let d
-    try { d = decisores.crear(nombre, ruta || this.decisor.ruta) } catch (e) { return { exito: false, texto: e.message + '.' } }
+    const deAntes = nombre === 'capataz' ? (this.decisor.nombre === 'capataz' ? this.decisor.ruta : null) : this.decisor.nombre === 'capataz' ? null : this.decisor.ruta
+    try { d = decisores.crear(nombre, ruta || deAntes) } catch (e) { return { exito: false, texto: e.message + '.' } }
     try { d.preparar() } catch (e) { return { exito: false, texto: `No puedo decidir con ${nombre}: ${e.message}.` } }
     this.decisor = d
-    return { exito: true, texto: `Decido con ${d.nombre} (${path.basename(d.ruta)}).` }
+    return { exito: true, texto: d.nombre === 'capataz' ? `Juego de ${d.rol}: en modo libre sigo sus etapas.` : `Decido con ${d.nombre} (${path.basename(d.ruta)}).` }
   }
 
   ordenInmediata(o) {
@@ -601,6 +606,7 @@ class Personaje {
         return { exito: true, texto: `Perfil ${o.perfil}: en modo libre decido como ${o.perfil}.` }
       }
       case 'decisor': return this.ponerDecisor(o.decisor)
+      case 'rol': return this.ponerDecisor('capataz', o.rol) // F8.1: juega con el rol v2 (perfiles/v2/<rol>.json)
       case 'modo': {
         if (o.modo === 'libre') {
           try { this.decisor.preparar() } catch (e) { return { exito: false, texto: `No puedo pasar a modo libre: ${e.message}.` } }
@@ -1068,8 +1074,13 @@ class Personaje {
       // decisor [red|guion|capataz] [RUTA]: quién decide en libre y con qué política (F8.0a); sin nada, el actual
       decisor: async (a) => {
         const [nombre, ruta] = (a || '').split(/\s+/).filter(Boolean)
-        if (nombre) { const r = this.ponerDecisor(nombre, ruta ? path.resolve(ruta) : null); if (!r.exito) return r.texto }
+        if (nombre) { const r = this.ponerDecisor(nombre, ruta ? (nombre === 'capataz' ? ruta : path.resolve(ruta)) : null); if (!r.exito) return r.texto }
         return JSON.stringify({ decisor: this.decisor.nombre, politica: this.decisor.ruta, decisores: decisores.NOMBRES })
+      },
+      // progreso: el rol del capataz, la etapa que toca, lo que le falta y las hechas con su día (F8.1)
+      progreso: async () => {
+        if (this.decisor.nombre !== 'capataz') return JSON.stringify({ rol: null, decisor: this.decisor.nombre })
+        return JSON.stringify(require('./capataz').progreso(this.bot, this.decisor.rol))
       },
       // personajes: quién soy y qué otros personajes (bots) conozco, para no tomarlos por jugadores humanos
       personajes: async () => JSON.stringify({ yo: this.nombre, puerto: this.puerto, perfil: observacion.perfilDe(this.bot).nombre, decisor: this.decisor.nombre,

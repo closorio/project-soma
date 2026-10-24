@@ -6,7 +6,8 @@
 //     es observar + red.decidir + los argumentos de antes, también encerrado; (3) tramos de 300 s y nunca llama a observarSv.
 // C · decisores por personaje (F8.0a, bot/decisores.js), en un solo proceso sin IO_POLITICA ni IO_DECISOR: uno con la red del
 //     usuario (25 entradas, tramos de 300 s), otro con la red de supervivencia y otro con el guion de supervivencia (47, 1200 s);
-//     cada uno decide con lo suyo en los mismos mundos de mentira, el capataz se niega y «guion@RUTA» de la línea de órdenes vale.
+//     cada uno decide con lo suyo en los mismos mundos de mentira, el capataz casual se prepara (un rol que no existe, no) y «guion@RUTA»
+//     de la línea de órdenes vale.
 // B · supervivencia (IO_SERVIDOR=supervivencia, IO_POLITICA=entrenamiento/politica_supervivencia_dagger.json): observa con
 //     observarSv (47 entradas), tramos de 1200 s, todas las acciones con argumentos, fabricar sin objeto (siguienteFabricacion),
 //     y la salida del refugio de _necesita_salir() del simulador (solo dentro, y solo si la habilidad haría algo fuera).
@@ -103,10 +104,14 @@ if (parte === 'decisores') {
   ok(libre.tramo(usuario) === 300 && libre.tramo(redSv) === 1200 && libre.tramo(guionSv) === 1200,
     `tramos ${libre.tramo(usuario)}, ${libre.tramo(redSv)}, ${libre.tramo(guionSv)} (esperaba 300, 1200, 1200)`)
   ok(redSv.politica === guionSv.politica, 'la misma política no se carga dos veces')
+  // F8.1: el capataz ya existe; con un rol que no existe se niega
   const capataz = decisores.crear('capataz')
-  let negado = ''
+  let negado = null
   try { capataz.preparar() } catch (e) { negado = e.message }
-  ok(/F8\.1/.test(negado), `el capataz debería negarse hasta F8.1 (dijo «${negado}»)`)
+  ok(negado === null && capataz.rol === 'casual' && libre.tramo(capataz) === 1200, `el capataz casual no se prepara (${negado})`)
+  let sinRol = ''
+  try { decisores.crear('capataz', 'astronauta').preparar() } catch (e) { sinRol = e.message }
+  ok(/ENOENT|no vale|astronauta/.test(sinRol), `un rol que no existe no se niega (${sinRol})`)
   let mal = ''
   try { decisores.crear('oraculo') } catch (e) { mal = e.message }
   ok(/desconocido/.test(mal), 'un decisor desconocido se rechaza')

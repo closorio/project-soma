@@ -78,7 +78,7 @@ function lejosDeProtegido(x, z, margen = 10) {
 // { mal: causa }. y = la altura del suelo más alto (a esa cota se nivela, solo rellenando: nunca cavando).
 function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax = 1, yRef = null, mov = null, camino = true } = {}) {
   const esquinas = [[x0, z0], [x0 + ancho - 1, z0], [x0, z0 + largo - 1], [x0 + ancho - 1, z0 + largo - 1]]
-  if (!esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' }
+  if (require('./mundo').nombre === 'usuario' && !esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' } // F8.1: solo en el del usuario
   if (!esquinas.every(([x, z]) => lejosDeProtegido(x, z, margen))) return { mal: `a menos de ${margen} de una zona protegida o un cofre` }
   const y0 = yRef ?? bot.entity.position.y
   const suelos = new Map()

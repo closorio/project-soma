@@ -82,6 +82,7 @@ function interpretar(texto) {
   if (/\bmodo (?:de )?ordene?s?\b|\bobedece|\ba mis ordenes\b/.test(t)) return { tipo: 'modo', modo: 'ordenes' }
   if ((m = t.match(/^(?:se |pon(?:te)? (?:el )?)?perfil (\w+)$/))) return { tipo: 'perfil', perfil: m[1] }
   if ((m = t.match(/^(?:decide con (?:el |la )?|pon(?:te)? (?:el )?)?decisor (red|guion|capataz)$/))) return { tipo: 'decisor', decisor: m[1] } // F8.0a
+  if ((m = t.match(/^(?:rol|juega (?:como|de)|haz de) (\w+)$/))) return { tipo: 'rol', rol: m[1] } // F8.1: el rol v2 del capataz
   if (/\b(?:estado|informe)\b|^(?:como estas|que haces|donde estas|que tal)\b/.test(t)) return { tipo: 'estado' }
   if (/^(?:ayuda|que sabes hacer|ordenes)$/.test(t)) return { tipo: 'ayuda' }
   // F8.0b: la fundación de los perfiles v2 (antes que «mata», «vacía», «recoge», «mina» y «tala», que se las comerían)
