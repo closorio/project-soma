@@ -1,0 +1,5 @@
+# Entorno de entrenamiento: python3 -m venv entrenamiento/.venv && entrenamiento/.venv/bin/pip install -r entrenamiento/requirements.txt
+# (en Ubuntu sin python3-venv: python3 -m venv --without-pip … y bootstrap con get-pip.py)
+numpy
+# Opcional, solo para entrenar.py y entrenar_supervivencia_dagger.py (rueda CPU, ~200 MB):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
