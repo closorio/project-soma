@@ -1,2 +1,1 @@
-{"_nota": "Divisores del vector de perfil (entradas perfil_* de la red, en [0, 1]); los usan entorno_habilidades.py y bot/observacion.js.",
- "madera": 2.0, "compania": 5.0, "seguridad": 5.0, "tiempo": 0.01, "supervivencia": 5.0}
+{"_nota": "Divisores del vector de perfil (entradas perfil_* de la red, en [0, 1]); los usan entorno_habilidades.py y bot/observacion.js. F8: progreso y riesgo solo los leen los perfiles v2 (perfiles/v2/).", "madera": 2.0, "compania": 5.0, "seguridad": 5.0, "tiempo": 0.01, "supervivencia": 5.0, "progreso": 5.0, "riesgo": 1.0}

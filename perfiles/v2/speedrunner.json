@@ -1,0 +1,104 @@
+{
+ "v": 2,
+ "nombre": "speedrunner",
+ "identidad": "Pasarse el juego lo antes posible: lo justo de cada cosa, aprovecha la noche con luz y acepta riesgos.",
+ "sirve_a": [],
+ "estilos": {
+  "madera": "recolector",
+  "noche": "supervivencia"
+ },
+ "pesos": {
+  "madera": 0.5,
+  "seguridad": 0.5,
+  "tiempo": 0.01,
+  "supervivencia": 0.5,
+  "progreso": 5.0,
+  "riesgo": 0.8
+ },
+ "reglas": {
+  "noche": "aprovechar_con_luz",
+  "y_min": -59,
+  "cofre": "no"
+ },
+ "etapas": [
+  {
+   "id": "madera",
+   "objetivo": {
+    "inv": {
+     "troncos": 4
+    }
+   },
+   "hacer": [
+    "rutina_madera 4 120"
+   ],
+   "max_s": 120
+  },
+  {
+   "id": "herr_madera",
+   "max_s": 60
+  },
+  {
+   "id": "piedra",
+   "objetivo": {
+    "inv": {
+     "piedra": 11
+    }
+   },
+   "hacer": [
+    "minar stone 11"
+   ]
+  },
+  {
+   "id": "herr_piedra",
+   "max_s": 240
+  },
+  {
+   "id": "hierro",
+   "objetivo": {
+    "inv": {
+     "hierro": 7
+    }
+   },
+   "hacer": [
+    "minar iron_ore 7",
+    "pendiente:fundir iron 7 tablones"
+   ],
+   "max_s": 1200,
+   "pre": {
+    "inv": {
+     "pico": 0.66
+    }
+   }
+  },
+  {
+   "id": "cubo"
+  },
+  {
+   "id": "portal"
+  },
+  {
+   "id": "nether"
+  },
+  {
+   "id": "fortaleza"
+  },
+  {
+   "id": "varas_blaze"
+  },
+  {
+   "id": "perlas"
+  },
+  {
+   "id": "ojos"
+  },
+  {
+   "id": "stronghold"
+  },
+  {
+   "id": "end"
+  },
+  {
+   "id": "dragon"
+  }
+ ]
+}

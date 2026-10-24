@@ -1,0 +1,447 @@
+{
+ "v": 2,
+ "_nota": "Catálogo común de etapas de los perfiles v2 (F8, PLAN_F8_perfiles.md). Cada rol (perfiles/v2/<rol>.json) elige etapas por id y puede cambiar sus campos. Lo validan bot/perfil_v2.js y entrenamiento/perfiles_v2.py; los nombres con «pendiente:» son habilidades que aún no existen (F8.0b y siguientes).",
+ "estado": {
+  "inv": [
+   "troncos",
+   "tablones",
+   "palos",
+   "piedra",
+   "carbon",
+   "hierro_mena",
+   "hierro",
+   "comida",
+   "colocables",
+   "antorchas",
+   "redstone",
+   "diamante",
+   "obsidiana",
+   "varas_blaze",
+   "perlas",
+   "ojos",
+   "pico",
+   "hacha",
+   "espada",
+   "armadura",
+   "mesa",
+   "horno",
+   "cama",
+   "cubo"
+  ],
+  "memoria": [
+   "base",
+   "refugio",
+   "cofre",
+   "horno",
+   "casa",
+   "huerto",
+   "portal",
+   "fortaleza",
+   "stronghold"
+  ],
+  "hitos": [
+   "nether",
+   "end",
+   "estructura_visitada",
+   "dragon_muerto"
+  ]
+ },
+ "acciones": [
+  "ir_a_arbol",
+  "picar_tronco",
+  "recoger",
+  "ir_a_jugador",
+  "huir",
+  "ir_a_otro_arbol",
+  "depositar",
+  "explorar",
+  "minar",
+  "construir",
+  "deshacer",
+  "comer",
+  "atacar",
+  "refugiarse",
+  "salir_del_refugio",
+  "dormir",
+  "esperar_al_dia",
+  "fabricar",
+  "equipar",
+  "apartarse",
+  "recoger_comida",
+  "rutina_madera",
+  "rutina_noche"
+ ],
+ "etapas": {
+  "madera": {
+   "tipo": "madera",
+   "objetivo": {
+    "inv": {
+     "troncos": 6
+    }
+   },
+   "hacer": [
+    "rutina_madera 6 300"
+   ]
+  },
+  "herr_madera": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "troncos": 3
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "pico": 0.33,
+     "espada": 0.33
+    }
+   },
+   "hacer": [
+    "fabricar pico_madera",
+    "fabricar espada_madera"
+   ]
+  },
+  "piedra": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.33
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "piedra": 8
+    }
+   },
+   "hacer": [
+    "minar stone 8"
+   ]
+  },
+  "herr_piedra": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "piedra": 8
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "pico": 0.66,
+     "espada": 0.66
+    }
+   },
+   "hacer": [
+    "fabricar pico_piedra",
+    "fabricar espada_piedra"
+   ]
+  },
+  "carbon": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.66
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "carbon": 8,
+     "antorchas": 8
+    }
+   },
+   "hacer": [
+    "minar coal_ore 8",
+    "fabricar antorcha"
+   ]
+  },
+  "hierro": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.66,
+     "carbon": 1
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "hierro": 3
+    }
+   },
+   "hacer": [
+    "minar iron_ore 3",
+    "pendiente:fundir iron 3"
+   ],
+   "max_s": 1800
+  },
+  "pico_hierro": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "hierro": 3
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "hacer": [
+    "pendiente:fabricar iron_pickaxe"
+   ]
+  },
+  "cama": {
+   "tipo": "comida",
+   "objetivo": {
+    "inv": {
+     "cama": 1
+    }
+   },
+   "hacer": [
+    "pendiente:cazar sheep 3",
+    "pendiente:fabricar white_bed"
+   ]
+  },
+  "casa": {
+   "tipo": "construir",
+   "pre": {
+    "inv": {
+     "cama": 1
+    }
+   },
+   "objetivo": {
+    "memoria": {
+     "casa": true
+    }
+   },
+   "hacer": [
+    "pendiente:construir_json casa_basica"
+   ],
+   "max_s": 2400
+  },
+  "comida": {
+   "tipo": "comida",
+   "objetivo": {
+    "inv": {
+     "comida": 16
+    }
+   },
+   "hacer": [
+    "recoger_comida",
+    "pendiente:cocinar"
+   ],
+   "repetir": true
+  },
+  "armadura": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "armadura": 15
+    }
+   },
+   "hacer": [
+    "minar iron_ore 24",
+    "pendiente:fundir iron 24",
+    "pendiente:fabricar armadura_hierro",
+    "equipar"
+   ],
+   "max_s": 3600
+  },
+  "aventura": {
+   "tipo": "explorar",
+   "pre": {
+    "memoria": {
+     "casa": true
+    }
+   },
+   "objetivo": {
+    "hitos": {
+     "estructura_visitada": true
+    }
+   },
+   "hacer": [
+    "pendiente:buscar_estructura village",
+    "pendiente:ir_a_punto base"
+   ],
+   "max_s": 3600
+  },
+  "cubo": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "hierro": 3
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "cubo": 1
+    }
+   },
+   "hacer": [
+    "pendiente:fabricar bucket"
+   ]
+  },
+  "portal": {
+   "tipo": "dimension",
+   "pre": {
+    "inv": {
+     "cubo": 1
+    }
+   },
+   "objetivo": {
+    "memoria": {
+     "portal": true
+    }
+   },
+   "hacer": [
+    "pendiente:buscar_estructura ruined_portal",
+    "pendiente:moldear_portal",
+    "pendiente:encender_portal"
+   ],
+   "max_s": 2100
+  },
+  "nether": {
+   "tipo": "dimension",
+   "pre": {
+    "memoria": {
+     "portal": true
+    }
+   },
+   "objetivo": {
+    "hitos": {
+     "nether": true
+    }
+   },
+   "hacer": [
+    "pendiente:cruzar_portal"
+   ]
+  },
+  "fortaleza": {
+   "tipo": "explorar",
+   "pre": {
+    "hitos": {
+     "nether": true
+    }
+   },
+   "objetivo": {
+    "memoria": {
+     "fortaleza": true
+    }
+   },
+   "hacer": [
+    "pendiente:buscar_fortaleza"
+   ],
+   "max_s": 1800
+  },
+  "varas_blaze": {
+   "tipo": "combate",
+   "pre": {
+    "memoria": {
+     "fortaleza": true
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "varas_blaze": 7
+    }
+   },
+   "hacer": [
+    "pendiente:cazar_blaze 7"
+   ],
+   "max_s": 1800
+  },
+  "perlas": {
+   "tipo": "combate",
+   "pre": {
+    "hitos": {
+     "nether": true
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "perlas": 12
+    }
+   },
+   "hacer": [
+    "pendiente:intercambiar 24"
+   ],
+   "max_s": 1800
+  },
+  "ojos": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "varas_blaze": 7,
+     "perlas": 12
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "ojos": 12
+    }
+   },
+   "hacer": [
+    "pendiente:fabricar ender_eye 12"
+   ]
+  },
+  "stronghold": {
+   "tipo": "explorar",
+   "pre": {
+    "inv": {
+     "ojos": 12
+    }
+   },
+   "objetivo": {
+    "memoria": {
+     "stronghold": true
+    }
+   },
+   "hacer": [
+    "pendiente:lanzar_ojo",
+    "pendiente:triangular",
+    "pendiente:viajar"
+   ],
+   "max_s": 2400
+  },
+  "end": {
+   "tipo": "dimension",
+   "pre": {
+    "memoria": {
+     "stronghold": true
+    }
+   },
+   "objetivo": {
+    "hitos": {
+     "end": true
+    }
+   },
+   "hacer": [
+    "pendiente:buscar_sala_portal",
+    "pendiente:activar_portal_end"
+   ],
+   "max_s": 1800
+  },
+  "dragon": {
+   "tipo": "combate",
+   "pre": {
+    "hitos": {
+     "end": true
+    }
+   },
+   "objetivo": {
+    "hitos": {
+     "dragon_muerto": true
+    }
+   },
+   "hacer": [
+    "pendiente:subir_torre",
+    "pendiente:romper_cristal",
+    "pendiente:atacar_dragon"
+   ],
+   "max_s": 3600
+  }
+ }
+}

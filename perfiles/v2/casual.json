@@ -1,0 +1,61 @@
+{
+ "v": 2,
+ "nombre": "casual",
+ "identidad": "Aventura estándar: progresa con calma, duerme en su cama, se hace una casa y no se juega la vida.",
+ "sirve_a": [],
+ "estilos": {
+  "madera": "recolector",
+  "noche": "supervivencia"
+ },
+ "pesos": {
+  "madera": 0.5,
+  "seguridad": 2.0,
+  "tiempo": 0.002,
+  "supervivencia": 2.0,
+  "progreso": 1.0,
+  "riesgo": 0.2
+ },
+ "reglas": {
+  "noche": "refugio",
+  "y_min": 0,
+  "cofre": "base"
+ },
+ "etapas": [
+  {
+   "id": "madera"
+  },
+  {
+   "id": "herr_madera"
+  },
+  {
+   "id": "piedra"
+  },
+  {
+   "id": "herr_piedra"
+  },
+  {
+   "id": "carbon"
+  },
+  {
+   "id": "hierro"
+  },
+  {
+   "id": "pico_hierro"
+  },
+  {
+   "id": "cama"
+  },
+  {
+   "id": "casa"
+  },
+  {
+   "id": "comida"
+  },
+  {
+   "id": "armadura"
+  },
+  {
+   "id": "aventura"
+  }
+ ]
+}
