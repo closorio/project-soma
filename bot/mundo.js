@@ -1,7 +1,8 @@
 // Mundo de Minecraft de este proceso (F7.0): un solo punto de resolución para el servidor y los datos de cada mundo.
 // IO_SERVIDOR (la misma variable que servidor/rcon.py y entrenamiento/mundo.py): sin valor o «usuario», el mundo pacífico del
 // usuario (localhost:25565); «supervivencia», el mundo de pruebas aparte (../servidor-supervivencia, 25566); «companero», el
-// server Java de un compañero por wifi (2026-10-23): host, puerto y versión de Minecraft salen de mundos/companero/mundo.json
+// server Java de un compañero por wifi (2026-10-23); «local», el servidor propio de F8 (servidor-local/, 26.1.2, 25567). En los
+// dos, host, puerto y versión de Minecraft salen de mundos/<nombre>/mundo.json
 // (`servidor: {host, puerto, version}`); IO_HOST, IO_PORT_SERVIDOR e IO_VERSION (io.js) los sobreescriben. mineflayer 4.39 llega
 // hasta la 26.1 (protocolo 775): el server del compañero tiene que estar en 26.1.x.
 // Los datos de cada mundo están en ../mundos/<nombre>/: zonas.json, cofres.json, obras.json, diario.md (y mundo.json en el de
@@ -16,13 +17,14 @@ const MUNDOS = {
   usuario: { host: 'localhost', puertoMc: 25565, version: '1.21.11' },
   supervivencia: { host: 'localhost', puertoMc: 25566, version: '1.21.11' },
   companero: { desdeMundoJson: true }, // host, puerto y versión en mundos/companero/mundo.json
+  local: { desdeMundoJson: true }, // F8: servidor-local/ (26.1.2, 25567; RCON 25577), en mundos/local/mundo.json
 }
 const HEREDADOS = { // solo para el mundo del usuario
   'zonas.json': path.join(RAIZ, 'zonas.json'), 'cofres.json': path.join(RAIZ, 'cofres.json'),
   'obras.json': path.join(RAIZ, 'obras.json'), 'diario.md': path.join(RAIZ, 'mente', 'diario.md'),
 }
 const nombre = process.env.IO_SERVIDOR || 'usuario'
-if (!MUNDOS[nombre]) throw new Error(`IO_SERVIDOR desconocido: ${nombre} (usuario, supervivencia o companero)`)
+if (!MUNDOS[nombre]) throw new Error(`IO_SERVIDOR desconocido: ${nombre} (usuario, supervivencia, companero o local)`)
 const carpetaDatos = path.join(RAIZ, 'mundos', nombre)
 
 // Servidor de Minecraft de este mundo: fijo en MUNDOS o, en el del compañero, el `servidor` de su mundo.json.

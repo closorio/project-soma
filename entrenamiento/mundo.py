@@ -1,7 +1,8 @@
 """Mundo de Minecraft en el que trabajan las herramientas de entrenamiento/ (F7.0): un solo punto de resolución, como bot/mundo.js.
 IO_SERVIDOR (la misma variable que servidor/rcon.py y bot/io.js): sin valor o «usuario», el mundo pacífico del usuario (25565);
 «supervivencia», el mundo de pruebas aparte (../servidor-supervivencia, 25566); «companero», el server Java de un compañero por wifi
-(2026-10-23; host, puerto y versión en mundos/companero/mundo.json: `servidor`; sin RCON todavía).
+(2026-10-23; host, puerto y versión en mundos/companero/mundo.json: `servidor`; sin RCON todavía); «local», el servidor propio de F8
+(servidor-local/, 26.1.2, 25567; RCON 25577; mundos/local/mundo.json).
 Datos de cada mundo en ../mundos/<nombre>/: zonas.json, cofres.json, obras.json, diario.md y, en el de supervivencia, mundo.json
 (semilla, aparición y bosque de preparar.py; campamento y puntos de partida los escribe F7.5). En mundos/usuario/ son enlaces a los
 archivos de siempre (../zonas.json…, ../mente/diario.md): cada ruta se resuelve al archivo real, para que escribir no rompa el enlace.
@@ -13,12 +14,13 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 MUNDOS = {"usuario": {"puerto_mc": 25565, "centro": (303, 32)}, "supervivencia": {"puerto_mc": 25566, "centro": None},
-          "companero": {"puerto_mc": None, "centro": None}}  # puerto_mc None: el de mundo.json: servidor.puerto
+          "companero": {"puerto_mc": None, "centro": None},
+          "local": {"puerto_mc": None, "centro": None}}  # F8: servidor-local/ (26.1.2)  # puerto_mc None: el de mundo.json: servidor.puerto
 HEREDADOS = {"zonas.json": RAIZ / "zonas.json", "cofres.json": RAIZ / "cofres.json", "obras.json": RAIZ / "obras.json",
              "diario.md": RAIZ / "mente" / "diario.md"}  # solo para el mundo del usuario
 NOMBRE = os.environ.get("IO_SERVIDOR") or "usuario"
 if NOMBRE not in MUNDOS:
-    raise SystemExit(f"IO_SERVIDOR desconocido: {NOMBRE!r} (usuario, supervivencia o companero)")
+    raise SystemExit(f"IO_SERVIDOR desconocido: {NOMBRE!r} (usuario, supervivencia, companero o local)")
 CARPETA = RAIZ / "mundos" / NOMBRE
 SUFIJO = "" if NOMBRE == "usuario" else "-" + NOMBRE  # el del usuario conserva los nombres de siempre (modos-AAAAMMDD.jsonl)
 

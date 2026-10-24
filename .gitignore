@@ -6,7 +6,12 @@ __pycache__/
 # lanzador de Minecraft
 tlauncher/
 # servidores: mundos, jars, librerías, copias, registros y datos de jugadores
-servidor/
+servidor/*
+!servidor/rcon.py
+servidor-local/*
+!servidor-local/*.sh
+!servidor-local/*.py
+!servidor-local/eula.txt
 servidor-supervivencia/libraries/
 servidor-supervivencia/copias/
 servidor-supervivencia/logs/

@@ -11,7 +11,7 @@ aparición (mundo.json). --seco: no manda nada (ni RCON ni órdenes al bot): esc
 que necesita el servidor (sirve para ver que la serie no cambia)."""
 import argparse, json, math, random, re, sys, threading, time, urllib.parse, urllib.request
 from pathlib import Path
-sys.path.insert(0, "/home/seppuq/Documentos/thereisnospoon/laboratorio/mundo-simulado/servidor")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "servidor"))  # servidor/rcon.py
 from rcon import rcon
 import mundo
 

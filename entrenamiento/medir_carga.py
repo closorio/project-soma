@@ -18,7 +18,8 @@ RAIZ = AQUI.resolve().parent
 sys.path.insert(0, str(AQUI.parent / "servidor"))
 from rcon import rcon
 
-CARPETAS = {"usuario": RAIZ / "servidor", "supervivencia": RAIZ / "servidor-supervivencia"}  # cwd de cada servidor
+CARPETAS = {"usuario": RAIZ / "servidor", "supervivencia": RAIZ / "servidor-supervivencia",
+            "local": RAIZ / "servidor-local"}  # cwd de cada servidor
 MUNDO_SV = RAIZ / "mundos" / "supervivencia" / "mundo.json"
 
 HZ = os.sysconf("SC_CLK_TCK")

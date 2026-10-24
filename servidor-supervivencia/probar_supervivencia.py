@@ -28,12 +28,15 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent / "servidor"))
 from rcon import rcon
 
+MUNDO_SV = os.environ.get("IO_SERVIDOR") or "supervivencia"  # F8: el mismo banco en otro mundo (p. ej. local, 26.1.2)
+(Path(__file__).resolve().parent / "logs").mkdir(exist_ok=True)  # registros del banco (ignorados por git)
+
 MIN_MB = 800
 X, Z, S = 96, -64, 150                   # centro de la arena; S: la altura de los pies sobre el suelo (bloque de arriba en S-1)
 R = 12                                   # la arena va de X-R a X+R (paredes de cristal en el borde)
 CAJA = (X - R, S - 12, Z - R, X + R, S + 15, Z + R)
 ETIQ = "prueba_sv"
-MEDIDAS = AQUI.parent / "entrenamiento" / "habilidades_medidas_sv.json"
+MEDIDAS = AQUI.parent / "entrenamiento" / ("habilidades_medidas_sv.json" if MUNDO_SV == "supervivencia" else f"habilidades_medidas_{MUNDO_SV}.json")
 SECCIONES = ["comer", "fabricar", "llano", "tapiar", "ladera", "seguridad", "zombi", "esqueleto", "esperar", "dormir", "apartarse",
              "caza", "reflejos"]
 
@@ -43,7 +46,7 @@ class Parada(Exception):
 
 
 def r(cmd):
-    return rcon(cmd, servidor="supervivencia")
+    return rcon(cmd, servidor=MUNDO_SV)
 
 
 def memoria_mb():
@@ -483,7 +486,7 @@ def main():
         b.arena()
         log = open(AQUI / "logs" / f"bot-{a.nombre}.log", "w")
         bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}"], cwd=AQUI.parent / "bot", stdout=log, stderr=subprocess.STDOUT,
-                               env={**os.environ, "IO_SERVIDOR": "supervivencia"}, start_new_session=True)
+                               env={**os.environ, "IO_SERVIDOR": MUNDO_SV}, start_new_session=True)
         info["pid_bot"] = bot.pid
         e = ""
         for _ in range(60):

@@ -29,9 +29,12 @@ RAIZ = AQUI.parent
 sys.path.insert(0, str(RAIZ / "servidor"))
 from rcon import rcon
 
+MUNDO_SV = os.environ.get("IO_SERVIDOR") or "supervivencia"  # F8: el mismo banco en otro mundo (p. ej. local, 26.1.2)
+(Path(__file__).resolve().parent / "logs").mkdir(exist_ok=True)  # registros del banco (ignorados por git)
+
 OW = "execute in minecraft:overworld"
-MUNDO = RAIZ / "mundos" / "supervivencia" / "mundo.json"
-OBRAS = RAIZ / "mundos" / "supervivencia" / "obras.json"
+MUNDO = RAIZ / "mundos" / MUNDO_SV / "mundo.json"
+OBRAS = RAIZ / "mundos" / MUNDO_SV / "obras.json"
 POLITICA = RAIZ / "entrenamiento" / "politica_supervivencia_dagger3.json"  # la oficial (semilla 0 de DAgger 3; decisión del usuario 2026-10-16)
 MIN_MB = 800
 ETIQ = "noche_sv"
@@ -46,7 +49,7 @@ class Parada(Exception):
 
 
 def r(cmd):
-    return rcon(cmd, servidor="supervivencia")
+    return rcon(cmd, servidor=MUNDO_SV)
 
 
 def memoria_mb():
@@ -210,7 +213,7 @@ def reponer_terreno(registro_bot):
 
 def analizar(desde, nombre):
     """Las decisiones del modo libre de esta ejecución (entrenamiento/ejecuciones/modos-supervivencia-AAAAMMDD.jsonl)."""
-    f = RAIZ / "entrenamiento" / "ejecuciones" / f"modos-supervivencia-{time.strftime('%Y%m%d')}.jsonl"
+    f = RAIZ / "entrenamiento" / "ejecuciones" / f"modos-{MUNDO_SV}-{time.strftime('%Y%m%d')}.jsonl"
     decs = []
     if f.exists():
         for l in f.read_text().splitlines():
@@ -276,7 +279,7 @@ def main():
     t_inicio = None
     try:
         # el bot primero: con él cerca están cargados los trozos que se miran para elegir puntos
-        env = {**os.environ, "IO_SERVIDOR": "supervivencia", "IO_POLITICA": a.politica}
+        env = {**os.environ, "IO_SERVIDOR": MUNDO_SV, "IO_POLITICA": a.politica}
         env.pop("IO_MODO", None)
         bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}:{a.perfil}:ordenes"], cwd=RAIZ / "bot",
                                stdout=open(rbot, "w"), stderr=subprocess.STDOUT, env=env, start_new_session=True)
@@ -326,7 +329,7 @@ def main():
         time.sleep(2)
         s0, p0, h0 = vigia(a.nombre)
         res["salida"] = {"salud": s0, "pos": p0, "hora": h0, "obs": (b.json("obs_sv").get("datos") or {})}
-        carga = subprocess.Popen([sys.executable, str(RAIZ / "entrenamiento" / "medir_carga.py"), "--servidor", "supervivencia",
+        carga = subprocess.Popen([sys.executable, str(RAIZ / "entrenamiento" / "medir_carga.py"), "--servidor", MUNDO_SV,
                                   "--segundos", str(int(a.max)), "--intervalo", "5", "--etiqueta", f"noche {a.perfil}", "--anotar"],
                                  stdout=open(AQUI / "logs" / f"carga-noche-{hora_ini}.log", "w"), stderr=subprocess.STDOUT,
                                  start_new_session=True)

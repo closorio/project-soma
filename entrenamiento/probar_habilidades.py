@@ -9,7 +9,7 @@ Escribe habilidades_medidas.json (éxito, causas y tiempos por habilidad) para c
 import argparse, json, math, random, re, statistics, sys, time, urllib.parse, urllib.request
 from collections import Counter, defaultdict
 from pathlib import Path
-sys.path.insert(0, "/home/seppuq/Documentos/thereisnospoon/laboratorio/mundo-simulado/servidor")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "servidor"))  # servidor/rcon.py
 from rcon import rcon
 
 OW = "execute in minecraft:overworld"

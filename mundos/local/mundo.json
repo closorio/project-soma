@@ -1,0 +1,45 @@
+{
+ "servidor": {
+  "host": "localhost",
+  "puerto": 25567,
+  "version": "26.1",
+  "nota": "Mundo local de F8 (servidor-local/, Minecraft 26.1.2, semilla 20261024). version: la que habla mineflayer 4.39 (26.1, protocolo 775)."
+ },
+ "rcon": {
+  "puerto": 25577,
+  "nota": "La clave está en servidor-local/server.properties (permisos 600, fuera de git)."
+ },
+ "aparicion": [
+  32,
+  68,
+  32
+ ],
+ "campamento": null,
+ "puntos": [],
+ "semilla": 20261024,
+ "aparicion_original": [
+  0,
+  69,
+  0
+ ],
+ "movida_al_bosque": true,
+ "bosque_mas_cercano": {
+  "bioma": "minecraft:forest",
+  "x": 32,
+  "z": 32,
+  "distancia": 45
+ },
+ "reglas": [
+  "Gamerule pvp is now set to: false",
+  "Gamerule spawn_monsters is now set to: true",
+  "Gamerule keep_inventory is now set to: false",
+  "Gamerule spawn_phantoms is now set to: false",
+  "The difficulty did not change; it is already set to normal"
+ ],
+ "locate": {
+  "minecraft:forest": "The nearest minecraft:forest is at [32, 69, 32] (45 blocks away)",
+  "minecraft:birch_forest": "The nearest minecraft:birch_forest is at [352, 69, 960] (1022 blocks away)",
+  "minecraft:flower_forest": "The nearest minecraft:flower_forest is at [544, 69, -160] (567 blocks away)"
+ },
+ "fecha": "2026-10-24 01:24"
+}

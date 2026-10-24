@@ -14,11 +14,14 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent / "servidor"))
 from rcon import rcon
 
+MUNDO_SV = os.environ.get("IO_SERVIDOR") or "supervivencia"  # F8: el mismo banco en otro mundo (p. ej. local, 26.1.2)
+(Path(__file__).resolve().parent / "logs").mkdir(exist_ok=True)  # registros del banco (ignorados por git)
+
 HOSTILES = ("zombie", "skeleton", "creeper", "spider", "enderman", "witch", "drowned", "husk", "stray", "slime",
             "zombie_villager", "cave_spider", "phantom", "bogged")
 
 def r(cmd):
-    return rcon(cmd, servidor="supervivencia")
+    return rcon(cmd, servidor=MUNDO_SV)
 
 def orden(puerto, c, t=15):
     try:
@@ -52,7 +55,7 @@ def main():
     res = {"nombre": a.nombre, "puerto": a.puerto, "inicio": time.strftime("%Y-%m-%d %H:%M:%S")}
     log = open(AQUI / "logs" / f"bot-{a.nombre}.log", "w")
     bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}"], cwd=AQUI.parent / "bot", stdout=log, stderr=subprocess.STDOUT,
-                           env={**os.environ, "IO_SERVIDOR": "supervivencia"}, start_new_session=True)
+                           env={**os.environ, "IO_SERVIDOR": MUNDO_SV}, start_new_session=True)
     res["pid_bot"] = bot.pid
     try:
         for _ in range(60):  # hasta 60 s para entrar

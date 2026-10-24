@@ -31,6 +31,9 @@ AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI.parent / "servidor"))
 from rcon import rcon
 
+MUNDO_SV = os.environ.get("IO_SERVIDOR") or "supervivencia"  # F8: el mismo banco en otro mundo (p. ej. local, 26.1.2)
+(Path(__file__).resolve().parent / "logs").mkdir(exist_ok=True)  # registros del banco (ignorados por git)
+
 MIN_MB = 800
 X, Y, Z = 96, 150, -64            # el bot, de pie sobre la plataforma (encima de la aparición, 96 66 -64)
 CAJA = (X - 5, Y - 4, Z - 5, X + 5, Y + 3, Z + 5)  # todo lo que la prueba pone: plataforma (Y-3..Y-1), refugio, antorcha…
@@ -46,7 +49,7 @@ class Parada(Exception):
 
 
 def r(cmd):
-    return rcon(cmd, servidor="supervivencia")
+    return rcon(cmd, servidor=MUNDO_SV)
 
 
 def memoria_mb():
@@ -310,7 +313,7 @@ def main():
         preparar(p)
         log = open(AQUI / "logs" / f"bot-{a.nombre}.log", "w")
         bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}"], cwd=AQUI.parent / "bot", stdout=log, stderr=subprocess.STDOUT,
-                               env={**os.environ, "IO_SERVIDOR": "supervivencia"}, start_new_session=True)
+                               env={**os.environ, "IO_SERVIDOR": MUNDO_SV}, start_new_session=True)
         info["pid_bot"] = bot.pid
         for _ in range(60):  # hasta 60 s para entrar
             time.sleep(1)
