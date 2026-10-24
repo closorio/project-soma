@@ -22,7 +22,7 @@ Un perfil real es **una cadena de etapas con un objetivo medible cada una**, no 
 ## Decisiones del usuario (2026-10-23)
 1. El roadmap llega **hasta el dragón**, por etapas con criterio medible; se ejecuta por fases y se para donde se llegue.
 2. **La progresión la lleva un guion determinista por rol en JS (sin tokens); la red entrenada decide la zona gris.** Alma/Claude queda fuera del bucle: evalúa y propone.
-3. La evaluación repetible se hace en un **servidor local propio** (recrear `servidor/` con 26.1.2 y RCON, y escribir `servidor/rcon.py`, que no está en disco). El server del compañero (`mundos/companero/`, sin RCON) es solo para jugar.
+3. La evaluación repetible se hace en un **servidor local propio** (hecho en F8.0a: `servidor-local/`, 26.1.2 en 127.0.0.1:25567 con RCON 25577, y `servidor/rcon.py`, que no existía). El server del compañero (`mundos/companero/`, sin RCON) es solo para jugar.
 4. Los perfiles de apoyo son Granjero, Minero y Explorador/Cartógrafo.
 
 ## Restricciones que condicionan el plan
@@ -168,14 +168,23 @@ Fundación mínima para medir cualquier rol: **C1 → C3 → C4 → C5**. C6-C7 
 
 Elytra queda fuera.
 
+## Estado de F8.0a (2026-10-24)
+Hecho en la rama `deploy`: `servidor/rcon.py` (un servidor por mundo, respuestas en varios paquetes y cerrojo entre procesos);
+`servidor-local/` en 26.1.2 (Java 25, semilla 20261024, `keep_inventory` y `spawn_phantoms` apagados) y el mundo `local`;
+taxonomía de amenazas por nombre (`bot/habilidades/taxonomia.js`); decisores por personaje (`bot/decisores.js`, CLI
+`NOMBRE:PUERTO:PERFIL:MODO:DECISOR[@RUTA]`, orden `decisor`); perfiles v2 `casual` y `speedrunner` con validadores JS y Python;
+rutinas `rutina_madera` y `rutina_noche` (`bot/rutinas.js`, guion de F3 en JS); memoria persistente
+(`bot/memoria_persistente.js`); `red_numpy.configurar`. Pendiente para F8.0b: en 26.1 `time query daytime` ya no existe y
+`time query day` mide otra cosa, y lo usan `experimentos_sv.py`, `probar_noche.py` y `experimento_mente_sv.py`.
+
 ## Fases
 | fase | contenido | puerta (criterio fijado antes de medir) | servidor | trabajador / máquina |
 |---|---|---|---|---|
-| F8.0a infra | `servidor/` 26.1.2 + RCON (scripts copiados de `servidor-supervivencia/`); `servidor/rcon.py` que resuelve el servidor por `IO_SERVIDOR`, con cerrojo; mundo `local` en `mundo.js`/`mundo.py`; taxonomía C0; decisores; perfiles v2 con sus validadores; rutinas y `guion_f3.js`; memoria persistente; pruebas en seco | `rcon.py list` 10/10; `probar_supervivencia.py` 13/13 en 26.1.2; pruebas en seco en verde; `IO_SERVIDOR` vacío se comporta igual que hoy | sí | 8-10 h / 2 sesiones |
+| F8.0a infra | `servidor-local/` 26.1.2 + RCON en 25567/25577 (scripts calcados de `servidor-supervivencia/`); `servidor/rcon.py` que resuelve el servidor por `IO_SERVIDOR`, con cerrojo; mundo `local` en `mundo.js`/`mundo.py`; taxonomía C0; decisores; perfiles v2 con sus validadores; rutinas y `guion_f3.js`; memoria persistente; pruebas en seco | `rcon.py list` 10/10; `probar_supervivencia.py` 13/13 en 26.1.2; pruebas en seco en verde; `IO_SERVIDOR` vacío se comporta igual que hoy | sí | 8-10 h / 2 sesiones |
 | F8.0b cuerpo base | E0 explorar robusto; C3-C7 (`fabricar` genérico, `fundir`, `poner`, `sacar_del_cofre`, `iluminar`, `cavar_escalera`, `subir`, `cazar`, `recoger_agua`, `verter`); banco H-hab | E0 10/10 en 4 terrenos; H-hab según la tabla de bancos | sí | 10-12 h / 3 sesiones |
 | F8.1 Casual K1-K5 + capataz | primer rol completo; banco K | hierro + cama en ≤ 2 días en ≥ 6/8; muertes ≤ 1 cada 3 días | sí | 8 h / 2 sesiones |
 | F8.2 Minero ∥ F8.3 Granjero | apoyo temprano, dos trabajadores en paralelo; bancos M y G | M: ≥ 24 de hierro en 6/8, 0 muertes por lava; G: huerto 7/8, cosecha 9/9, cría 6/8 | sí | 8 h + 8 h |
-| F8.G jornada + DAgger | simulador, guion de zona gris, red 57→17 | fidelidad ≥ 95 % por rol; hitos y muertes no peores que el guion (IC95); JS = numpy 300/300 | no | 6 h / 2-4 h de CPU |
+| F8.G jornada + DAgger | simulador **vectorizado** (lotes de mundos en numpy, repartidos en los 8 núcleos; GPU opcional), guion de zona gris, red 57→17 | fidelidad ≥ 95 % por rol; hitos y muertes no peores que el guion (IC95); JS = numpy 300/300 | no | 6 h / 2-4 h de CPU |
 | F8.9 balance mínimo | Casual solo frente a Casual + Minero | Casual + Minero llega al hierro ≥ 25 % antes | sí | 4 h |
 | F8.4 Explorador E1-E4 | mapa, estructuras, viajes; banco E | aldea ≥ 3/4, portal en ruinas ≥ 2/4 | sí | 8 h |
 | F8.5 Builder B1-B5 | planos JSON, nivelar, altura; banco B | 150 bloques al 100 % 4/4; 400 bloques ≥ 95 % 3/4, ≥ 8 bloques/min | sí | 10 h |
@@ -189,7 +198,7 @@ F8.0a → F8.0b → F8.1 Casual → (F8.2 Minero ∥ F8.3 Granjero) → F8.G (pr
 
 **Casual y Speedrunner.** Casual es la tercera fase (F8.1) y su red llega en F8.G. Speedrunner reutiliza toda la fundación y la red de zona gris; S1-S2 se pueden medir en cuanto F8.0b esté hecha, pero S3 y lo que sigue dependen de E4 (F8.4) y del Nether (F8.7).
 
-**Entrenamiento y GPU.** La red de la zona gris es pequeña (57→64→64→17) y la receta es la de F7.4: DAgger con entropía cruzada, lotes de 512 y Adam en numpy, 4-6 min de CPU por semilla. En redes así, el coste lo pone el simulador y no el aprendiz. **Medido el 2026-10-24** (GTX 1650): con lotes de 512, numpy tarda 0,6 ms por paso y CUDA 1,1 ms, así que el aprendiz de F8.G se queda en numpy. CUDA solo gana con lotes ≥ 2048 o con redes de 256 de ancho. Lo que más tarda en DAgger es la recogida en el simulador, y para acelerar hay que paralelizar eso. Detalle en la nota del vault «CUDA frente a numpy en redes pequeñas».
+**Entrenamiento y GPU.** La red de la zona gris es pequeña (57→64→64→17) y la receta es la de F7.4: DAgger con entropía cruzada, lotes de 512 y Adam en numpy, 4-6 min de CPU por semilla. En redes así, el coste lo pone el simulador y no el aprendiz. **Medido el 2026-10-24** (GTX 1650): con lotes de 512, numpy tarda 0,6 ms por paso y CUDA 1,1 ms, así que el aprendiz de F8.G se queda en numpy. CUDA solo gana con lotes ≥ 2048 o con redes de 256 de ancho. Lo que más tarda en DAgger es la recogida en el simulador, y para acelerar hay que paralelizar eso. Detalle en la nota del vault «CUDA frente a numpy en redes pequeñas». **Decisión del usuario (2026-10-24):** `entorno_jornada.py` se escribe vectorizado desde el principio (un paso avanza N mundos a la vez, con arrays), para que el mismo diseño pase a torch en la GPU si después crece la red o se hace refuerzo.
 
 ## Bancos (criterios fijados antes de medir)
 Todos en el servidor local 26.1.2, con 4 bots en cuadrado latino (plantilla `experimentos_sv.py`), `keep_inventory false`, `spawn_phantoms false` (nombres de las reglas en 26.1; se comprueban con `/gamerule` al montar el servidor), parada si `MemAvailable` < 800 MB, terreno repuesto y una copia tar.gz por hito.
@@ -218,7 +227,7 @@ Todos en el servidor local 26.1.2, con 4 bots en cuadrado latino (plantilla `exp
 - **Cupo y tokens**: cada medición con servidor cuesta ≈ 1 punto; bancos cortos y trabajadores ≤ 45 min. Alma no entra en el bucle.
 
 ## Ficheros que se crearán o tocarán (resumen)
-- Nuevos: `servidor/{descargar,arrancar,parar,guardar}.sh`, `servidor/rcon.py`, `mundos/local/…`, `perfiles/v2/{_etapas,casual,speedrunner,redstoner,builder,granjero,minero,cartografo}.json`, `bot/{rutinas,guion_f3,capataz,decisores,progresion,memoria_persistente,perfil_v2,guion_jornada}.js`, `bot/guiones/<rol>.js` (solo si hacen falta), las habilidades nuevas en `bot/habilidades/`, `entrenamiento/{entorno_jornada,entrenar_jornada_dagger,perfiles_v2,probar_rutinas,experimentos_roles,experimentos_equipos}.py`, `entrenamiento/rutinas_medidas.json` y las pruebas en seco `bot/probar_*_seco.js`.
+- Nuevos: `servidor-local/{descargar,arrancar,parar,guardar}.sh` y `preparar.py`, `servidor/rcon.py`, `mundos/local/…`, `perfiles/v2/{_etapas,casual,speedrunner,redstoner,builder,granjero,minero,cartografo}.json`, `bot/{rutinas,guion_f3,capataz,decisores,progresion,memoria_persistente,perfil_v2,guion_jornada}.js`, `bot/guiones/<rol>.js` (solo si hacen falta), las habilidades nuevas en `bot/habilidades/`, `entrenamiento/{entorno_jornada,entrenar_jornada_dagger,perfiles_v2,probar_rutinas,experimentos_roles,experimentos_equipos}.py`, `entrenamiento/rutinas_medidas.json` y las pruebas en seco `bot/probar_*_seco.js`.
 - Tocados: `bot/{io,libre,red,observacion,ordenes,registro,informe,mundo}.js`, `bot/habilidades/{index,fabricar,explorar,minar,sv}.js`, `entrenamiento/{mundo,red_numpy,probar_habilidades}.py`, `perfiles/*.json` y `_escala.json` (solo cambios aditivos), `mente/alma/mente.py`, `PLAN.md`, `bot/README.md`.
 - Intactos: `entorno_habilidades.py`, `entorno_supervivencia.py`, `entrenar_*` existentes, `politica_*.json`, `guion_sv.js`, `reflejos.js`, `experimentos*.py`, `servidor-supervivencia/`.
 
