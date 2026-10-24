@@ -177,6 +177,28 @@ rutinas `rutina_madera` y `rutina_noche` (`bot/rutinas.js`, guion de F3 en JS); 
 (`bot/memoria_persistente.js`); `red_numpy.configurar`. Pendiente para F8.0b: en 26.1 `time query daytime` ya no existe y
 `time query day` mide otra cosa, y lo usan `experimentos_sv.py`, `probar_noche.py` y `experimento_mente_sv.py`.
 
+## Estado de F8.0b (2026-10-24)
+Hecho en la rama `deploy`. **Hora de 26.1**: `rcon.hora()` lee el reloj en 1.21.11 y en 26.1, y la usan los tres bancos.
+**Fundación C3-C7** (`bot/habilidades/`):
+- `fabricar` genérico con el planificador de recetas (`planificador.js`; cama, cubo, cofre, horno, herramientas y armadura de
+  hierro, ojos de ender);
+- `fundir` (tabla propia: minecraft-data no trae recetas de horno);
+- `poner` (apunta los cofres en `cofres.json`) y `sacar_del_cofre`;
+- `iluminar`, `cavar_escalera`, `subir_a_superficie`, `desatascarse`, `cazar`, `recoger_agua` y `verter`;
+- `minar` fuera del rectángulo de obras cuando no es el mundo del usuario;
+- órdenes de chat de todas ellas.
+
+**Explorar robusto (E0)**: `parcela.pisable` (toda la columna), segunda vuelta que cava, tramos abandonados en vez de rendirse, a
+nado fuera del mundo del usuario (con la superficie del agua como destino) y desatascarse sin cielo encima.
+
+**Medidas en el servidor local 26.1.2**:
+- **H-hab**: las 9 secciones pasan sus criterios (fundir 10/10 tras poder probar varias casillas para el horno; sacar, poner,
+  iluminar, escalera, agua, verter, cazar y fabricar genérico, 10/10).
+- **E0**: llano 10/10, montaña 10/10, río 10/10, cueva 8/10. En la cueva sale del túnel en las 10; los 2 fallos van hacia el norte
+  desde el borde norte del llano, y lo que no supera es el terreno de allí («sin avance», «sin camino»).
+- **Pendiente**: ese terreno y los manglares, que siguen sin suelo seco ni superficie de agua libre (raíces anegadas). Pasan a E3
+  (viajes largos, F8.4).
+
 ## Fases
 | fase | contenido | puerta (criterio fijado antes de medir) | servidor | trabajador / máquina |
 |---|---|---|---|---|
