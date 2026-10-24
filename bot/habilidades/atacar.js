@@ -13,6 +13,7 @@ const { conMovimientos, dist, esperar, hostiles, prudentes } = require('./comun'
 const huir = require('./huir')
 const sv = require('./sv')
 const { ponerArma } = require('./equipar')
+const { NUNCA_ATACAR } = require('./taxonomia')
 
 const RADIO = 16, ALCANCE = 3, SALUD_MIN = 8, MAX_HOSTILES = 2, CREEPER_CERCA = 5
 
@@ -82,6 +83,8 @@ module.exports = async function atacar(bot, args, tarea) {
     const h = await huir(bot, ['creeper', '12', '10'], tarea)
     return { exito: false, causa: 'creeper', huida: h.causa, golpes: 0, ...datos() }
   }
+  // F8.0a: tampoco con creaking, ghast, warden… (taxonomia.NUNCA_ATACAR; el creeper ya tiene su caso)
+  if (NUNCA_ATACAR.has(e.name)) return { exito: false, causa: 'nunca atacar', golpes: 0, ...datos() }
   if (bot.health < SALUD_MIN && !acorralado) return { exito: false, causa: 'salud baja', golpes: 0, ...datos() }
   if (hostiles(bot, RADIO).length > MAX_HOSTILES && !acorralado) return { exito: false, causa: 'demasiados', golpes: 0, ...datos() }
   let arma = null

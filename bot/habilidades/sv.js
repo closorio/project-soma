@@ -9,7 +9,8 @@ const zonas = require('../zonas')
 const cofres = require('../cofres')
 const obras = require('../obras')
 const observacion = require('../observacion')
-const { pruebas, hostiles, esperar } = require('./comun')
+const { hostiles, esperar, esAmenaza } = require('./comun')
+const { anotarAgresor } = require('./taxonomia')
 const { tipoHostil, COMIDA_MALA, esColocable, valorArma, PUNTOS_ARMADURA, PIEZAS, NOCHE } = observacion
 
 const RADIO_N = 16 // hostiles que cuentan como «a la vista» (hostiles_n de la observación)
@@ -25,8 +26,9 @@ const madrugada = (bot) => hora(bot) > NOCHE[1] || hora(bot) < AMANECE // del fi
 const esperable = (bot) => hora(bot) >= ATARDECER || hora(bot) < AMANECE // del atardecer a las 6:29 (F7.6; simulador: _esperable)
 
 // ---- monstruos ----
-// Un monstruo: entidad hostil (o de un tipo marcado con `amenaza_prueba` en pacífico). Los jugadores, animales y la caída no.
-const esMonstruo = (bot, e) => !!e && e !== bot.entity && (e.type === 'hostile' || pruebas(bot).amenazas.has(e.name))
+// Un monstruo: una amenaza según la taxonomía (./taxonomia.js; o un tipo marcado con `amenaza_prueba` en pacífico). Los
+// jugadores, los animales, la caída y los neutrales que no han golpeado no.
+const esMonstruo = (bot, e) => esAmenaza(bot, e)
 // Muertos hace poco (la entidad tarda ~1 s en desaparecer tras morir): no son objetivo ni amenaza. Lo apunta vigilarGolpes.
 const muertos = (bot) => memoria(bot, 'muertos', () => new Map())
 const vivo = (bot, e) => !!e && e.isValid !== false && !(Date.now() - (muertos(bot).get(e.id) || 0) < 3000)
@@ -121,7 +123,9 @@ const atendido = (bot) => { estado(bot).atendido = Date.now() }
 function vigilarGolpes(bot, alGolpe = () => {}) {
   bot.on('entityDead', (e) => { if (e) muertos(bot).set(e.id, Date.now()) })
   bot.on('entityHurt', (e, fuente) => {
-    if (!bot.entity || e !== bot.entity || !esMonstruo(bot, fuente)) return
+    if (!bot.entity || e !== bot.entity) return
+    anotarAgresor(bot, fuente) // un neutral que golpea pasa a ser amenaza un rato (taxonomia.AGRESOR_MS)
+    if (!esMonstruo(bot, fuente)) return
     const g = estado(bot).golpe = { t: Date.now(), id: fuente.id, nombre: fuente.name, tipo: tipoHostil(fuente) }
     alGolpe(g)
   })

@@ -3,6 +3,7 @@ const { Vec3 } = require('vec3')
 const { Movements } = require('mineflayer-pathfinder')
 const memoria = require('../memoria')
 const zonas = require('../zonas')
+const taxonomia = require('./taxonomia')
 
 // Nombres de los personajes (bots) que no son jugadores humanos: los de este proceso (io.js los añade) y los de IO_BOTS
 // (otros procesos, separados por comas). «El jugador» de la observación y de ir_a_jugador/ven es siempre un humano.
@@ -85,11 +86,12 @@ function buscarEntidad(bot, nombre, radio = 48) {
 }
 
 // Hostiles en el radio, del más cercano al más lejano (hostilCercano: el primero; F7.1 cuenta cuántos hay).
-// Con el servidor en pacífico no hay hostiles: la orden `amenaza_prueba TIPO`
+// Qué es amenaza lo dice la taxonomía por nombre (./taxonomia.js, F8.0a): los hostiles siempre y los neutrales que acaban de
+// golpear. Con el servidor en pacífico no hay hostiles: la orden `amenaza_prueba TIPO`
 // hace que una entidad de ese tipo (p. ej. villager) cuente como amenaza, para probar huir, obs y la interrupción.
+const esAmenaza = (bot, e) => taxonomia.esAmenaza(bot, e, pruebas(bot).amenazas)
 function hostiles(bot, radio) {
-  const { amenazas } = pruebas(bot)
-  return Object.values(bot.entities).filter(e => e !== bot.entity && (e.type === 'hostile' || amenazas.has(e.name)) && dist(bot, e) < radio)
+  return Object.values(bot.entities).filter(e => esAmenaza(bot, e) && dist(bot, e) < radio)
     .sort((a, b) => dist(bot, a) - dist(bot, b))
 }
 const hostilCercano = (bot, radio) => hostiles(bot, radio)[0] || null
@@ -123,5 +125,5 @@ async function moverHasta(bot, meta, listo, { ms, tarea, entidad, mov }) {
   } finally { bot.removeListener('path_update', alCalcular) }
 }
 
-module.exports = { esperar, dist, conLimite, prudentes, prudentesSecos, conMovimientos, lejania, hayCamino, nodo, buscarEntidad, jugadorCercano,
+module.exports = { esAmenaza, esperar, dist, conLimite, prudentes, prudentesSecos, conMovimientos, lejania, hayCamino, nodo, buscarEntidad, jugadorCercano,
   companeroCercano, moverHasta, hostilCercano, hostiles, encerrado, pruebas, PERSONAJES, esBot, BOTS, companeros }
