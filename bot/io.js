@@ -56,6 +56,7 @@ const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
+const rutinas = require('./rutinas') // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
@@ -234,6 +235,11 @@ class Personaje {
   // Una habilidad con la tarea dada (la de una orden o la del bucle del modo libre), y después el reflejo de guardar.
   async ejecutarHabilidad(nombre, a, tarea) {
     const args = Array.isArray(a) ? a : a ? String(a).split(/\s+/).filter(Boolean) : []
+    if (rutinas.RUTINAS[nombre]) { // F8.0a: una rutina son varias habilidades, cada una por aquí (registro, reflejos, cofre)
+      const r = await rutinas.ejecutar(this.bot, nombre, args, tarea, (h, x, t) => this.ejecutarHabilidad(h, x, t))
+      this.ev(`[rutina] ${nombre} ${args.join(' ')} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms; ${(r.decisiones || []).join(' ')})`)
+      return r
+    }
     this.enHabilidad++
     try {
       const marcha = habilidades.ejecutar(this.bot, nombre, args, tarea)
@@ -1015,7 +1021,7 @@ class Personaje {
       personajes: async () => JSON.stringify({ yo: this.nombre, puerto: this.puerto, perfil: observacion.perfilDe(this.bot).nombre, decisor: this.decisor.nombre,
         personajes: [...PERSONAJES] }),
     }
-    for (const n of Object.keys(habilidades.HABILIDADES)) O[n] = (a) => this.habilidad(n, a)
+    for (const n of [...Object.keys(habilidades.HABILIDADES), ...Object.keys(rutinas.RUTINAS)]) O[n] = (a) => this.habilidad(n, a)
     return O
   }
 }

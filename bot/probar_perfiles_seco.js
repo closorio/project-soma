@@ -1,6 +1,6 @@
 // Prueba en seco de los perfiles v2 (F8.0a; bot/perfil_v2.js y entrenamiento/perfiles_v2.py), sin servidor:
 // 1. Los roles de perfiles/v2/ no tienen errores, y JS y Python dan las mismas etapas resueltas y los mismos errores.
-// 2. Las acciones del catálogo que no son rutinas existen en bot/habilidades (no se queda atrás si cambia el registro).
+// 2. Las acciones del catálogo existen en bot/habilidades o en bot/rutinas.js, y al revés (no se queda atrás si cambia el registro).
 // 3. Roles rotos a propósito: los dos validadores ven lo mismo (pre que nadie da, acción desconocida, peso fuera de escala,
 //    estilo que no existe, etapa repetida) y JS = Python también en los errores.
 // Uso: node bot/probar_perfiles_seco.js   (necesita python3 en el PATH)
@@ -31,9 +31,10 @@ ok(['casual', 'speedrunner'].every(n => js[n]), 'faltan casual o speedrunner')
 process.env.IO_SERVIDOR = process.env.IO_SERVIDOR || 'supervivencia'
 const { HABILIDADES } = require('./habilidades')
 const cat = v2.catalogo()
-const sueltas = cat.acciones.filter(a => !a.startsWith('rutina_') && !HABILIDADES[a])
+const { RUTINAS } = require('./rutinas')
+const sueltas = cat.acciones.filter(a => a.startsWith('rutina_') ? !RUTINAS[a] : !HABILIDADES[a])
 ok(sueltas.length === 0, `acciones del catálogo que no son habilidades: ${sueltas.join(', ')}`)
-const nuevas = Object.keys(HABILIDADES).filter(h => !cat.acciones.includes(h))
+const nuevas = [...Object.keys(HABILIDADES), ...Object.keys(RUTINAS)].filter(h => !cat.acciones.includes(h))
 ok(nuevas.length === 0, `habilidades que faltan en el catálogo: ${nuevas.join(', ')}`)
 console.log(`  2 · ${cat.acciones.length} acciones del catálogo frente a ${Object.keys(HABILIDADES).length} habilidades`)
 

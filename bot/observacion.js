@@ -45,6 +45,12 @@ function cargarPerfil(nombre) {
 const perfiles = () => fs.readdirSync(DIR_PERFILES).filter(f => f.endsWith('.json') && !f.startsWith('_')).map(f => f.slice(0, -5))
 const perfilDe = (bot) => memoria(bot, 'perfil', () => cargarPerfil('recolector')) // por defecto, el Ío de F2
 function ponerPerfil(bot, nombre) { return (memoria(bot).perfil = cargarPerfil(nombre)) }
+// F8.0a: corre fn con el perfil (estilo) `nombre` y deja el de antes al acabar, pase lo que pase (las rutinas de bot/rutinas.js)
+async function conPerfil(bot, nombre, fn) {
+  const antes = memoria(bot).perfil
+  ponerPerfil(bot, nombre)
+  try { return await fn() } finally { memoria(bot).perfil = antes }
+}
 const VISTA = 48, RADIO_OBJ = 8, META = 10, RADIO_AMENAZA = 16
 const NOCHE = [12480, 23520] // 0,52-0,98 del día, como el simulador
 // Escalas de supervivencia (las de entorno_supervivencia.py)
@@ -286,7 +292,7 @@ const ESCALAS_SV = { vista: VISTA, radio_obj: RADIO_OBJ, meta: META, noche: NOCH
   radio_hostiles: RADIO_HOSTILES, hostiles_max: HOSTILES_MAX, comida_max: COMIDA_MAX, tierra_max: TIERRA_MAX, armadura_max: ARMADURA_MAX,
   radio_peligro: RADIO_PELIGRO, caida_max: CAIDA_MAX }
 
-module.exports = { observar, observarSv, iniciar, anotarHabilidad, NOMBRES, HABILIDADES, NOMBRES_SV, ACCIONES_SV, TIPOS_HOSTIL, ESCALAS_SV,
+module.exports = { conPerfil, observar, observarSv, iniciar, anotarHabilidad, NOMBRES, HABILIDADES, NOMBRES_SV, ACCIONES_SV, TIPOS_HOSTIL, ESCALAS_SV,
   ponerPerfil, perfilDe, perfiles,
   // F7.2: lo mismo que ven los sentidos, para las habilidades de supervivencia y los reflejos (habilidades/sv.js, reflejos.js)
   tipoHostil, COMIDA_MALA, esColocable, valorArma, PUNTOS_ARMADURA, PIEZAS, puntosArmadura, hayCaida, liquidos, NOCHE }
