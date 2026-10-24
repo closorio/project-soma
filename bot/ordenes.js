@@ -14,14 +14,28 @@ const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando] y, dentro del rectángulo de obras: mina N piedras, ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, refúgiate, ' +
-  'sal del refugio, duerme, fabrica una espada, equípate, apártate, caza.'
+  'sal del refugio, duerme, fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
+  'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, ilumina, baja N (una escalera), sube, ' +
+  'desatáscate, caza N ovejas, recoge agua, vierte el agua.'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
 const BLOQUES = { piedra: 'stone', piedras: 'stone', roca: 'stone', tierra: 'dirt', arena: 'sand', grava: 'gravel', mineral: 'mineral', minerales: 'mineral',
   carbon: 'coal_ore', hierro: 'iron_ore', cobre: 'copper_ore', andesita: 'andesite', granito: 'granite', diorita: 'diorite', arenisca: 'sandstone' }
 // F7.2: lo que se puede fabricar, por su nombre en español (habilidades/fabricar.js; «espada» a secas: de piedra si hay piedra)
 const FABRICABLES = { espada: 'espada', espadas: 'espada', pico: 'pico', picos: 'pico', hacha: 'hacha', hachas: 'hacha', pala: 'pala_madera',
   mesa: 'mesa', palo: 'palos', palos: 'palos', tablon: 'tablones', tablones: 'tablones', tabla: 'tablones', tablas: 'tablones',
-  antorcha: 'antorcha', antorchas: 'antorcha' }
+  antorcha: 'antorcha', antorchas: 'antorcha',
+  // F8.0b: el fabricar genérico (habilidades/fabricar.js, GENERICOS)
+  cama: 'cama', cubo: 'cubo', cofre: 'cofre', horno: 'horno', escudo: 'escudo', mechero: 'mechero', cizallas: 'cizallas', puerta: 'puerta',
+  azada: 'azada', armadura: 'armadura_hierro' }
+// F8.0b: animales que se cazan para materiales, lo que se funde, lo que se pone y lo que se saca del cofre, por su nombre en español
+const ANIMALES = { oveja: 'sheep', ovejas: 'sheep', vaca: 'cow', vacas: 'cow', cerdo: 'pig', cerdos: 'pig', pollo: 'chicken', pollos: 'chicken',
+  gallina: 'chicken', gallinas: 'chicken', conejo: 'rabbit', conejos: 'rabbit' }
+const FUNDIBLES = { hierro: 'hierro', oro: 'oro', cobre: 'cobre', arena: 'arena', cristal: 'arena', vidrio: 'arena', piedra: 'piedra',
+  carne: 'carne', comida: 'carne' }
+const PONIBLES = { cofre: 'cofre', horno: 'horno', mesa: 'mesa', antorcha: 'antorcha', cama: 'cama', tierra: 'tierra', bloque: 'tierra' }
+const SACABLES = { troncos: 'troncos', tronco: 'troncos', madera: 'troncos', tablones: 'tablones', piedra: 'piedra', comida: 'comida',
+  carbon: 'carbon', hierro: 'hierro', lana: 'lana' }
+const palabra = (t, tabla) => { const w = t.split(' ').find(x => tabla[x]); return w ? tabla[w] : null }
 const PLANOS = { cabana: 'cabana', cabanas: 'cabana', casa: 'cabana', casita: 'cabana', refugio: 'cabana', muro: 'muro', pared: 'muro', muralla: 'muro',
   pilar: 'pilar', columna: 'pilar', poste: 'pilar', plataforma: 'plataforma', suelo: 'plataforma', tarima: 'plataforma' }
 
@@ -70,6 +84,24 @@ function interpretar(texto) {
   if ((m = t.match(/^(?:decide con (?:el |la )?|pon(?:te)? (?:el )?)?decisor (red|guion|capataz)$/))) return { tipo: 'decisor', decisor: m[1] } // F8.0a
   if (/\b(?:estado|informe)\b|^(?:como estas|que haces|donde estas|que tal)\b/.test(t)) return { tipo: 'estado' }
   if (/^(?:ayuda|que sabes hacer|ordenes)$/.test(t)) return { tipo: 'ayuda' }
+  // F8.0b: la fundación de los perfiles v2 (antes que «mata», «vacía», «recoge», «mina» y «tala», que se las comerían)
+  if ((m = t.match(/\b(?:caza|cazad|cazar|mata|matad|consigue|trae)\b/)) && palabra(t, ANIMALES))
+    return { tipo: 'cazar', animal: palabra(t, ANIMALES), n: numero(t) || 1 }
+  if (/\b(?:recoge|recoged|llena|llenad|coge|coged)\b.*\bagua\b|\bllena el cubo\b/.test(t)) return { tipo: 'agua' }
+  if (/\b(?:vierte|verted|vierta|echa|echad|vacia el cubo)\b.*\b(?:agua|lava|cubo)\b|^(?:pon|poned) (?:el )?(?:agua|lava)\b/.test(t))
+    return { tipo: 'vierte', que: /\blava\b/.test(t) ? 'lava' : 'agua' }
+  if (/\b(?:funde|fundid|fundir|cocina|cocinad|cocinar|asa|asad|hornea)\b/.test(t))
+    return { tipo: 'funde', entrada: palabra(t, FUNDIBLES) || (/\b(?:cocina|cocinad|cocinar|asa|asad)\b/.test(t) ? 'carne' : 'hierro'), n: numero(t) || 1 }
+  if (/\b(?:ilumina|iluminad|iluminar|alumbra|alumbrad|pon antorchas|poned antorchas)\b/.test(t)) return { tipo: 'ilumina' }
+  if (/^(?:pon|poned|coloca|colocad)\b/.test(t) && palabra(t, PONIBLES)) return { tipo: 'pon', objeto: palabra(t, PONIBLES) }
+  if (/\b(?:saca|sacad|sacar)\b|\b(?:coge|trae) del cofre\b/.test(t)) return { tipo: 'saca', objeto: palabra(t, SACABLES), n: numero(t) || 8 }
+  if (/\b(?:desatascate|desatascaos|desatascarte|estas atascad[oa]s?|sal de aqui como puedas)\b/.test(t)) return { tipo: 'desatascate' }
+  if (/^(?:sube|subid)\b|\b(?:sube|subid|sal) a la superficie\b/.test(t)) return { tipo: 'sube' }
+  if (/^(?:baja|bajad)\b|\b(?:cava|cavad|haz) una escalera\b|\bescalera (?:hacia )?abajo\b/.test(t)) {
+    const y = String(texto).match(/\by\s*=?\s*(-?\d+)/i) // del texto original: normalizar quita el signo
+    const r = t.match(/\b(norte|sur|este|oeste)\b/)
+    return { tipo: 'baja', y: y ? parseInt(y[1]) : null, n: y ? null : numero(t) || 16, rumbo: r ? r[1] : null }
+  }
   // F7.2: supervivencia (antes que «quédate», porque «espera al día» no es quedarse quieto, y que «tala», porque «consigue comida»
   // no es talar)
   if (/^(?:espera|esperad)\b.*\b(?:dia|amanezca|amanecer|se haga de dia)\b|\b(?:duerme|dormid|dormir|a dormir|vete a dormir|acuestate)\b/.test(t))
@@ -86,7 +118,7 @@ function interpretar(texto) {
   if (/\b(?:fabrica|fabricad|fabricar|craftea|craftead|craftear|hazte|haz(?:me)?|crea|hacer)\b/.test(t) && (/\b(?:fabrica|fabricad|fabricar|craftea|craftead|craftear)\b/.test(t) || t.split(' ').some(w => FABRICABLES[w]))) {
     const w = t.split(' ').find(x => FABRICABLES[x])
     let objeto = w ? FABRICABLES[w] : null
-    if (['espada', 'pico', 'hacha'].includes(objeto) && /\bde (piedra|madera)\b/.test(t)) objeto += /\bde piedra\b/.test(t) ? '_piedra' : '_madera'
+    if (['espada', 'pico', 'hacha'].includes(objeto) && /\bde (piedra|madera|hierro|diamante)\b/.test(t)) objeto += '_' + t.match(/\bde (piedra|madera|hierro|diamante)\b/)[1]
     return { tipo: 'fabrica', objeto }
   }
   if (/^(?:quedate|quedaos|quieto|quieta|quietos|quietas|para|parad|alto|espera|esperad|stop|detente|deteneos|basta|deja de|dejad de)\b/.test(t))

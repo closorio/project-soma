@@ -78,7 +78,12 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', quedate: () => 'M
   equipate: () => 'Me equipo.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
   explora: (o) => `Voy a explorar ${o.rumbo === '-' ? 'por ahí' : 'hacia el ' + o.rumbo}, ${o.n} bloques${o.nada ? ', nadando si hace falta' : ''}.`, mina: (o) => `Voy a minar ${o.n} de ${o.bloque}.`,
-  construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.' }
+  construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
+  // F8.0b
+  cazar: (o) => `Voy a cazar ${o.n} ${o.animal}.`, agua: () => 'Voy a llenar el cubo.', vierte: (o) => `Vierto el ${o.que}.`,
+  funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
+  saca: (o) => `Voy al cofre a por ${o.objeto || 'eso'}.`, desatascate: () => 'Busco por dónde salir.', sube: () => 'Subo a la superficie.',
+  baja: (o) => (o.y !== null ? `Bajo por una escalera hasta y = ${o.y}.` : `Bajo ${o.n} por una escalera.`) }
 
 // Personajes femeninos: hablan de sí en femenino por el chat («me quedo quieta»).
 const FEMENINAS = new Set(['Alma'])
@@ -772,6 +777,47 @@ class Personaje {
       case 'apartate': {
         const [r, d] = await paso('apartarse', [])
         return { exito: !!r.exito, texto: r.exito ? (r.causa === 'sin peligro' ? 'Aquí no hay peligro.' : 'Ya estoy a salvo.') : `No pude apartarme: ${r.causa}.`, pasos: [d] }
+      }
+      // F8.0b: la fundación de los perfiles v2
+      case 'cazar': {
+        const [r, d] = await paso('cazar', [o.animal, String(o.n)])
+        const lo = Object.entries(r.obtenido || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
+        return { exito: !!r.exito, texto: r.exito ? `Cazado${lo ? ': ' + lo : ''}.` : `No pude cazar: ${r.causa}.`, pasos: [d] }
+      }
+      case 'agua': {
+        const [r, d] = await paso('recoger_agua', [])
+        return { exito: !!r.exito, texto: r.exito ? 'Cubo lleno de agua.' : `No llené el cubo: ${r.causa}.`, pasos: [d] }
+      }
+      case 'vierte': {
+        const [r, d] = await paso('verter', [o.que])
+        return { exito: !!r.exito, texto: r.exito ? `Vertido en ${r.pos.join(', ')}.` : `No pude verter: ${r.causa}.`, pasos: [d] }
+      }
+      case 'funde': {
+        const [r, d] = await paso('fundir', [o.entrada, String(o.n)])
+        return { exito: !!r.exito, texto: r.exito ? `Fundido: ${r.obtenido} ${String(r.salida).replace(/_/g, ' ')}.` : `No pude fundir: ${r.causa}.`, pasos: [d] }
+      }
+      case 'ilumina': {
+        const [r, d] = await paso('iluminar', [])
+        return { exito: !!r.exito, texto: r.exito ? `Iluminado (${r.puestas.length} antorchas).` : `No pude iluminar: ${r.causa}.`, pasos: [d] }
+      }
+      case 'pon': {
+        const [r, d] = await paso('poner', [o.objeto])
+        return { exito: !!r.exito, texto: r.exito ? `Puesto ${r.objeto} en ${r.pos.join(', ')}.` : `No pude ponerlo: ${r.causa}.`, pasos: [d] }
+      }
+      case 'saca': {
+        if (!o.objeto) return { exito: false, texto: 'No sé qué sacar: troncos, tablones, piedra, comida, carbón, hierro o lana.', pasos: [] }
+        const [r, d] = await paso('sacar_del_cofre', [o.objeto, String(o.n)])
+        const lo = Object.entries(r.sacado || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
+        return { exito: !!r.exito, texto: r.exito ? `Sacado: ${lo}.` : `No saqué bastante: ${r.causa}${lo ? ' (' + lo + ')' : ''}.`, pasos: [d] }
+      }
+      case 'desatascate': case 'sube': {
+        const [r, d] = await paso(o.tipo === 'sube' ? 'subir_a_superficie' : 'desatascarse', [])
+        return { exito: !!r.exito, texto: r.exito ? `Fuera (y = ${r.y}).` : `No pude salir: ${r.causa}.`, pasos: [d] }
+      }
+      case 'baja': {
+        const y = o.y !== null ? o.y : bot.entity.position.floored().y - o.n
+        const [r, d] = await paso('cavar_escalera', [String(y), o.rumbo || '-'])
+        return { exito: !!r.exito, texto: r.exito ? `Abajo, en y = ${r.y} (${r.pasos} escalones).` : `Paré en y = ${r.y}: ${r.causa}.`, pasos: [d] }
       }
       case 'caza': {
         const [r, d] = await paso('recoger_comida', [])

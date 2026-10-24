@@ -61,7 +61,7 @@
    },
    "hacer": [
     "minar iron_ore 7",
-    "pendiente:fundir iron 7 tablones"
+    "fundir iron 7 tablones"
    ],
    "max_s": 1200,
    "pre": {

@@ -178,7 +178,7 @@
    },
    "hacer": [
     "minar iron_ore 3",
-    "pendiente:fundir iron 3"
+    "fundir iron 3"
    ],
    "max_s": 1800
   },
@@ -195,7 +195,7 @@
     }
    },
    "hacer": [
-    "pendiente:fabricar iron_pickaxe"
+    "fabricar iron_pickaxe"
    ]
   },
   "cama": {
@@ -206,8 +206,8 @@
     }
    },
    "hacer": [
-    "pendiente:cazar sheep 3",
-    "pendiente:fabricar white_bed"
+    "cazar sheep 3",
+    "fabricar cama"
    ]
   },
   "casa": {
@@ -236,7 +236,7 @@
    },
    "hacer": [
     "recoger_comida",
-    "pendiente:cocinar"
+    "fundir carne 8"
    ],
    "repetir": true
   },
@@ -254,8 +254,8 @@
    },
    "hacer": [
     "minar iron_ore 24",
-    "pendiente:fundir iron 24",
-    "pendiente:fabricar armadura_hierro",
+    "fundir iron 24",
+    "fabricar armadura_hierro",
     "equipar"
    ],
    "max_s": 3600
@@ -291,7 +291,7 @@
     }
    },
    "hacer": [
-    "pendiente:fabricar bucket"
+    "fabricar bucket"
    ]
   },
   "portal": {
@@ -394,7 +394,7 @@
     }
    },
    "hacer": [
-    "pendiente:fabricar ender_eye 12"
+    "fabricar ender_eye 12"
    ]
   },
   "stronghold": {
