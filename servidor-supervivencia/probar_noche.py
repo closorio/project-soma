@@ -27,7 +27,7 @@ from pathlib import Path
 AQUI = Path(__file__).resolve().parent
 RAIZ = AQUI.parent
 sys.path.insert(0, str(RAIZ / "servidor"))
-from rcon import rcon
+from rcon import rcon, hora
 
 MUNDO_SV = os.environ.get("IO_SERVIDOR") or "supervivencia"  # F8: el mismo banco en otro mundo (p. ej. local, 26.1.2)
 (Path(__file__).resolve().parent / "logs").mkdir(exist_ok=True)  # registros del banco (ignorados por git)
@@ -158,8 +158,8 @@ def vigia(nombre):
     """(salud, [x, y, z], hora del día) por RCON."""
     s = re.search(r"(-?[\d.]+)f", r(f"data get entity {nombre} Health"))
     p = re.findall(r"(-?[\d.]+)d", r(f"data get entity {nombre} Pos"))
-    h = re.search(r"(\d+)", r("time query daytime"))
-    return (float(s[1]) if s else None, [round(float(v), 1) for v in p[:3]] if len(p) >= 3 else None, int(h[1]) if h else None)
+    _, h = hora(r=r)  # F8: 1.21.11 y 26.1 (servidor/rcon.py)
+    return (float(s[1]) if s else None, [round(float(v), 1) for v in p[:3]] if len(p) >= 3 else None, h)
 
 
 def muertes(nombre):

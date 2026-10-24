@@ -23,6 +23,7 @@ import argparse
 import fcntl
 import json
 import os
+import re
 import socket
 import struct
 import sys
@@ -128,6 +129,25 @@ def rcon(cmd, servidor=None, host=None, puerto=None, clave_archivo=None):
         finally:
             fcntl.flock(fc, fcntl.LOCK_UN)
 
+
+
+def hora(servidor=None, r=None):
+    """(día, ticks del día 0-23999) del mundo, en 1.21.11 y en 26.1; (None, None) si no se entiende la respuesta.
+    1.21.11: «time query daytime» → «The time is N» y «time query day» → «The time is D» (el número de día).
+    26.1 (relojes y «timelines»): «time query daytime» ya no existe; «time query time» → «Clock minecraft:overworld is at N»,
+    el reloj acumulado del mundo (lo que cambia `time set`), así que día = N // 24000 y ticks = N % 24000 («time query day» da
+    solo los ticks del día). `r`: otra función para mandar órdenes (el RCON de mentira de las pruebas en seco)."""
+    r = r or (lambda c: rcon(c, servidor))
+    t = r("time query daytime")
+    m = re.search(r"The time is (\d+)", t)
+    if m:
+        d = re.search(r"The time is (\d+)", r("time query day"))
+        return (int(d[1]) if d else None), int(m[1])
+    m = re.search(r"is at (-?\d+) tick", r("time query time"))
+    if not m:
+        return None, None
+    n = int(m[1])
+    return n // 24000, n % 24000
 
 def main():
     a = argparse.ArgumentParser(description="Manda una orden al RCON de un mundo (IO_SERVIDOR por defecto).")

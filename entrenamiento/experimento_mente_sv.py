@@ -204,9 +204,7 @@ class Banco:
 
     # ---- lecturas ----
     def reloj(self):
-        h = re.search(r"(\d+)", self.r("time query daytime"))
-        d = re.search(r"(\d+)", self.r("time query day"))
-        return (int(d[1]), int(h[1])) if h and d else (None, None)
+        return pn.hora(r=self.r)  # (día, ticks del día) en 1.21.11 y 26.1 (servidor/rcon.py)
 
     def salud_pos(self, n):
         s = re.search(r"(-?[\d.]+)f", self.r(f"data get entity {n} Health"))

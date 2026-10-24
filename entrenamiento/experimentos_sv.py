@@ -207,8 +207,7 @@ class Sesion:
             if mb < MIN_MB:
                 raise pn.Parada(f"solo quedan {mb} MB de memoria disponible (mínimo {MIN_MB}): paro")
             t = round(time.time() - t0)
-            h = re.search(r"(\d+)", r("time query daytime"))
-            h = int(h[1]) if h else None
+            _, h = pn.hora(r=r)  # F8: 1.21.11 y 26.1 (servidor/rcon.py)
             muestreo = t - ultimo_muestreo >= 10
             for pol in POLITICAS:
                 e, nombre = est[pol], NOMBRES[pol][0]
