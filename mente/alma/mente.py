@@ -17,7 +17,7 @@ Uso (desde cualquier sitio):
 Archivos: sesion.json (la sesión en curso), diario.md (un turno por línea), memoria.md, fallos.json, propuestas.md,
 sesiones.md; PARAR (si existe, esperar vuelve enseguida y la mente debe cerrar). En ../diario.md (el del cuerpo) solo una
 cabecera y una línea de cierre por sesión.
-Mundo (F7.7): todas las órdenes aceptan --mundo usuario|supervivencia (sin él, IO_SERVIDOR; sin nada, el del usuario, como
+Mundo (F7.7): todas las órdenes aceptan --mundo usuario|supervivencia|companero (sin él, IO_SERVIDOR; sin nada, el del usuario, como
 siempre). En el de supervivencia (GUIA_supervivencia.md) el cuerpo es Alma en el puerto 3104, los archivos de la mente van a
 supervivencia/ (la memoria del mundo del usuario no vale allí; PARAR es el mismo), la cabecera y el cierre al diario de ese
 mundo (mundos/supervivencia/diario.md), el campamento por defecto es el de mundos/supervivencia/mundo.json, el informe añade
@@ -32,7 +32,7 @@ SESION, PARAR = AQUI / "sesion.json", AQUI / "PARAR"
 DIARIO, MEMORIA, FALLOS, PROPUESTAS, SESIONES = (AQUI / n for n in ("diario.md", "memoria.md", "fallos.json", "propuestas.md", "sesiones.md"))
 DIARIO_CUERPO = RAIZ / "mente" / "diario.md"
 PUERTO = 3004
-PUERTOS = {"usuario": 3004, "supervivencia": 3104}  # F7.7: Alma en cada mundo (los personajes de supervivencia van en 31xx)
+PUERTOS = {"usuario": 3004, "supervivencia": 3104, "companero": 3004}  # F7.7: Alma en cada mundo (supervivencia en 31xx; en el server del compañero, el puerto de siempre: el mundo local no corre a la vez)
 MUNDO, CAMPAMENTO = "usuario", None  # los fija elegir_mundo()
 SONDEO = 20  # s entre lecturas del informe mientras se espera
 BLOQUEOS = 5  # bloqueos seguidos en una espera que cuentan como atasco
