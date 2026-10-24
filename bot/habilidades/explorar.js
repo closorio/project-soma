@@ -6,12 +6,20 @@
 // probando desvíos de ±30, ±60 y ±90°. Un vigía corta la marcha si pisa agua o le falta aire y vuelve a la última casilla seca
 // (causa «agua»). El campamento es la posición de la primera salida (o la orden `campamento`): «vuelve al campamento».
 // Devuelve { exito, causa, pos, recorrido, campamento, bioma, altura, visto: { troncos, agua, minerales, arboles, jugadores, animales } }.
+// F8.0b (E0, explorar robusto; en companero acertaba 4 de 437 veces): el suelo de cada tramo es parcela.pisable (toda la columna,
+// atravesando copas y techos, el más cercano a la altura del bot) y no parcela.superficie (el primer bloque desde arriba). Fuera del
+// mundo del usuario, si ningún desvío tiene camino a pie, otra vuelta con movimientos que pican y suben poniendo bloques (los de
+// salir_del_refugio, sin tocar lo protegido); un tramo atascado (20 s sin avanzar) o sin camino se abandona y se prueba otro desvío
+// (2 seguidos acaban); y si no hay destino en ningún rumbo y no se ve el cielo (túnel, cueva cerrada), primero desatascarse. Lo
+// roto y lo puesto al cavar va en la respuesta (rotos, puestos), para reponer el terreno.
 const { goals } = require('mineflayer-pathfinder')
 const { Vec3 } = require('vec3')
 const memoria = require('../memoria')
 const zonas = require('../zonas')
 const parcela = require('../parcela')
+const mundo = require('../mundo')
 const { moverHasta, prudentes, prudentesSecos, hayCamino, esperar, esBot } = require('./comun')
+const MAX_ABANDONOS = 2, MAX_DESATASCOS = 1
 
 const RUMBOS = { norte: 0, n: 0, noreste: 45, ne: 45, este: 90, e: 90, sureste: 135, se: 135, sur: 180, s: 180, suroeste: 225, so: 225,
   oeste: 270, o: 270, noroeste: 315, no: 315 }
@@ -26,7 +34,7 @@ function tierraCercana(bot, radio) {
   for (let dx = -radio; dx <= radio; dx++) for (let dz = -radio; dz <= radio; dz++) {
     const d = Math.hypot(dx, dz)
     if (d === 0 || (mejor && d >= mejor.d)) continue
-    const s = parcela.superficie(bot, p.x + dx, p.z + dz, p.y, 3, 3)
+    const s = parcela.pisable(bot, p.x + dx, p.z + dz, p.y, 6, 6)
     if (s) mejor = { x: p.x + dx, y: s.y, z: p.z + dz, d }
   }
   return mejor
@@ -59,14 +67,15 @@ const suma = (a, b) => {
 }
 
 // Un destino a `d` bloques en el rumbo `ang` (grados desde el norte, reloj) con suelo seco, fuera de zonas vedadas y con camino.
-async function destino(bot, ang, d, mov) {
+async function destino(bot, ang, d, mov, evitar = null) {
   const p = bot.entity.position
   const razones = new Set()
   for (const g of DESVIOS) {
+    if (g === evitar) continue // el desvío del tramo que se acaba de abandonar
     await new Promise(resolve => setImmediate(resolve)) // el cálculo de camino es síncrono: ceder el paso a los demás personajes
     const a = (ang + g) * Math.PI / 180
     const x = Math.floor(p.x + Math.sin(a) * d), z = Math.floor(p.z - Math.cos(a) * d)
-    const s = parcela.superficie(bot, x, z, p.y, 10, 10)
+    const s = parcela.pisable(bot, x, z, p.y, 24, 24)
     if (!s) { razones.add('sin suelo seco'); continue }
     let vedado = false
     for (let dx = -2; dx <= 2 && !vedado; dx++) for (let dz = -2; dz <= 2 && !vedado; dz++) vedado = zonas.pasoVedado(x + dx, s.y + 1, z + dz)
@@ -96,10 +105,21 @@ module.exports = async function explorar(bot, [rumbo, bloques, segundos, modo], 
 
   let visto = mirar(bot), causa = null, seco = p0.floored(), agua = false
   const mov = nadar ? prudentes(bot) : prudentesSecos(bot)
+  const puedeCavar = mundo.nombre !== 'usuario' // F8.0b: la segunda vuelta que pica y pone, solo fuera del mundo del usuario
+  const rotos = [], puestos = [], cavados = { tramos: 0 }
+  let abandonos = 0, evitar = null, desatascos = 0
+  // lo que cambia junto al bot mientras va con los movimientos que cavan (pathfinder no lo cuenta)
+  const alCambiar = (viejo, nuevo) => {
+    if (!cavando || !viejo || !nuevo || viejo.position.distanceTo(bot.entity.position) > 4) return
+    if (viejo.boundingBox === 'block' && nuevo.boundingBox === 'empty') rotos.push([viejo.position.x, viejo.position.y, viejo.position.z, viejo.name])
+    else if (viejo.boundingBox === 'empty' && nuevo.boundingBox === 'block') puestos.push([nuevo.position.x, nuevo.position.y, nuevo.position.z, nuevo.name])
+  }
+  let cavando = false
+  bot.on('blockUpdate', alCambiar)
   if (!nadar && enAgua(bot)) { // empieza con los pies en el agua: primero a tierra firme (los movimientos secos no saben salir del agua)
     const s = tierraCercana(bot, 8)
     if (s) await moverHasta(bot, new goals.GoalNear(s.x, s.y + 1, s.z, 0), () => !enAgua(bot) && bot.entity.onGround, { ms: 20000, tarea, mov: prudentes(bot) })
-    if (enAgua(bot)) return { exito: false, causa: 'agua', pos: bot.entity.position.floored().toArray(), recorrido: 0, campamento: camp, visto }
+    if (enAgua(bot)) { bot.removeListener('blockUpdate', alCambiar); return { exito: false, causa: 'agua', pos: bot.entity.position.floored().toArray(), recorrido: 0, campamento: camp, visto } }
     seco = bot.entity.position.floored()
   }
   const recorrido = () => Math.hypot(bot.entity.position.x - p0.x, bot.entity.position.z - p0.z)
@@ -111,8 +131,22 @@ module.exports = async function explorar(bot, [rumbo, bloques, segundos, modo], 
     const p = bot.entity.position
     const a = volver ? Math.atan2(camp[0] + 0.5 - p.x, -(camp[2] + 0.5 - p.z)) * 180 / Math.PI : ang
     const d = Math.min(TRAMO, volver ? faltaAlCamp() : D - recorrido())
-    const dst = await destino(bot, a, Math.max(3, d), mov)
+    let movTramo = mov
+    let dst = await destino(bot, a, Math.max(3, d), mov, evitar)
+    if (!dst.meta && puedeCavar) { // segunda vuelta: pudiendo picar y subir poniendo bloques
+      const cava = require('./salir_del_refugio').movimientos(bot)
+      const d2 = await destino(bot, a, Math.max(3, d), cava, evitar)
+      if (d2.meta) { dst = d2; movTramo = cava }
+    }
+    if (!dst.meta && puedeCavar && desatascos < MAX_DESATASCOS && !require('./escalera').alCielo(bot)) { // túnel o cueva cerrada
+      desatascos++
+      const r = await require('./desatascarse')(bot, [], tarea)
+      rotos.push(...(r.rotos || [])); puestos.push(...(r.puestos || []))
+      if (r.exito) continue
+    }
     if (!dst.meta) { causa = dst.razon; break }
+    cavando = movTramo !== mov
+    if (cavando) cavados.tramos++
     let mejorAvance = recorrido(), tAvance = Date.now(), atascado = false
     const vigia = () => { // pisar agua (aunque sea somera: el navegador «seco» no sabe salir de ella) o quedarse sin aire;
       // nadando, solo quedarse sin aire (la cabeza bajo el agua un rato). Y no insistir: 20 s sin ganar un bloque es atasco.
@@ -125,21 +159,28 @@ module.exports = async function explorar(bot, [rumbo, bloques, segundos, modo], 
       if (bot.entity.onGround && !enAgua(bot)) seco = p.floored()
       return Math.hypot(dst.x + 0.5 - bot.entity.position.x, dst.z + 0.5 - bot.entity.position.z) <= 2.2
     }
-    const r = await moverHasta(bot, dst.meta, vigia, { ms: Math.min(ms - (Date.now() - t0), 45000), tarea, mov })
+    const r = await moverHasta(bot, dst.meta, vigia, { ms: Math.min(ms - (Date.now() - t0), 45000), tarea, mov: movTramo })
+    cavando = false
     if (agua) { // salir del agua: volver a la última casilla seca
       await moverHasta(bot, new goals.GoalNear(seco.x, seco.y, seco.z, 1), () => bot.entity.position.distanceTo(seco) <= 1.5 && bot.entity.onGround, { ms: 15000, tarea, mov })
       causa = 'agua'; break
     }
     if (r === 'cancelado') { causa = 'cancelado'; break }
-    if (r === 'sin camino') { causa = 'sin camino'; break }
-    if (atascado) { causa = 'sin avance'; break }
+    if (r === 'sin camino' || atascado) { // F8.0b: abandonar este tramo y probar otro desvío; dos seguidos acaban
+      if (++abandonos >= MAX_ABANDONOS) { causa = atascado ? 'sin avance' : 'sin camino'; break }
+      evitar = dst.desvio
+      continue
+    }
+    abandonos = 0; evitar = null
     visto = suma(visto, mirar(bot))
     await esperar(100)
   }
+  bot.removeListener('blockUpdate', alCambiar)
   const p = bot.entity.position.floored()
   let bioma = null
   try { const b = bot.blockAt(p); bioma = b?.biome?.name || bot.registry.biomes[bot.world.getBiome(p)]?.name || null } catch (_) {}
-  const datos = { pos: p.toArray(), recorrido: +recorrido().toFixed(1), campamento: campamentoDe(bot), bioma, altura: p.y, visto, pedido: D, rumbo: volver ? 'volver' : Math.round(ang), nadando: nadar }
+  const datos = { pos: p.toArray(), recorrido: +recorrido().toFixed(1), campamento: campamentoDe(bot), bioma, altura: p.y, visto, pedido: D, rumbo: volver ? 'volver' : Math.round(ang), nadando: nadar,
+    ...(rotos.length || puestos.length || cavados.tramos || desatascos ? { rotos, puestos, cavados: cavados.tramos, desatascos } : {}) }
   const exito = causa === 'llegué' || (!volver && recorrido() >= 0.75 * D)
   return { exito, causa, ...datos }
 }

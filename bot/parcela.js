@@ -35,6 +35,23 @@ function superficie(bot, x, z, yRef, arriba = 8, abajo = 8, natural = false) {
   return null
 }
 
+// F8.0b (E0, explorar): dónde se puede estar de pie en la columna (x, z): un bloque sólido (no hojas ni tronco) con dos casillas
+// libres encima, sin líquido. A diferencia de superficie, no se queda con el primer bloque que encuentra desde arriba: mira toda la
+// columna de yRef+arriba a yRef−abajo, atravesando copas, techos de roca y desniveles, y se queda con la casilla más cercana a yRef
+// (en una cueva, la del nivel del bot; en un monte, la ladera). Devuelve { y, bloque } (se pisa en y+1) o null.
+function pisable(bot, x, z, yRef, arriba = 24, abajo = 24) {
+  const y0 = Math.floor(yRef)
+  if (!bot.world.getColumn(x >> 4, z >> 4)) return null
+  let mejor = null
+  for (let y = y0 + arriba; y >= y0 - abajo; y--) {
+    if (mejor && Math.abs(y - y0) >= Math.abs(mejor.y - y0)) { if (y < y0) break; continue }
+    const b = bot.blockAt(new Vec3(x, y, z))
+    if (!solido(b) || esLiquido(b) || /_leaves$|_log$/.test(b.name)) continue
+    if (libre(bot.blockAt(new Vec3(x, y + 1, z))) && libre(bot.blockAt(new Vec3(x, y + 2, z)))) mejor = { y, bloque: b.name }
+  }
+  return mejor
+}
+
 // Vecinos (6 caras) con agua o lava, por nombre: minar no rompe un bloque que los tenga (inundación, lava).
 function vecinosLiquidos(bot, pos) {
   const r = []
@@ -118,4 +135,4 @@ async function elegirParcela(bot, dim, { radio = 24, margen = 10, desnivelMax = 
   return { mal: Object.entries(causas).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ×${n}`).join(', ') || 'sin candidatas' }
 }
 
-module.exports = { superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }
+module.exports = { pisable, superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }
