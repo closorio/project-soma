@@ -40,6 +40,8 @@ const HABILIDADES = {
   cazar: require('./cazar'),
   recoger_agua: require('./agua').recogerAgua,
   verter: require('./agua').verter,
+  // F8.1: hasta una mena enterrada, cavando (la pide el capataz cuando minar no ve ninguna)
+  ir_a_mena: require('./ir_a_mena'),
 }
 
 // Interrupción por amenaza (como los «modos» de Mindcraft y como el simulador): un hostil a ≤ 6 bloques corta

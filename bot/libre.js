@@ -51,7 +51,7 @@ function decidir(bot, decisor = delProceso()) {
   if (decisor.pasoDe) { // F8.1: el capataz da el paso entero (habilidad y argumentos), sin observación ni red
     const p = decisor.pasoDe(bot)
     return { tipo: 'capataz', obs: null, datos: { perfil: decisor.rol, etapa: p.etapa || null, motivo: p.motivo || null, falta: p.falta || [] },
-      d: { i: null, habilidad: p.habilidad, q: null, paso: p.paso, etapa: p.etapa, alternativa: !!p.alternativa }, args: p.args.join(' '), salir: false }
+      d: { i: null, habilidad: p.habilidad, args: p.args, q: null, paso: p.paso, etapa: p.etapa, alternativa: !!p.alternativa }, args: p.args.join(' '), salir: false }
   }
   const tipo = decisor.observacion()
   const { obs, datos } = tipo === 'obs_sv' ? observacion.observarSv(bot) : observacion.observar(bot)

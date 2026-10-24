@@ -59,7 +59,7 @@ const libre = require('./libre')
 const persistente = require('./memoria_persistente') // F8.0a: lo que sobrevive a reiniciar (fuera del mundo del usuario)
 const rutinas = require('./rutinas')
 // Las habilidades que cambian el terreno: su línea [terreno] (rotos y puestos) deja al banco reponerlo (probar_noche.py).
-const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 'subir_a_superficie', 'desatascarse', 'explorar', 'verter']) // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
+const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 'subir_a_superficie', 'desatascarse', 'explorar', 'verter', 'ir_a_mena']) // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo

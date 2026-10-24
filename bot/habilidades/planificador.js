@@ -42,7 +42,8 @@ function pedir(registry, item, n, inv, camino) {
     }
     plan.pasos.push({ item, veces, mesa })
     copia[item] = (copia[item] || 0) + veces * sale - falta
-    const coste = [Object.values(plan.faltan).reduce((a, b) => a + b, 0), plan.pasos.length]
+    // a igualdad, la variante de roble (si falta todo, pedir «cherry_log» despista: el roble es el árbol más común)
+    const coste = [Object.values(plan.faltan).reduce((a, b) => a + b, 0), plan.pasos.length + (Object.keys(g).some(x => x.startsWith('oak_')) ? 0 : 0.5)]
     if (!mejor || coste[0] < mejor.coste[0] || (coste[0] === mejor.coste[0] && coste[1] < mejor.coste[1])) mejor = { plan, copia, coste }
     if (coste[0] === 0 && coste[1] === 1) break // no se puede hacer mejor
   }

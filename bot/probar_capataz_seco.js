@@ -65,11 +65,12 @@ const b4 = mundoFalso({ inventario: [['oak_log', 6], ['wooden_pickaxe', 1], ['wo
 d = capataz.decidir(b4, 'casual')
 ok(d.etapa === 'carbon' && d.habilidad === 'minar' && d.args[0] === 'coal_ore', `con herramientas de piedra: ${JSON.stringify(d)}`)
 const vistos = []
-for (let k = 0; k < 8; k++) { // nada sale bien
+for (let k = 0; k < 12; k++) { // nada sale bien (con ir_a_mena tras cada «nada que minar»)
   d = capataz.decidir(b4, 'casual')
   vistos.push(d.alternativa ? `alt:${d.habilidad}` : d.habilidad + ':' + d.args[0])
   capataz.alResultado(b4, 'casual', d, { exito: false, causa: 'no piqué nada' })
 }
+ok(vistos.includes('ir_a_mena:coal_ore'), `tras «nada que minar» no va a por la mena: ${vistos.join(' ')}`)
 ok(vistos.some(v => v.startsWith('alt:')), `nunca prueba una alternativa: ${vistos.join(' ')}`)
 ok(vistos.includes('alt:cavar_escalera') || vistos.includes('alt:explorar'), `alternativa de mineral: ${vistos.join(' ')}`)
 // consigue el carbón y las antorchas: al dar el resultado, la etapa queda hecha
@@ -81,6 +82,28 @@ ok(capataz.decidir(b4, 'casual').etapa === 'hierro', 'después de carbon no toca
 const p = capataz.progreso(b4, 'casual')
 ok(p.etapa === 'hierro' && p.pendientes[0] === 'hierro' && p.hechas.carbon, `progreso: ${JSON.stringify({ etapa: p.etapa, pendientes: p.pendientes })}`)
 console.log(`  4 · fallos: ${vistos.join(' ')}; carbon hecha → hierro`)
+
+// 5 · amenaza, etapa empezada y muerte
+const zombi = mundoFalso({ entidades: [{ name: 'zombie', pos: [4.5, 64, 0.5] }], inventario: [['stone_sword', 1]] })
+ok(capataz.decidir(zombi, 'casual').habilidad === 'atacar', 'un zombi a 4 con espada: no se defiende')
+const creeper = mundoFalso({ entidades: [{ name: 'creeper', pos: [4.5, 64, 0.5] }], inventario: [['stone_sword', 1]] })
+ok(capataz.decidir(creeper, 'casual').habilidad === 'huir', 'un creeper a 4: no huye')
+// herr_piedra empezada: tras el pico gasta la piedra (pre piedra 8) y debe seguir en herr_piedra (la espada)
+const b5 = mundoFalso({ inventario: [['wooden_pickaxe', 1], ['wooden_sword', 1], ['cobblestone', 8], ['oak_log', 6]] })
+let d5 = capataz.decidir(b5, 'casual')
+ok(d5.etapa === 'herr_piedra' && d5.args[0] === 'pico_piedra', `con piedra: ${JSON.stringify(d5)}`)
+b5.inventory.slots.fill(null, 9, 45)
+b5.inventory.slots[9] = { name: 'stone_pickaxe', count: 1 }; b5.inventory.slots[10] = { name: 'cobblestone', count: 5 }; b5.inventory.slots[11] = { name: 'wooden_sword', count: 1 }
+capataz.alResultado(b5, 'casual', d5, { exito: true })
+d5 = capataz.decidir(b5, 'casual')
+ok(d5.etapa === 'herr_piedra' && d5.args[0] === 'espada_piedra', `tras el pico (5 de piedra) se fue a otra etapa: ${JSON.stringify(d5)}`)
+// muere: las etapas de inventario se olvidan
+const h5 = capataz.hechas(b5, 'casual')
+ok(h5.madera && h5.herr_madera, 'madera y herr_madera deberían estar hechas')
+persistente.anotarMuerte(b5, 'prueba')
+capataz.decidir(b5, 'casual')
+ok(!capataz.hechas(b5, 'casual').madera, 'tras morir, madera sigue hecha')
+console.log('  5 · zombi → atacar, creeper → huir; la etapa empezada sigue; tras morir se rehacen las de inventario')
 
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

@@ -16,7 +16,7 @@ const progresion = require('./progresion')
 const sv = require('./habilidades/sv')
 const { nodo } = require('./habilidades/comun')
 
-const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000
+const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8
 
 const roles = new Map() // nombre → { perfil, etapas } (las etapas resueltas una vez)
 function rol(nombre) {
@@ -55,12 +55,33 @@ function alternativa(bot, etapa, n) {
   return { habilidad: 'explorar', args: [] }
 }
 
+// Al morir se pierde el inventario (keep_inventory false): las etapas hechas cuyo objetivo era solo de inventario se olvidan (hay que
+// volver a hacerlas); las de memoria o hitos (la casa, el portal) se quedan.
+function olvidarSiMurio(bot, nombre, etapas) {
+  const d = persistente.de(bot), st = estadoCapataz(bot)
+  const n = d ? d.muertes.length : 0
+  if (st.muertes === undefined) { st.muertes = n; return }
+  if (n <= st.muertes) return
+  st.muertes = n
+  const h = hechas(bot, nombre)
+  for (const et of etapas) if (h[et.id] && Object.keys(et.objetivo || {}).every(s => s === 'inv')) delete h[et.id]
+  Object.assign(st, { etapa: null, paso: 0, fallos: {}, luego: null })
+  if (d) persistente.guardar(d)
+}
+
 function decidir(bot, nombre) {
   const { perfil, etapas } = rol(nombre)
   const reglas = perfil.reglas || {}
   const t = bot.time ? bot.time.timeOfDay : 6000
   const atardecer = t >= ATARDECER && t < 12542
-  // 1 · mantenimiento
+  // 1 · mantenimiento. Un monstruo a ≤ 8: defenderse como el guion de supervivencia (con arma, vida ≥ 8, ≤ 2 y sin creeper) o huir
+  // (F8.1: en la primera prueba, bajo tierra, el capataz seguía con la etapa y una araña lo mató)
+  const cerca = sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= AMENAZA)
+  if (cerca.length) {
+    const creeper = cerca.some(x => sv.tipoHostil(x) === 'creeper'), arma = sv.mejorArma(bot)
+    const lucha = arma && bot.health >= VIDA_PELEA && cerca.length <= 2 && !creeper
+    return { habilidad: lucha ? 'atacar' : 'huir', args: ['-'], motivo: 'amenaza' }
+  }
   if (reglas.noche === 'refugio' && (sv.esNoche(bot) || atardecer)) return { habilidad: 'rutina_noche', args: ['900'], motivo: 'noche' }
   if (reglas.noche !== 'refugio' && sv.esNoche(bot) && (bot.health < VIDA_REFUGIO || sv.aLaVista(bot).length >= 3))
     return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }
@@ -68,15 +89,20 @@ function decidir(bot, nombre) {
   if (bot.food <= HAMBRE && comida) return { habilidad: 'comer', args: [], motivo: 'hambre' }
   if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) return { habilidad: 'recoger_comida', args: [], motivo: 'hambre sin comida' }
   // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
+  olvidarSiMurio(bot, nombre, etapas)
   const e = progresion.estado(bot)
-  let et = progresion.etapaActual(etapas, e, hechas(bot, nombre))
+  const st0 = estadoCapataz(bot), h0 = hechas(bot, nombre)
+  // la etapa empezada sigue hasta acabarla aunque su pre deje de cumplirse a medias (el pico de piedra gasta la piedra del pre)
+  const empezada = st0.etapa && !h0[st0.etapa] && etapas.find(x => x.id === st0.etapa)
+  let et = empezada && !progresion.cumple(empezada.objetivo, e) ? empezada : progresion.etapaActual(etapas, e, h0)
   for (let k = 0; et && et.yaCumple && k < etapas.length; k++) {
     marcarHecha(bot, nombre, et.id)
     et = progresion.etapaActual(etapas, e, hechas(bot, nombre))
   }
   if (!et) return { habilidad: 'explorar', args: [], motivo: 'rol completo' }
   const st = estadoCapataz(bot)
-  if (st.etapa !== et.id) Object.assign(st, { etapa: et.id, paso: 0, fallos: {}, alternativas: 0 })
+  if (st.etapa !== et.id) Object.assign(st, { etapa: et.id, paso: 0, fallos: {}, alternativas: 0, luego: null })
+  if (st.luego) { const l = st.luego; st.luego = null; return { ...l, ...{ etapa: et.id, falta: progresion.falta(et.objetivo, e) } } }
   const pasos = et.hacer.filter(h => !h.startsWith('pendiente:'))
   const datos = { etapa: et.id, falta: progresion.falta(et.objetivo, e) }
   for (let k = 0; k < pasos.length; k++) {
@@ -92,6 +118,8 @@ function alResultado(bot, nombre, d, r) {
   const st = estadoCapataz(bot)
   if (d.paso != null && st.etapa === d.etapa) {
     if (r.exito) { st.fallos[d.paso] = 0; st.paso = d.paso + 1 } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
+    // minar no ve la mena (está enterrada): lo siguiente, ir hasta la más cercana cavando, y luego minar otra vez
+    if (d.habilidad === 'minar' && !r.exito && /nada que minar|no piqué/.test(String(r.causa))) st.luego = { habilidad: 'ir_a_mena', args: [d.args[0], '32'], motivo: 'mena enterrada' }
   }
   const dp = persistente.de(bot)
   if (d.habilidad === 'construir' && r.exito && dp) { dp.casa = r.origen || nodo(bot).toArray(); persistente.guardar(dp) }
