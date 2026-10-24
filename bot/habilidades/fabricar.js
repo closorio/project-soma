@@ -18,6 +18,7 @@ const { fabricarTablones, vaciarRejilla } = require('./construir')
 const recoger = require('./recoger')
 const { planear } = require('./planificador')
 const sv = require('./sv')
+const mundo = require('../mundo')
 
 // Lo que gasta cada objeto: tablones (t), palos (p), piedra (q) y si pide mesa (los mismos números que RECETAS del simulador).
 const OBJETOS = {
@@ -84,6 +85,26 @@ async function ponerMesa(bot) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
     if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
     try {
+      await conLimite(bot.equip(mesa, 'hand'), 3000)
+      await conLimite(bot.placeBlock(suelo, new Vec3(0, 1, 0)), 3000)
+    } catch (_) {}
+    await esperar(200)
+    const puesta = bot.blockAt(v)
+    if (puesta && puesta.name === 'crafting_table') return puesta
+  }
+  // F8.1: sin hueco al lado (en el túnel de una escalera, todo roca) y fuera del mundo del usuario: picar una casilla de un lado
+  // (con suelo firme debajo y sin líquidos alrededor) y poner allí la mesa
+  if (mundo.nombre === 'usuario') return null
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
+    if (!sv.solido(k) || sv.NO_PICAR.test(k.name) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (require('../parcela').vecinosLiquidos(bot, v).length) continue
+    const { item, ms } = sv.mejorHerramienta(bot, k)
+    if (ms > 6000) continue
+    try {
+      if (item) await conLimite(bot.equip(item, 'hand'), 3000)
+      await conLimite(bot.dig(k, true), ms + 3000, () => bot.stopDigging())
+      await esperar(250)
       await conLimite(bot.equip(mesa, 'hand'), 3000)
       await conLimite(bot.placeBlock(suelo, new Vec3(0, 1, 0)), 3000)
     } catch (_) {}

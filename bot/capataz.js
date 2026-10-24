@@ -14,7 +14,7 @@ const persistente = require('./memoria_persistente')
 const perfilV2 = require('./perfil_v2')
 const progresion = require('./progresion')
 const sv = require('./habilidades/sv')
-const { nodo } = require('./habilidades/comun')
+const { nodo, encerrado } = require('./habilidades/comun')
 
 const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8
 
@@ -82,7 +82,12 @@ function decidir(bot, nombre) {
     const lucha = arma && bot.health >= VIDA_PELEA && cerca.length <= 2 && !creeper
     return { habilidad: lucha ? 'atacar' : 'huir', args: ['-'], motivo: 'amenaza' }
   }
-  if (reglas.noche === 'refugio' && (sv.esNoche(bot) || atardecer)) return { habilidad: 'rutina_noche', args: ['900'], motivo: 'noche' }
+  if (reglas.noche === 'refugio' && (sv.esNoche(bot) || atardecer)) {
+    // al atardecer aún es «de día» para rutina_noche (acababa al momento, en bucle): refugiarse antes y, dentro, esperar al día
+    // (o dormir con cama); de noche y fuera, rutina_noche (el guion de supervivencia)
+    if (encerrado(bot)) return { habilidad: sv.esNoche(bot) && progresion.estado(bot).inv.cama ? 'dormir' : 'esperar_al_dia', args: [], motivo: 'noche' }
+    return atardecer ? { habilidad: 'refugiarse', args: [], motivo: 'atardecer' } : { habilidad: 'rutina_noche', args: ['900'], motivo: 'noche' }
+  }
   if (reglas.noche !== 'refugio' && sv.esNoche(bot) && (bot.health < VIDA_REFUGIO || sv.aLaVista(bot).length >= 3))
     return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }
   const comida = sv.comidas(bot).length > 0
