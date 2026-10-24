@@ -15,9 +15,10 @@ const { pathfinder, Movements, goals } = require('mineflayer-pathfinder')
 const http = require('http')
 const fs = require('fs')
 const path = require('path')
-// Servidor de Minecraft y datos del mundo (bot/mundo.js): el del usuario (localhost:25565) por defecto; IO_SERVIDOR=supervivencia,
-// el mundo de pruebas aparte (../servidor-supervivencia, puerto 25566); IO_HOST e IO_PORT_SERVIDOR mandan sobre ambos. Va antes que
-// los demás módulos, que leen sus datos del mundo al cargarse (zonas, cofres, obras, registro).
+// Servidor de Minecraft y datos del mundo (bot/mundo.js): el del usuario (localhost:25565, 1.21.11) por defecto; IO_SERVIDOR=supervivencia,
+// el mundo de pruebas aparte (../servidor-supervivencia, puerto 25566); IO_SERVIDOR=companero, el server de un compañero por wifi
+// (mundos/companero/mundo.json, 26.1); IO_HOST, IO_PORT_SERVIDOR e IO_VERSION mandan sobre todos. Va antes que los demás módulos,
+// que leen sus datos del mundo al cargarse (zonas, cofres, obras, registro).
 let mundo
 try { mundo = require('./mundo') } catch (e) { console.error(e.message); process.exit(1) }
 
@@ -42,10 +43,12 @@ const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
 const DIARIO = mundo.diario
-const SERVIDOR = {
-  host: process.env.IO_HOST || 'localhost',
+const SERVIDOR = { // host, puerto y versión de Minecraft del mundo (bot/mundo.js); IO_HOST, IO_PORT_SERVIDOR e IO_VERSION los afinan
+  host: process.env.IO_HOST || mundo.host,
   port: parseInt(process.env.IO_PORT_SERVIDOR) || mundo.puertoMc,
+  version: process.env.IO_VERSION || mundo.version,
 }
+if (!SERVIDOR.host) throw new Error(`mundo ${mundo.nombre}: falta la IP del servidor (servidor.host en mundos/${mundo.nombre}/mundo.json, o IO_HOST)`)
 const fecha = () => new Date().toLocaleString('sv-SE').slice(0, 16) // 2026-10-14 18:05
 const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el diario por proceso, hasta que vuelva a caber algo
 // F4: personajes de este proceso por nombre (una orden a «todos» o a otro personaje), órdenes de chat ya atendidas, argumentos de
@@ -112,7 +115,7 @@ class Personaje {
   // Conecta (o reconecta) el bot; las órdenes usan siempre el `this.bot` actual.
   conectar() {
     const bot = this.bot = mineflayer.createBot({
-      host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: '1.21.11',
+      host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: SERVIDOR.version,
     })
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)

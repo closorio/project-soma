@@ -1,0 +1,11 @@
+{
+ "servidor": {
+  "host": "192.168.1.46",
+  "puerto": 25565,
+  "version": "26.1",
+  "nota": "Server Java del compañero por wifi (2026-10-23). host: su IP local (ipconfig / ip a); IO_HOST la sobreescribe. version: la que habla mineflayer (4.39 llega hasta 26.1, protocolo 775): el server tiene que estar en 26.1.x."
+ },
+ "aparicion": null,
+ "campamento": null,
+ "puntos": []
+}

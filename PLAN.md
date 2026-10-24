@@ -5,8 +5,8 @@
 > **Nombres (2026-10-15):** el personaje Io se llama ahora **Soma** (puerto 3001) y Claude, **Alma** (puerto 3004, femenina; su mente vive en `mente/alma/`). Eco e Iris no cambian; Ío, el asistente de voz, tampoco. **Io = Soma, Claude = Alma**: lo anterior a esta fecha (diarios, ejecuciones, informes y este plan) conserva los nombres antiguos.
 
 ## Estado (2026-10-14)
-- Servidor local Minecraft 1.21.11, offline, solo 127.0.0.1 (`servidor/arrancar.sh`).
-- Cliente: TLauncher extraído en `tlauncher/` (no instalado en el sistema).
+- Servidor local Minecraft 1.21.11, offline, solo 127.0.0.1 (`servidor/arrancar.sh`). **2026-10-23:** además, el server Java de un compañero por wifi (`IO_SERVIDOR=companero`, `mundos/companero/mundo.json`, Minecraft **26.1.x**: ver `bot/README.md`, «Apuntar al server del compañero»); allí, por ahora, solo jugar (sin RCON: `servidor/rcon.py` no está en este PC).
+- Cliente: TLauncher extraído en `tlauncher/` (no instalado en el sistema); para el server del compañero, la versión 26.1.x.
 - Bot Mineflayer 4.39 (`bot/io.js`), uno o varios personajes por proceso: `node io.js [NOMBRE[:PUERTO[:PERFIL]] …]`; sin argumentos, Soma (antes Io) en 127.0.0.1:3001 con el perfil recolector (el de siempre). Órdenes por puerto: `estado, percibir, decir, ven, para, ir, talar, arboles, cerebro N` (`talar` nunca tala en una zona protegida: lo dice por el chat del juego y va a por un tronco de fuera, o se niega), `arbolado [x1 z1 x2 z2]` (para medir: troncos del arbolado y bloques de cada zona protegida), las habilidades de F2 (`hab NOMBRE`, `habilidades`), `obs [inicio [s]]` (las 20 entradas de F2+F3), `amenaza_prueba TIPO|-` (en pacífico, tratar un tipo de entidad como hostil), `jugador_prueba TIPO|-` (para el banco, tratar un tipo de entidad como «el jugador»), `perfil [NOMBRE]` (F3), `personajes` y, desde F4, `modo [libre|ordenes] [despues quieto|libre]`, `orden TEXTO` y `orden_esperar TEXTO` (órdenes en lenguaje sencillo; también por el chat del juego: ver F4 y `bot/README.md`).
 - Varios personajes (plan del 2026-10-14, ver *Varios personajes* abajo): fases A (perfiles como entrada), B (bot multi-instancia) y C (ejecutor y entrenamiento compartidos) hechas; D (verificación con 2-3 a la vez) a medias: falta medir la red nueva en Minecraft.
 - Zonas protegidas del usuario: `zonas.json` (GRANARBOL, ESTANQUE, HOGAR, vedadas) y `bot/zonas.js`: los personajes no las talan ni las pisan; `medir.py` y `medir_ejecutor.py` no usan puntos de salida dentro de ellas. El navegador nunca rompe troncos ni cofres (2026-10-14: solo pican `picar_tronco`, la orden `cerebro` y `talar`); `medir_ejecutor.py` fotografía el arbolado y las zonas antes y después de cada episodio (orden `arbolado`): repone también los troncos que falten sin haberlos picado (fuera de las zonas) y avisa de cualquier cambio dentro de una zona.
@@ -187,8 +187,8 @@ Meta: 2-3 personajes en el mismo mundo, cada uno con su perfil, con la misma red
 
 ## Riesgos y reglas
 - **Brecha simulador→mundo real:** ya apareció dos veces (árbol en la misma columna; troncos altos). Cada fallo en Minecraft se traslada al simulador.
-- Mineflayer soporta hasta 1.21.11; no actualizar el servidor sin comprobarlo.
-- Servidor siempre local y offline; nunca exponerlo a internet.
+- Mineflayer 4.39 (la última, 2026-10-23) soporta hasta 26.1 (protocolo 775); 26.2 y 26.3 sin soporte upstream (PRs abiertos en minecraft-data, minecraft-protocol y mineflayer). No subir ningún server sin comprobarlo (`require('minecraft-data')('26.3')` devuelve null).
+- Servidor propio siempre local y offline; nunca exponerlo a internet. El del compañero es suyo (wifi, offline); los puertos de control de los bots siguen solo en 127.0.0.1.
 - Sin claves de API de terceros en el proyecto. Reutilizar de Mindcraft/Voyager solo ideas.
 - Coste: el modelo propio decide sin tokens; mi intervención (planificar, depurar) se limita a lo necesario.
 
