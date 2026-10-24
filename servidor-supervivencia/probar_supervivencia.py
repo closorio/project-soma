@@ -39,6 +39,9 @@ ETIQ = "prueba_sv"
 MEDIDAS = AQUI.parent / "entrenamiento" / ("habilidades_medidas_sv.json" if MUNDO_SV == "supervivencia" else f"habilidades_medidas_{MUNDO_SV}.json")
 SECCIONES = ["comer", "fabricar", "llano", "tapiar", "ladera", "seguridad", "zombi", "esqueleto", "esperar", "dormir", "apartarse",
              "caza", "reflejos"]
+# F8.0b (H-hab, PLAN_F8_perfiles.md): las habilidades de la fundación; van aparte (--solo f8 o --solo fundir,poner,…)
+SECCIONES_F8 = ["fundir", "sacar", "poner", "iluminar", "escalera", "agua", "verter", "cazar", "fab_gen"]
+COFRES = AQUI.parent / "mundos" / MUNDO_SV / "cofres.json"  # sacar: el cofre de la prueba se apunta aquí y se quita al acabar
 
 
 class Parada(Exception):
@@ -367,6 +370,150 @@ def caza(b):
         r(f"kill @e[tag={ETIQ}]")
 
 
+# ---- F8.0b · H-hab ----
+def bloque_es(x, y, z, nombre):
+    return "passed" in r(f"execute if block {x} {y} {z} minecraft:{nombre}")
+
+
+def fundir(b):
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(5)
+        # la mitad lleva el horno; la otra mitad, piedra y troncos para fabricarlo (y la mesa)
+        inv = ["minecraft:raw_iron 3", "minecraft:coal 1"] + (["minecraft:furnace"] if k % 2 == 0 else ["minecraft:cobblestone 8", "minecraft:oak_log 2"])
+        b.cuerpo(x, S, z, inv)
+        d = b.hab("fundir hierro 3", t=120)
+        b.anotar("fundir", "fundir", d, d.get("exito") and d.get("obtenido") == 3,
+                 {"horno": "llevado" if k % 2 == 0 else "fabricado", "obtenido": d.get("obtenido"), "puesto": d.get("puesto")})
+
+
+def sacar(b):
+    antes = COFRES.read_text() if COFRES.exists() else None
+    try:
+        for k in range(b.n):
+            b.arena()
+            x, z = b.sitio(4)
+            cx, cz = x + 3, z
+            r(f"setblock {cx} {S} {cz} minecraft:chest")
+            r(f"item replace block {cx} {S} {cz} container.0 with minecraft:oak_log 10")
+            r(f"item replace block {cx} {S} {cz} container.1 with minecraft:cobblestone 5")
+            COFRES.write_text(json.dumps({"cofres": [{"nombre": "prueba", "bloques": [[cx, S, cz]]}]}) + "\n")
+            b.cuerpo(x, S, z, [])
+            d = b.hab("sacar_del_cofre troncos 6", t=60)
+            sacado = (d.get("sacado") or {}).get("oak_log", 0)
+            b.anotar("sacar", "sacar_del_cofre", d, d.get("exito") and sacado == 6, {"sacado": d.get("sacado")})
+            r(f"setblock {cx} {S} {cz} minecraft:air")
+    finally:
+        if antes is None:
+            COFRES.unlink(missing_ok=True)
+        else:
+            COFRES.write_text(antes)
+
+
+def poner(b):
+    objetos = [("cofre", "chest"), ("horno", "furnace"), ("mesa", "crafting_table"), ("antorcha", "torch"), ("tierra", "dirt")]
+    antes = COFRES.read_text() if COFRES.exists() else None  # poner un cofre lo apunta en cofres.json
+    try:
+        for k in range(b.n):
+            b.arena()
+            x, z = b.sitio(5)
+            alias, item = objetos[k % len(objetos)]
+            b.cuerpo(x, S, z, [f"minecraft:{item} 2"])
+            dx, dz = [(2, 0), (0, 2), (-2, 0), (0, -2)][k % 4]
+            d = b.hab(f"poner {alias} {x + dx} {S} {z + dz}", t=30)
+            b.anotar("poner", "poner", d, d.get("exito") and bloque_es(x + dx, S, z + dz, item), {"objeto": item, "facing": d.get("facing")})
+    finally:
+        if antes is None:
+            COFRES.unlink(missing_ok=True)
+        else:
+            COFRES.write_text(antes)
+
+
+def iluminar(b):
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(3)
+        b.cuerpo(x, S, z, ["minecraft:torch 16"], hora=18000)
+        d = b.hab("iluminar 6", t=120)
+        puestas = d.get("puestas") or []
+        bien = all(bloque_es(px, py, pz, "torch") or bloque_es(px, py, pz, "wall_torch") for px, py, pz in puestas)
+        b.anotar("iluminar", "iluminar", d, d.get("exito") and bien and len(puestas) > 0,
+                 {"antorchas": len(puestas), "luz_min": d.get("luz_min"), "en_su_sitio": bien})
+
+
+def escalera(b):
+    """Escalera de 8 hacia el este en roca (piedra de S-11 a S-2). En las impares, lava junto al 4º escalón: tiene que parar antes
+    («lava delante») sin tocarla. Contacto con la lava = perder vida."""
+    x0, z0 = X - 9, Z
+    for k in range(b.n):
+        b.arena()
+        fill(x0 - 1, S - 11, z0 - 3, x0 + 12, S - 2, z0 + 3, bloque="minecraft:stone")
+        fill(x0 - 1, S - 1, z0 - 3, x0 + 12, S - 1, z0 + 3, bloque="minecraft:stone")
+        lava = k % 2 == 1
+        if lava:
+            r(f"setblock {x0 + 4} {S - 4} {z0 + 1} minecraft:lava")
+        b.cuerpo(x0, S, z0, ["minecraft:stone_pickaxe", "minecraft:cobblestone 8", "minecraft:torch 4"])
+        d = b.hab(f"cavar_escalera {S - 8} este", t=200)
+        o = b.obs()
+        salud = o.get("salud", 0)
+        ok = (d.get("causa") == "lava delante" if lava else d.get("exito") and d.get("y") == S - 8) and salud >= 20
+        b.anotar("escalera", "cavar_escalera", d, ok, {"lava": lava, "y": d.get("y"), "pasos": d.get("pasos"), "salud": salud,
+                                                       "antorchas": d.get("antorchas")})
+        r(f"tp {b.nombre} {X + 0.5} {S} {Z + 0.5}")
+        fill(x0 - 1, S - 12, z0 - 3, x0 + 12, S - 10, z0 + 3, bloque="minecraft:air")
+
+
+def agua(b):
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(4)
+        r(f"setblock {x + 2} {S - 1} {z} minecraft:water")
+        b.cuerpo(x, S, z, ["minecraft:bucket"])
+        d = b.hab("recoger_agua", t=40)
+        b.anotar("agua", "recoger_agua", d, d.get("exito"), {"pos": d.get("pos")})
+
+
+def verter(b):
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(4)
+        b.cuerpo(x, S, z, ["minecraft:water_bucket"])
+        dx, dz = [(2, 0), (0, 2), (-2, 0), (0, -2)][k % 4]
+        d = b.hab(f"verter agua {x + dx} {S} {z + dz}", t=40)
+        b.anotar("verter", "verter", d, d.get("exito") and bloque_es(x + dx, S, z + dz, "water"), {"pos": d.get("pos")})
+
+
+def cazar(b):
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(4)
+        b.cuerpo(x, S, z, ["minecraft:wooden_sword"])
+        animal = ["sheep", "cow", "pig", "chicken"][k % 4] if k % 2 else "sheep"
+        for i in range(2):
+            b.invocar(animal, x + 3, S, z + i * 2 - 1, quitar_armadura=False)
+        time.sleep(0.5)
+        d = b.hab(f"cazar {animal} 2", t=90)
+        lana = any(n.endswith("_wool") for n in (d.get("obtenido") or {}))
+        b.anotar("cazar", "cazar", d, d.get("exito") and (lana or animal != "sheep"), {"animal": animal, "obtenido": d.get("obtenido")})
+        r(f"kill @e[tag={ETIQ}]")
+
+
+def fab_gen(b):
+    casos = [("cama", ["minecraft:white_wool 3", "minecraft:oak_log 2"], "white_bed"),
+             ("cubo", ["minecraft:iron_ingot 3", "minecraft:oak_log 2"], "bucket"),
+             ("cofre", ["minecraft:oak_log 3"], "chest"),
+             ("horno", ["minecraft:cobblestone 8", "minecraft:oak_log 2"], "furnace"),
+             ("pico_hierro", ["minecraft:iron_ingot 3", "minecraft:oak_log 2"], "iron_pickaxe")]
+    for k in range(b.n):
+        b.arena()
+        x, z = b.sitio(5)
+        alias, inv, item = casos[k % len(casos)]
+        b.cuerpo(x, S, z, inv)
+        d = b.hab(f"fabricar {alias}", t=60)
+        b.anotar("fab_gen", "fabricar", d, d.get("exito") and (d.get("fabricados") or {}).get(item, 0) >= 1,
+                 {"objeto": alias, "fabricados": d.get("fabricados"), "mesa": d.get("mesa")})
+
+
 def reflejos(b):
     """Los reflejos (reflejos si), en reposo: no hay criterio en el plan; se mira qué hace en cada caso."""
     b.orden("reflejos si")
@@ -416,6 +563,8 @@ def reflejos(b):
 
 CRITERIOS = {  # sección → (mínimo de aciertos, de cuántas) con n = 10; se escala con --n
     "comer": 1.0, "llano": 0.9, "ladera": 0.7, "seguridad": 1.0, "zombi": 0.8, "esqueleto": 0.6, "esperar": 1.0, "apartarse": 1.0,
+    # F8.0b (PLAN_F8_perfiles.md, banco H-hab), fijados antes de medir
+    "fundir": 1.0, "sacar": 1.0, "poner": 1.0, "iluminar": 0.9, "escalera": 0.8, "agua": 0.9, "verter": 0.9, "cazar": 0.8, "fab_gen": 0.9,
 }
 
 
@@ -439,7 +588,7 @@ def medidas(b):
         hab[h] = {"n": len(ms), "exitos": sum(m[0] for m in ms), "causas": dict(Counter(m[1] for m in ms)),
                   "s_mediana": round(statistics.median(oks), 1) if oks else None, "s_max": max(m[2] for m in ms) if ms else None,
                   "muestras": ms}
-    return {"fecha": time.strftime("%Y-%m-%d %H:%M"), "N": b.n, "semilla": 42, "mundo": "supervivencia", "arena": [X, S, Z],
+    return {"fecha": time.strftime("%Y-%m-%d %H:%M"), "N": b.n, "semilla": 42, "mundo": MUNDO_SV, "arena": [X, S, Z],
             "nota": "F7.2, servidor-supervivencia/probar_supervivencia.py: arena de tierra cercada en el aire; refugiarse mezcla cavar "
                     "y tapiar (modo en extra)", "habilidades": hab}
 
@@ -452,9 +601,9 @@ def main():
     ap.add_argument("--puerto", type=int, default=3101)
     ap.add_argument("--sin-medidas", action="store_true", help="no escribir habilidades_medidas_sv.json")
     a = ap.parse_args()
-    solo = [s for s in a.solo.split(",") if s]
-    if any(s not in SECCIONES for s in solo):
-        sys.exit(f"secciones: {', '.join(SECCIONES)}")
+    solo = SECCIONES_F8 if a.solo == "f8" else [s for s in a.solo.split(",") if s]  # F8.0b: --solo f8, las de la fundación
+    if any(s not in SECCIONES + SECCIONES_F8 for s in solo):
+        sys.exit(f"secciones: {', '.join(SECCIONES + SECCIONES_F8)} (o f8)")
     try:
         r("list")
     except OSError:
