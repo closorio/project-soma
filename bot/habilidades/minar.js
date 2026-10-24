@@ -1,5 +1,6 @@
 // minar [bloque=stone] [n=8] [radio=6] [y=50] [forzar] (F6): picar hasta n bloques del tipo pedido (o «mineral» = cualquier _ore)
-// al alcance de la mano, acercándose sin romper ni poner nada. Solo dentro del rectángulo de obras (obras.json); nunca en una
+// al alcance de la mano, acercándose sin romper ni poner nada. En el mundo del usuario solo dentro del rectángulo de obras (obras.json;
+// F8.0b: fuera de él, en cualquier sitio que no esté protegido); nunca en una
 // zona protegida, ni troncos, cofres o bloques de una obra en pie (aunque se pidan), ni bajo los pies, ni con agua o lava en
 // un vecino, ni con arena o grava encima, ni por debajo de y = 50 (salvo y=NN). Con la herramienta que más rinda; si el
 // bloque exige pico y no lo lleva, no lo pica (causa «sin pico») salvo «forzar» (lo pica sin que suelte nada).
@@ -79,7 +80,8 @@ module.exports = async function minar(bot, args, tarea) {
   const [bloque = 'stone', n0, radio0] = palabras.filter(a => a !== 'forzar' && !/^y=/.test(a))
   const n = Math.min(MAX_N, parseInt(n0) || 8), radio = Math.min(MAX_RADIO, parseFloat(radio0) || 6)
   const quiero = bloque === 'mineral' ? (nombre) => nombre.endsWith('_ore') : (nombre) => nombre === bloque
-  if (!obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
+  // F8.0b: el rectángulo de obras solo manda en el mundo del usuario; fuera, sv.puedeTocar (zonas, cofres y obras) como las demás
+  if (!SV && !obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
   if (bloque !== 'mineral' && !bot.registry.blocksByName[bloque]) return { exito: false, causa: 'bloque desconocido: ' + bloque }
   const ms = Math.min(MAX_MS, (20 + 10 * n) * 1000), t0 = Date.now()
   const descartados = { protegido: 0, fuera_de_obras: 0, bajo_pies: 0, liquido: 0, cae_encima: 0, profundo: 0, sin_pico: 0, nunca: 0, obra: 0,
@@ -95,7 +97,7 @@ module.exports = async function minar(bot, args, tarea) {
       const b = bot.blockAt(v)
       if (!b || !quiero(b.name)) return false
       if (NUNCA.test(b.name) || zonas.NO_ROMPER.test(b.name)) { descartados.nunca++; return false }
-      if (!obras.enPermitido(v.x, v.z)) { descartados.fuera_de_obras++; return false }
+      if (!SV && !obras.enPermitido(v.x, v.z)) { descartados.fuera_de_obras++; return false }
       if (zonas.protegidoPor(v.x, v.y, v.z) || cofres.esCofre(v.x, v.y, v.z)) { descartados.protegido++; return false }
       if (obras.esDeObra(v.x, v.y, v.z)) { descartados.obra++; return false }
       if (v.y < yMin) { descartados.profundo++; return false }

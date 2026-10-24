@@ -69,4 +69,13 @@ function anotarMuerte(bot, causa = null) {
   return guardar(d)
 }
 
-module.exports = { activo, ruta, vacia, cargar, guardar, de, alArrancar, trasHabilidad, anotarMuerte, MAX_MUERTES }
+// F8.0b: un sitio que ha puesto el personaje (cofres, horno, mesa, minas): se apunta una vez y se guarda.
+function anotarLugar(bot, clave, pos) {
+  const d = de(bot)
+  if (!d || !Array.isArray(d[clave])) return false
+  if (d[clave].some(p => JSON.stringify(p) === JSON.stringify(pos))) return false
+  d[clave].push(pos)
+  return guardar(d)
+}
+
+module.exports = { anotarLugar, activo, ruta, vacia, cargar, guardar, de, alArrancar, trasHabilidad, anotarMuerte, MAX_MUERTES }

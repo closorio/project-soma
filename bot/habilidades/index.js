@@ -28,6 +28,10 @@ const HABILIDADES = {
   equipar: require('./equipar'),
   apartarse: require('./apartarse'),
   recoger_comida: require('./recoger_comida'),
+  // F8.0b (fundación de los perfiles v2, PLAN_F8_perfiles.md): horno, poner bloques, sacar del cofre
+  fundir: require('./fundir'),
+  poner: require('./poner'),
+  sacar_del_cofre: require('./sacar_del_cofre'),
 }
 
 // Interrupción por amenaza (como los «modos» de Mindcraft y como el simulador): un hostil a ≤ 6 bloques corta
@@ -38,7 +42,7 @@ const HABILIDADES = {
 // io.js decide si defenderse o huir). Y la interrupción corta solo la habilidad (una subtarea), no la tarea de quien la pidió: el
 // bucle libre o la orden siguen y deciden qué hacer. En el mundo del usuario todo sigue como antes.
 const RADIO_AMENAZA = 6
-const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar'])
+const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar', 'poner', 'sacar_del_cofre']) // F8.0b: pasos cortos
 
 // Una tarea hija: cancelada si lo está la de fuera o si la cancela la alerta (sin tocar la de fuera).
 function subtarea(tarea) {

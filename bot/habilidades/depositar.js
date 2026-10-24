@@ -134,4 +134,4 @@ module.exports = async function depositar(bot, [modo], tarea) {
   if (!Object.keys(guardado).length) return { exito: false, causa: causa || (tarea && tarea.cancelada ? 'cancelado' : 'no guardé nada'), ...datos }
   return { exito: true, causa: Object.keys(quedan).length ? causa || 'guardado a medias' : 'guardado', ...datos }
 }
-Object.assign(module.exports, { necesita, ajustes, guardados, ocupacion, conservar, ESPERA_FALLO, ESPERA_LLENOS })
+Object.assign(module.exports, { necesita, ajustes, guardados, ocupacion, conservar, conCerrojo, ESPERA_FALLO, ESPERA_LLENOS })

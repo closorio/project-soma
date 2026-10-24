@@ -14,4 +14,17 @@ function lista() {
 }
 const esCofre = (x, y, z) => lista().some(c => c.bloques.some(([a, b, d]) => a === x && b === y && d === z))
 
-module.exports = { lista, esCofre, RUTA }
+// F8.0b: apunta un cofre que ha puesto un personaje (habilidad poner); no repite uno que ya esté. Escritura de golpe (tmp + rename).
+function registrar(nombre, bloques) {
+  if (bloques.some(([x, y, z]) => esCofre(x, y, z))) return false
+  let datos = { cofres: [] }
+  try { datos = JSON.parse(fs.readFileSync(RUTA, 'utf8')) } catch (_) {}
+  datos.cofres = [...(datos.cofres || []), { nombre, bloques }]
+  const tmp = `${RUTA}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(datos, null, 1) + '\n')
+  fs.renameSync(tmp, RUTA)
+  cache = { mtime: -1, lista: [] }
+  return true
+}
+
+module.exports = { lista, esCofre, registrar, RUTA }

@@ -68,6 +68,9 @@
   "equipar",
   "apartarse",
   "recoger_comida",
+  "fundir",
+  "poner",
+  "sacar_del_cofre",
   "rutina_madera",
   "rutina_noche"
  ],

@@ -8,10 +8,15 @@
 // Éxito: el objeto en el inventario (causa = el nombre de la orden: espada_madera, tablones…). Fallos: faltan materiales ·
 // receta desconocida · sin sitio para la mesa · no se pudo (el juego no lo hizo). La amenaza la corta, como al simulador.
 // Devuelve { exito, causa, objeto, fabricados: {item: n}, mesa: 'cerca'|'puesta'|null, s }.
+// F8.0b (C6), fabricar OBJETO [n] con cualquier otro objeto: el nombre de minecraft-data (white_bed, bucket, iron_pickaxe…) o un
+// alias de GENERICOS (cama, cubo, cofre, horno, armadura_hierro…). Lo planea planificador.js con las recetas del juego (cadena de
+// ingredientes, la variante de madera que haya) y lo fabrica paso a paso, con la mesa como arriba. Lo que no se fabrica (lingotes,
+// lana, menas…) no lo busca: falla con «faltan materiales: …». La ruta de arriba (OBJETOS y sin objeto) no cambia.
 const { Vec3 } = require('vec3')
 const { conLimite, esperar, nodo } = require('./comun')
 const { fabricarTablones, vaciarRejilla } = require('./construir')
 const recoger = require('./recoger')
+const { planear } = require('./planificador')
 const sv = require('./sv')
 
 // Lo que gasta cada objeto: tablones (t), palos (p), piedra (q) y si pide mesa (los mismos números que RECETAS del simulador).
@@ -32,6 +37,14 @@ const ALIAS = { palo: 'palos', tabla: 'tablones', tablas: 'tablones', tablon: 't
   espada_de_madera: 'espada_madera', espada_de_piedra: 'espada_piedra', pico_de_madera: 'pico_madera', pico_de_piedra: 'pico_piedra',
   hacha_de_madera: 'hacha_madera', hacha_de_piedra: 'hacha_piedra' }
 const PIEDRA = /^(cobblestone|cobbled_deepslate|blackstone)$/
+// F8.0b: alias del fabricar genérico → [[objeto de minecraft-data, n por unidad pedida], …]. La cama sale del color de lana que haya.
+const GENERICOS = {
+  cubo: [['bucket', 1]], cofre: [['chest', 1]], horno: [['furnace', 1]], escudo: [['shield', 1]], mechero: [['flint_and_steel', 1]],
+  cizallas: [['shears', 1]], puerta: [['oak_door', 1]], escalera_mano: [['ladder', 1]], azada: [['wooden_hoe', 1]],
+  pico_hierro: [['iron_pickaxe', 1]], espada_hierro: [['iron_sword', 1]], hacha_hierro: [['iron_axe', 1]], pala_hierro: [['iron_shovel', 1]],
+  armadura_hierro: [['iron_helmet', 1], ['iron_chestplate', 1], ['iron_leggings', 1], ['iron_boots', 1]],
+  pico_diamante: [['diamond_pickaxe', 1]], ojo_ender: [['ender_eye', 1]], ojos: [['ender_eye', 1]],
+}
 const ALCANCE_MESA = 4
 
 const cuenta = (bot, vale) => bot.inventory.items().filter(i => vale(i.name)).reduce((a, i) => a + i.count, 0)
@@ -91,7 +104,7 @@ async function craftear(bot, item, n, mesa) {
   return true
 }
 
-module.exports = async function fabricar(bot, [objeto], tarea) {
+module.exports = async function fabricar(bot, [objeto, cantidad], tarea) {
   const t0 = Date.now(), antes = {}
   for (const i of bot.inventory.items()) antes[i.name] = (antes[i.name] || 0) + i.count
   let o = ALIAS[objeto] || objeto
@@ -105,7 +118,7 @@ module.exports = async function fabricar(bot, [objeto], tarea) {
   }
   if (!o) return fin(false, 'faltan materiales')
   const r = OBJETOS[o]
-  if (!r) return fin(false, 'receta desconocida: ' + o + ` (hay: ${Object.keys(OBJETOS).join(', ')})`)
+  if (!r) return generico(bot, o, Math.max(1, parseInt(cantidad) || 1), tarea, fin, antes)
   const cancelado = () => tarea && tarea.cancelada
 
   if (o === 'tablones') { // un tronco → 4 tablones
@@ -146,7 +159,60 @@ module.exports = async function fabricar(bot, [objeto], tarea) {
   const tengo = cuenta(bot, n => n === r.item) > (antes[r.item] || 0)
   return ok && tengo ? fin(true, o, extra) : fin(false, 'no se pudo', extra)
 }
+// ---- F8.0b · fabricar genérico ----
+function inventario(bot) {
+  const inv = {}
+  for (const i of bot.inventory.items()) inv[i.name] = (inv[i.name] || 0) + i.count
+  return inv
+}
+// Los objetivos de un nombre pedido: un alias, un objeto del juego o la cama del color de la lana que se lleve.
+function objetivosDe(bot, o, n) {
+  if (o === 'cama' || o === 'bed') {
+    const lana = bot.inventory.items().find(i => i.name.endsWith('_wool'))
+    return [[(lana ? lana.name.replace(/_wool$/, '') : 'white') + '_bed', n]]
+  }
+  if (GENERICOS[o]) return GENERICOS[o].map(([x, k]) => [x, k * n])
+  return bot.registry.itemsByName[o] ? [[o, n]] : null
+}
+async function generico(bot, o, n, tarea, fin, antes) {
+  const objetivos = objetivosDe(bot, o, n)
+  if (!objetivos) return fin(false, `receta desconocida: ${o} (hay: ${[...Object.keys(OBJETOS), ...Object.keys(GENERICOS)].join(', ')} o un objeto del juego)`)
+  let mesa = mesaCerca(bot)
+  const llevoMesa = cuenta(bot, x => x === 'crafting_table') > 0
+  let plan = planear(bot.registry, objetivos, inventario(bot))
+  if (plan.pasos.some(p => p.mesa) && !mesa && !llevoMesa) plan = planear(bot.registry, [['crafting_table', 1], ...objetivos], inventario(bot))
+  const faltan = Object.entries(plan.faltan)
+  if (faltan.length) return fin(false, 'faltan materiales: ' + faltan.map(([k, m]) => `${k} ${m}`).join(', '), { plan: plan.pasos.map(p => p.item) })
+  let puesta = false
+  for (const paso of plan.pasos) {
+    if (tarea && tarea.cancelada) break
+    if (paso.mesa && !mesa) {
+      mesa = await ponerMesa(bot)
+      if (!mesa) return fin(false, 'sin sitio para la mesa')
+      puesta = true
+    }
+    for (let k = 0; k < paso.veces; k++) { // de una en una: varias de golpe a veces se pierden (construir.fabricarTablones)
+      if (!(await craftear(bot, paso.item, 1, paso.mesa ? mesa : null))) return fin(false, `no se pudo: ${paso.item}`, { mesa: puesta ? 'puesta' : null })
+    }
+  }
+  if (puesta) await recogerMesa(bot, mesa, tarea)
+  const extra = { mesa: puesta ? 'puesta' : mesa ? 'cerca' : null, objetivos: objetivos.map(([x, m]) => `${x}×${m}`) }
+  if (tarea && tarea.cancelada) return fin(false, 'cancelado', extra)
+  const tengo = objetivos.every(([x, m]) => cuenta(bot, y => y === x) >= (antes[x] || 0) + m)
+  return tengo ? fin(true, o, extra) : fin(false, 'no se pudo', extra)
+}
+async function recogerMesa(bot, mesa, tarea) {
+  const k = bot.blockAt(mesa.position)
+  if (!k || k.name !== 'crafting_table') return
+  const { item } = sv.mejorHerramienta(bot, k)
+  try { if (item) await conLimite(bot.equip(item, 'hand'), 3000); await conLimite(bot.dig(k, true), 6000, () => bot.stopDigging()) } catch (_) {}
+  await esperar(300)
+  await recoger(bot, ['5', 'crafting_table'], tarea)
+}
+
 module.exports.siguienteFabricacion = siguienteFabricacion
+module.exports.GENERICOS = GENERICOS
+module.exports.objetivosDe = objetivosDe
 module.exports.troncosPara = troncosPara
 module.exports.estado = estado
 module.exports.OBJETOS = OBJETOS
