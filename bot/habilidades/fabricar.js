@@ -112,6 +112,20 @@ async function ponerMesa(bot) {
     const puesta = bot.blockAt(v)
     if (puesta && puesta.name === 'crafting_table') return puesta
   }
+  // y si tampoco (encima de un pilar: a los lados, aire sin suelo), colgada de un lado del bloque de debajo, un nivel más abajo
+  const debajo = bot.blockAt(b.offset(0, -1, 0))
+  if (!sv.solido(debajo)) return null
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const v = b.offset(dx, -1, dz), k = bot.blockAt(v)
+    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    try {
+      await conLimite(bot.equip(mesa, 'hand'), 3000)
+      await conLimite(bot.placeBlock(debajo, new Vec3(dx, 0, dz)), 3000)
+    } catch (_) {}
+    await esperar(200)
+    const puesta = bot.blockAt(v)
+    if (puesta && puesta.name === 'crafting_table') return puesta
+  }
   return null
 }
 

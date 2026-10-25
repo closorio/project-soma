@@ -46,7 +46,7 @@ async function ejecutar(bot, nombre, args, tarea, hacer, { decisor = 'guion', po
   if (decisor === 'red' && decide.observacion() !== R.obs) return { exito: false, causa: `la política no es de ${R.obs}`, ms: 0 }
   const decisiones = []
   return observacion.conPerfil(bot, R.estilo, async () => {
-    let seguidos = 0, causa = null
+    let seguidos = 0, causa = null, refugioFallos = 0
     observacion.iniciar(bot, x.max_s)
     while (!causa) {
       if (R.hecho(bot, x)) { causa = 'hecho'; break }
@@ -61,6 +61,13 @@ async function ejecutar(bot, nombre, args, tarea, hacer, { decisor = 'guion', po
       let r
       try { r = await hacer(d.habilidad, String(libre.ARGS[d.habilidad] || '').split(/\s+/).filter(Boolean), tarea) } catch (e) { r = { exito: false, causa: 'error: ' + e.message } }
       decisiones.push(`${d.habilidad}${r.exito ? '' : '✗'}`)
+      // F8.1: refugiarse que falla en bucle («suelo peligroso»: 516 veces en una noche del banco K): moverse un poco y volver a probar
+      refugioFallos = d.habilidad === 'refugiarse' && !r.exito ? refugioFallos + 1 : 0
+      if (refugioFallos >= 2 && !tarea.cancelada) {
+        refugioFallos = 0
+        decisiones.push('explorar(apartarse)')
+        try { await hacer('explorar', ['-', '16', '25'], tarea) } catch (_) {}
+      }
       seguidos = r.exito ? 0 : seguidos + 1
     }
     return { exito: causa === 'hecho', causa, decisiones, estilo: R.estilo, decisor, ...R.resumen(bot, x), ms: Date.now() - t0 }

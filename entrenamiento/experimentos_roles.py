@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """F8.1 · banco K (y de cualquier rol v2): N personajes con el capataz de un rol (bot/capataz.js) a la vez, desde cero, en el mundo
 de IO_SERVIDOR (por defecto local, 26.1.2), con el servidor ya en marcha (servidor-local/arrancar.sh).
-Cada rotación: 4 puntos alrededor de un llano distinto y sin estrenar (--zona) (sobre motion_blocking_no_leaves), inventario vacío, memoria
+Cada rotación: 4 puntos en llanos sin estrenar (--zona); con Casual, solo puntos con ≥ 3 ovejas a ≤ 48 bloques (--ovejas) (sobre motion_blocking_no_leaves), inventario vacío, memoria
 persistente borrada, `time set 0`, monstruos encendidos, reflejos encendidos, modo libre; dura --dias días de Minecraft (por
 defecto 2 = 40 min). Cada 15 s lee `progreso` de cada personaje (etapas hechas con su día y su hora, y el inventario) y las muertes
 (su memoria persistente).
 Criterio de Casual fijado antes de medir (PLAN_F8_perfiles.md, banco K): pico de hierro y cama en ≤ 2 días en ≥ 6 de 8; muertes ≤ 1
 cada 3 días (se informa por ejecución). Escribe logs/rol-ROL-AAAAMMDD-HHMM.json (y lo va escribiendo durante la medida).
 Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]"""
-import argparse, json, os, re, signal, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, json, math, os, re, signal, subprocess, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
@@ -69,7 +69,46 @@ def muertes(nombre):
         return 0
 
 
-def rotacion(a, k, centro, nombres, puertos, salida, res):
+def ovejas_en(x, z, radio=48):
+    """Cuántas ovejas hay a ≤ radio de (x, z) (carga los trozos un momento: sin ellos el servidor no sabe de sus entidades)."""
+    r(f"forceload add {x - 32} {z - 32} {x + 32} {z + 32}")
+    time.sleep(5)
+    m = re.search(r"Count: (\d+)", r(f"{OW} positioned {x} 64 {z} if entity @e[type=minecraft:sheep,distance=..{radio}]"))
+    r(f"forceload remove {x - 32} {z - 32} {x + 32} {z + 32}")
+    return int(m[1]) if m else 0
+
+
+def al_llano(x, z):
+    m = re.search(r"\[(-?\d+), [^,]+, (-?\d+)\]", r(f"{OW} positioned {x} 64 {z} run locate biome minecraft:plains"))
+    return (int(m[1]), int(m[2])) if m else (x, z)
+
+
+def elegir_puntos(n, k, zona, ovejas, separacion=150):
+    """n puntos de salida en llano para la rotación k. Con ovejas > 0 (Casual: la cama pide 3 de lana; decisión del usuario,
+    2026-10-24, porque esta semilla tiene muy pocas), solo los que tienen al menos esas ovejas a ≤ 48 bloques, a ≥ separacion
+    entre sí; si en la zona no hay bastantes, en las siguientes. Devuelve [(x, z, ovejas)]."""
+    if not ovejas:
+        centro = llano(zona)
+        return [(*al_llano(centro[0] + dx, centro[1] + dz), None) for dx, dz in ROTACIONES[k % len(ROTACIONES)][:n]]
+    elegidos = []
+    for zz in range(zona, zona + 6):
+        centro = llano(zz)
+        print(f"   buscando puntos con ≥ {ovejas} ovejas alrededor del llano {centro}…", flush=True)
+        for radio in (0, 100, 200, 300, 400):
+            for g in (range(0, 360, 45) if radio else [0]):
+                x, z = al_llano(round(centro[0] + radio * math.cos(math.radians(g))), round(centro[1] + radio * math.sin(math.radians(g))))
+                if any(math.hypot(x - ex, z - ez) < separacion for ex, ez, _ in elegidos):
+                    continue
+                c = ovejas_en(x, z)
+                if c >= ovejas:
+                    elegidos.append((x, z, c))
+                    print(f"   punto {len(elegidos)}: {x}, {z} con {c} ovejas", flush=True)
+                    if len(elegidos) == n:
+                        return elegidos
+    raise SystemExit(f"no encuentro {n} puntos con ≥ {ovejas} ovejas (llevo {len(elegidos)})")
+
+
+def rotacion(a, k, puntos, nombres, puertos, salida, res):
     for n in nombres:
         (RAIZ / "mundos" / MUNDO / f"memoria_{n}.json").unlink(missing_ok=True)
     args = [f"{n}:{p}:recolector:ordenes:capataz@{a.rol}" for n, p in zip(nombres, puertos)]
@@ -87,18 +126,15 @@ def rotacion(a, k, centro, nombres, puertos, salida, res):
         r("gamerule spawn_monsters true")
         r("weather clear")
         for i, (n, p) in enumerate(zip(nombres, puertos)):
-            dx, dz = ROTACIONES[k % len(ROTACIONES)][i % 4]
+            px, pz, nov = puntos[i]
             r(f"clear {n}")
             r(f"effect clear {n}")
             r(f"effect give {n} minecraft:instant_health 1 10 true")
             r(f"effect give {n} minecraft:saturation 1 20 true")
-            # al llano más cercano a ese punto (a 100 del centro, varios caían fuera del llano: sin árboles ni animales)
-            m = re.search(r"\[(-?\d+), [^,]+, (-?\d+)\]", r(f"{OW} positioned {centro[0] + dx} 64 {centro[1] + dz} run locate biome minecraft:plains"))
-            px, pz = (int(m[1]), int(m[2])) if m else (centro[0] + dx, centro[1] + dz)
             poner_en(n, px, pz)
             orden(p, "campamento aqui")
             orden(p, "reflejos si")
-            filas[n] = {"rotacion": k, "punto": [px, pz], "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
+            filas[n] = {"rotacion": k, "punto": [px, pz], "ovejas": nov, "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
         r("time set 0")
         dia0, _ = hora(MUNDO)
         for p in puertos:
@@ -151,6 +187,7 @@ def main():
     ap.add_argument("--prefijo", default="K")
     ap.add_argument("--n", type=int, default=4)
     ap.add_argument("--zona", type=int, default=None, help="terreno de la medida (por defecto, uno nuevo cada vez)")
+    ap.add_argument("--ovejas", type=int, default=None, help="ovejas mínimas a ≤ 48 de cada punto (por defecto 3 con casual, 0 con los demás)")
     a = ap.parse_args()
     try:
         r("list")
@@ -162,11 +199,12 @@ def main():
     puertos = [a.puertos + i for i in range(a.n)]
     zona = a.zona if a.zona is not None else int(time.time() // 3600) % 40 + 1
     print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · zonas desde {zona}", flush=True)
+    ovejas = a.ovejas if a.ovejas is not None else (3 if a.rol == "casual" else 0)
     res = {}
     for k in range(a.rotaciones):
-        centro = llano(zona + k)  # cada rotación en un llano distinto, sin estrenar
-        print(f"== rotación {k + 1}: llano en {centro}", flush=True)
-        rotacion(a, k, centro, nombres, puertos, salida, res)
+        print(f"== rotación {k + 1}", flush=True)
+        puntos = elegir_puntos(a.n, k, zona + 7 * k, ovejas)  # cada rotación en zonas sin estrenar (las de la anterior quedan atrás)
+        rotacion(a, k, puntos, nombres, puertos, salida, res)
     filas = [f for rot in res.values() for f in rot.values()]
     bien = [f for f in filas if f["hitos"].get("pico_hierro", 99) <= 2 and f["hitos"].get("cama", 99) <= 2]
     muertes_3d = [round(f["muertes"] * 3 / a.dias, 2) for f in filas]
