@@ -169,8 +169,7 @@
    "tipo": "mineral",
    "pre": {
     "inv": {
-     "pico": 0.66,
-     "carbon": 1
+     "pico": 0.66
     }
    },
    "objetivo": {

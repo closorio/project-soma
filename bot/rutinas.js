@@ -32,7 +32,7 @@ const RUTINAS = {
     estilo: 'supervivencia', obs: 'obs_sv', guion: guionSv,
     leer: (a) => ({ max_s: parseInt(a[0]) || 900 }),
     inicio: () => ({}),
-    hecho: (bot) => deDia(bot) && sv.aLaVista(bot).length === 0,
+    hecho: (bot) => !sv.esperable(bot) && sv.aLaVista(bot).length === 0, // del atardecer (11040) al amanecer cuenta como noche
     resumen: (bot) => ({ salud: bot.health, hora: bot.time ? bot.time.timeOfDay : null }),
   },
 }
@@ -55,6 +55,8 @@ async function ejecutar(bot, nombre, args, tarea, hacer, { decisor = 'guion', po
       if (seguidos >= ATASCO) { causa = 'atasco'; break }
       const { obs, datos } = R.obs === 'obs_sv' ? observacion.observarSv(bot) : observacion.observar(bot)
       const d = decide.decidir(obs)
+      // el guion de F3 manda «ir al jugador» si no ve árbol (en F3 siempre había uno): sin jugador humano a la vista, explorar
+      if (d.habilidad === 'ir_a_jugador' && !(datos && datos.jugador)) d.habilidad = 'explorar'
       if (R.obs === 'obs_sv' && encerrado(bot) && libre.necesitaSalir(bot, d.habilidad, datos)) await hacer('salir_del_refugio', [], tarea)
       let r
       try { r = await hacer(d.habilidad, String(libre.ARGS[d.habilidad] || '').split(/\s+/).filter(Boolean), tarea) } catch (e) { r = { exito: false, causa: 'error: ' + e.message } }

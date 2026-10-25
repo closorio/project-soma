@@ -52,7 +52,7 @@ const estadoCapataz = (bot) => memoria(bot, 'capataz', () => ({ etapa: null, pas
 function alternativa(bot, etapa, n) {
   const y = nodo(bot).y
   if (etapa.tipo === 'mineral' && n % 2 === 0 && y > 20) return { habilidad: 'cavar_escalera', args: [String(y - 12), '-'] }
-  return { habilidad: 'explorar', args: [] }
+  return { habilidad: 'explorar', args: ['-', '80', '120'] } // más lejos que el explorar de siempre (40): ovejas, menas, árboles
 }
 
 // Al morir se pierde el inventario (keep_inventory false): las etapas hechas cuyo objetivo era solo de inventario se olvidan (hay que
@@ -86,7 +86,9 @@ function decidir(bot, nombre) {
     // al atardecer aún es «de día» para rutina_noche (acababa al momento, en bucle): refugiarse antes y, dentro, esperar al día
     // (o dormir con cama); de noche y fuera, rutina_noche (el guion de supervivencia)
     if (encerrado(bot)) return { habilidad: sv.esNoche(bot) && progresion.estado(bot).inv.cama ? 'dormir' : 'esperar_al_dia', args: [], motivo: 'noche' }
-    return atardecer ? { habilidad: 'refugiarse', args: [], motivo: 'atardecer' } : { habilidad: 'rutina_noche', args: ['900'], motivo: 'noche' }
+    // F8.1: al atardecer refugiarse a pelo fallaba en bucle («suelo peligroso») y lo mataban de noche: la rutina (el guion de
+    // supervivencia) sabe moverse si no puede refugiarse, y desde el atardecer hasta el amanecer cuenta como noche
+    return { habilidad: 'rutina_noche', args: ['900'], motivo: atardecer ? 'atardecer' : 'noche' }
   }
   if (reglas.noche !== 'refugio' && sv.esNoche(bot) && (bot.health < VIDA_REFUGIO || sv.aLaVista(bot).length >= 3))
     return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }

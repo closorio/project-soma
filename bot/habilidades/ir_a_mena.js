@@ -27,7 +27,10 @@ module.exports = async function irAMena(bot, [tipo = 'mineral', radio0], tarea) 
   try {
     for (const v of menas.slice(0, 3)) {
       if (tarea && tarea.cancelada) return { exito: false, causa: 'cancelado', rotos, puestos }
-      const r = await moverHasta(bot, new goals.GoalNear(v.x, v.y, v.z, 2), () => lejania(bot, v) <= 4.3, { ms: MS, tarea, mov: movimientos(bot) })
+      // hasta verla (no solo tenerla cerca): minar solo pica lo que se ve desde el ojo (F7.7); en el banco K se paraba al lado de la
+      // mena tapada y minar decía «nada que minar» una y otra vez
+      const meta = new goals.GoalLookAtBlock(v, bot.world, { reach: 4 })
+      const r = await moverHasta(bot, meta, () => meta.isEnd(bot.entity.position.floored()) && lejania(bot, v) <= 4.3, { ms: MS, tarea, mov: movimientos(bot) })
       if (r === 'listo') return { exito: true, causa: 'al lado', mena: bot.blockAt(v)?.name, pos: [v.x, v.y, v.z], rotos, puestos }
     }
     return { exito: false, causa: 'sin camino', rotos, puestos }
