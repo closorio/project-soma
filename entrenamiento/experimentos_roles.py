@@ -8,7 +8,12 @@ monstruos encendidos, reflejos encendidos, modo libre; dura --dias días de Mine
 la causa, del registro del servidor).
 Criterio de Casual fijado antes de medir (PLAN_F8_perfiles.md, banco K): pico de hierro y cama en ≤ 2 días en ≥ 6 de 8; muertes ≤ 1
 cada 3 días (se informa por ejecución). Escribe logs/rol-ROL-AAAAMMDD-HHMM.json (y lo va escribiendo durante la medida).
-Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]"""
+Terreno fijo (F8.1): --preparar-puntos RUTA --zona Z elige 8 puntos y fotografía sus regiones (servidor-local/banco_k/); luego
+--puntos RUTA restaura la foto antes de medir y pone a los 8 a la vez en sus puntos (una rotación), y --comparar JSON compara punto a
+punto con otra medida del mismo banco.
+Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]
+     experimentos_roles.py --preparar-puntos entrenamiento/puntos_k.json --zona 60
+     experimentos_roles.py --puntos entrenamiento/puntos_k.json [--comparar logs/rol-casual-….json]"""
 import argparse, json, math, os, re, signal, subprocess, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
@@ -134,6 +139,99 @@ def elegir_puntos(n, k, zona, ovejas, separacion=150):
     raise SystemExit(f"no encuentro {n} puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles (llevo {len(elegidos)})")
 
 
+# F8.1 · terreno fijo: las medidas 7-9 cambiaban a la vez el código y el terreno (una --zona nueva cada vez), y no se sabía de
+# dónde venía una mejora. Con --preparar-puntos se eligen 8 puntos una vez y se fotografían sus regiones (bloques, entidades y
+# puntos de interés: árboles y ovejas incluidos); con --puntos, cada medida restaura la foto antes de empezar y arranca en los
+# mismos puntos, así dos versiones del código se comparan por pares (punto a punto).
+LOCAL = RAIZ / "servidor-local"
+OVERWORLD = LOCAL / "world" / "dimensions" / "minecraft" / "overworld"
+FOTO = LOCAL / "banco_k"  # fuera de git (servidor-local/*): las regiones pesan decenas de MB y no viajan
+CAPAS = ("region", "entities", "poi")
+MARGEN = 128  # bloques alrededor de cada punto que se restauran (lo que un bot recorre en las primeras etapas)
+
+
+def regiones(puntos):
+    """Los ficheros r.X.Z.mca (512×512 bloques) que cubren ±MARGEN alrededor de cada punto."""
+    rr = set()
+    for x, z, *_ in puntos:
+        for gx in range((x - MARGEN) // 512, (x + MARGEN) // 512 + 1):
+            for gz in range((z - MARGEN) // 512, (z + MARGEN) // 512 + 1):
+                rr.add(f"r.{gx}.{gz}.mca")
+    return sorted(rr)
+
+
+def servidor(accion):
+    """parar.sh o arrancar.sh del servidor local (por PID, nunca pkill)."""
+    p = subprocess.run([str(LOCAL / f"{accion}.sh")], capture_output=True, text=True, timeout=300)
+    print("   " + " · ".join(l for l in p.stdout.splitlines() if l.strip()), flush=True)
+    if p.returncode:
+        raise SystemExit(f"{accion}.sh falló: {p.stdout} {p.stderr}")
+
+
+def copiar_regiones(nombres, desde, hasta):
+    import shutil
+    n = 0
+    for capa in CAPAS:
+        (hasta / capa).mkdir(parents=True, exist_ok=True)
+        for f in nombres:
+            if (desde / capa / f).exists():
+                shutil.copy2(desde / capa / f, hasta / capa / f)
+                n += 1
+    return n
+
+
+def preparar_puntos(zona, ovejas, ruta, n=8):
+    if MUNDO != "local":
+        raise SystemExit("el terreno fijo solo es para el mundo local (servidor-local/)")
+    print(f"preparando {n} puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles desde la zona {zona}…", flush=True)
+    puntos = [(x, z) for x, z, _ in elegir_puntos(n, 0, zona, ovejas)]
+    r("save-all flush")
+    servidor("parar")
+    rr = regiones(puntos)
+    copiadas = copiar_regiones(rr, OVERWORLD, FOTO)
+    servidor("arrancar")
+    # lo que hay tras volver a cargar es la referencia (las ovejas se mueven algo al cargar)
+    ref = [[x, z, *terreno(x, z)] for x, z in puntos]
+    ruta.write_text(json.dumps({"zona": zona, "semilla": 20261024, "margen": MARGEN, "puntos": ref, "regiones": rr},
+                               ensure_ascii=False, indent=1) + "\n")
+    print(f"   {len(rr)} regiones ({copiadas} ficheros) en {FOTO.relative_to(RAIZ)}; puntos en {ruta}", flush=True)
+    for x, z, ov, tr in ref:
+        print(f"   {x}, {z}: {ov} ovejas, {tr} árboles", flush=True)
+
+
+def restaurar(banco):
+    """Vuelve a poner la foto de las regiones de los puntos (con el servidor parado) y comprueba ovejas y árboles."""
+    rr = banco["regiones"]
+    faltan = [f for f in rr if not (FOTO / "region" / f).exists()]
+    if faltan:
+        raise SystemExit(f"no está la foto de {len(faltan)} regiones en {FOTO} (otro PC): lanza --preparar-puntos")
+    r("save-all flush")
+    servidor("parar")
+    n = copiar_regiones(rr, FOTO, OVERWORLD)
+    servidor("arrancar")
+    print(f"   restauradas {len(rr)} regiones ({n} ficheros)", flush=True)
+    mal = []
+    for x, z, ov, tr in banco["puntos"]:
+        ov2, tr2 = terreno(x, z)
+        if abs(ov2 - ov) > 1 or tr2 != tr:
+            mal.append(f"{x}, {z}: {ov2} ovejas y {tr2} árboles (la foto: {ov} y {tr})")
+    if mal:
+        raise SystemExit("el terreno no coincide con la foto:\n   " + "\n   ".join(mal))
+    print("   terreno comprobado: ovejas y árboles como en la foto", flush=True)
+
+
+def comparar(anterior, res):
+    """Punto a punto: hitos (día) y muertes de la medida anterior y de esta (las dos con --puntos del mismo banco)."""
+    previas = {tuple(f["punto"]): f for rot in json.loads(Path(anterior).read_text())["resultados"].values() for f in rot.values()}
+    print(f"comparación con {Path(anterior).name} (día de pico / cama / casa · muertes):", flush=True)
+    d = lambda f, h: f"{f['hitos'][h]:.2f}" if h in f["hitos"] else "  —  "
+    for rot in res.values():
+        for n, f in rot.items():
+            p = previas.get(tuple(f["punto"]))
+            antes = f"{d(p, 'pico_hierro')} / {d(p, 'cama')} / {d(p, 'casa')} · {p['muertes']}" if p else "(punto nuevo)"
+            print(f"   {n} {f['punto']}: antes {antes}  →  ahora {d(f, 'pico_hierro')} / {d(f, 'cama')} / {d(f, 'casa')} · {f['muertes']}", flush=True)
+
+
 def rotacion(a, k, puntos, nombres, puertos, salida, res):
     for n in nombres:
         (RAIZ / "mundos" / MUNDO / f"memoria_{n}.json").unlink(missing_ok=True)
@@ -235,22 +333,39 @@ def main():
     ap.add_argument("--n", type=int, default=4)
     ap.add_argument("--zona", type=int, default=None, help="terreno de la medida (por defecto, uno nuevo cada vez)")
     ap.add_argument("--ovejas", type=int, default=None, help="ovejas mínimas a ≤ 48 de cada punto (por defecto 3 con casual, 0 con los demás)")
+    ap.add_argument("--preparar-puntos", metavar="RUTA", help="elige 8 puntos (desde --zona), fotografía su terreno y los guarda en RUTA")
+    ap.add_argument("--puntos", metavar="RUTA", help="terreno fijo: restaura la foto y usa sus puntos (8 personajes, 1 rotación)")
+    ap.add_argument("--sin-restaurar", action="store_true", help="con --puntos, no restaurar la foto (p. ej. un humo seguido de la medida)")
+    ap.add_argument("--comparar", metavar="JSON", help="al acabar, tabla punto a punto con otra medida del mismo banco")
     a = ap.parse_args()
     try:
         r("list")
     except OSError:
         sys.exit(f"el servidor de {MUNDO} no responde por RCON: arráncalo")
+    ovejas = a.ovejas if a.ovejas is not None else (3 if a.rol == "casual" else 0)
+    if a.preparar_puntos:
+        if a.zona is None:
+            sys.exit("--preparar-puntos pide --zona (una sin usar: las de las medidas anteriores están taladas y cazadas)")
+        return preparar_puntos(a.zona, ovejas, Path(a.preparar_puntos))
+    banco = json.loads(Path(a.puntos).read_text()) if a.puntos else None
+    if banco:
+        a.n, a.rotaciones = len(banco["puntos"]), 1  # B5: todos a la vez, cada uno en su punto de siempre
     LOGS.mkdir(exist_ok=True)
     salida = LOGS / f"rol-{a.rol}-{time.strftime('%Y%m%d-%H%M')}.json"
     nombres = [f"{a.prefijo}{i + 1}" for i in range(a.n)]
     puertos = [a.puertos + i for i in range(a.n)]
     zona = a.zona if a.zona is not None else int(time.time() // 3600) % 40 + 1
-    print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · zonas desde {zona}", flush=True)
-    ovejas = a.ovejas if a.ovejas is not None else (3 if a.rol == "casual" else 0)
+    donde = f"puntos fijos de {a.puntos}" if banco else f"zonas desde {zona}"
+    print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · {donde}", flush=True)
     res = {}
     for k in range(a.rotaciones):
         print(f"== rotación {k + 1}", flush=True)
-        puntos = elegir_puntos(a.n, k, zona + 7 * k, ovejas)  # cada rotación en zonas sin estrenar (las de la anterior quedan atrás)
+        if banco:
+            if not a.sin_restaurar:
+                restaurar(banco)
+            puntos = [(x, z, ov) for x, z, ov, _ in banco["puntos"]]
+        else:
+            puntos = elegir_puntos(a.n, k, zona + 7 * k, ovejas)  # cada rotación en zonas sin estrenar (las de la anterior quedan atrás)
         rotacion(a, k, puntos, nombres, puertos, salida, res)
     filas = [f for rot in res.values() for f in rot.values()]
     bien = [f for f in filas if f["hitos"].get("pico_hierro", 99) <= 2 and f["hitos"].get("cama", 99) <= 2]
@@ -270,8 +385,10 @@ def main():
           f"muertes por 3 días {muertes_3d} ({'bien' if resumen['muertes_ok'] else 'demasiadas'})", flush=True)
     print("hitos: " + " · ".join(f"{h} {v['n']}/{v['de']} (mediana día {v['mediana']})" for h, v in resumen["hitos"].items()), flush=True)
     print("causas de muerte: " + (", ".join(f"{c} ×{n}" for c, n in sorted(causas.items(), key=lambda x: -x[1])) or "ninguna"), flush=True)
-    salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "resumen": resumen, "resultados": res},
+    salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "puntos": a.puntos, "resumen": resumen, "resultados": res},
                                  ensure_ascii=False, indent=1) + "\n")
+    if a.comparar:
+        comparar(a.comparar, res)
     print("FIN", salida, flush=True)
 
 

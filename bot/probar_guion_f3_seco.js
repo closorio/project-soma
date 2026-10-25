@@ -2,7 +2,8 @@
 // 1. El guion de F3 en JS da lo mismo que guion_lote de Python en las observaciones de
 // episodios del simulador de habilidades (todos los perfiles, solo y con compañeros, jugados al azar y por el propio guion),
 // con y sin compañero.
-// 2. Las rutinas (rutinas.js) en el mundo de mentira de probar_sentidos_seco.js, con un `hacer` de mentira: rutina_madera decide
+// 2. Las rutinas (rutinas.js) en el mundo de mentira de probar_sentidos_seco.js, con un `hacer` de mentira (también uno en que todo
+//    sale bien sin dar troncos: acaba «sin avance»): rutina_madera decide
 //    con el guion de F3 y el estilo recolector, acaba al juntar N troncos, por atasco o por la tarea cancelada y deja el perfil de
 //    antes; rutina_noche acaba enseguida de día sin monstruos y, de noche, decide con el guion de supervivencia.
 // Uso: node bot/probar_guion_f3_seco.js [episodios=120]   (necesita el python3 del venv en el PATH)
@@ -52,12 +53,12 @@ const observacion = require('./observacion')
 const guionSv = require('./guion_sv')
 const ok = (c, que) => { if (!c) { bien = false; console.log('  FALLO ' + que) } }
 // Un `hacer` de mentira: apunta lo que pide; picar_tronco da un tronco (en el inventario de mentira) y lo demás «sale bien».
-function hacedor(bot, { falla = false, alPedir = () => {} } = {}) {
+function hacedor(bot, { falla = false, sinTroncos = false, alPedir = () => {} } = {}) {
   const pedidas = []
   const hacer = async (h, args, tarea) => {
     pedidas.push({ h, args, perfil: observacion.perfilDe(bot).nombre })
     alPedir(pedidas.length, tarea)
-    if (h === 'picar_tronco' && !falla) bot.inventory.slots[9] = { name: 'oak_log', count: (bot.inventory.slots[9]?.count || 0) + 1 }
+    if (h === 'picar_tronco' && !falla && !sinTroncos) bot.inventory.slots[9] = { name: 'oak_log', count: (bot.inventory.slots[9]?.count || 0) + 1 }
     return { exito: !falla, causa: falla ? 'sin árbol' : h }
   }
   return { hacer, pedidas }
@@ -81,6 +82,11 @@ function hacedor(bot, { falla = false, alPedir = () => {} } = {}) {
   r = await rutinas.ejecutar(bot, 'rutina_madera', ['5', '30'], { cancelada: false }, h.hacer)
   ok(!r.exito && r.causa === 'interrumpida' && h.pedidas.length === 1, `con la tarea cancelada: ${r.causa} tras ${h.pedidas.length}`)
   console.log(`  2 · rutina_madera: atasco tras ${rutinas.ATASCO} fallos e interrumpida con una orden nueva`)
+  // F8.1: todo «sale bien» pero no entra ningún tronco (K4, banco K 9: 2.990 ir_a_arbol con éxito): acaba «sin avance»
+  bot = arbol(); h = hacedor(bot, { sinTroncos: true })
+  r = await rutinas.ejecutar(bot, 'rutina_madera', ['5', '30'], { cancelada: false }, h.hacer)
+  ok(!r.exito && r.causa === 'sin avance' && h.pedidas.length === rutinas.SIN_AVANCE, `éxitos sin troncos: ${r.causa} tras ${h.pedidas.length} (${r.decisiones.join(' ')})`)
+  console.log(`  2 · rutina_madera sin troncos: ${r.causa} tras ${h.pedidas.length} decisiones (${r.decisiones.join(' ')})`)
 
   bot = mundoFalso({ hora: 6000 }); h = hacedor(bot)
   r = await rutinas.ejecutar(bot, 'rutina_noche', [], { cancelada: false }, h.hacer)
