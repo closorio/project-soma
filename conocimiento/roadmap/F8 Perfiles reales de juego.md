@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F8
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-10-24
-siguiente: "F8.1 Casual: el capataz que recorre las etapas de perfiles/v2/casual.json y el banco K (pico de hierro y cama en ≤ 2 días en ≥ 6/8)"
+actualizado: 2026-10-25
+siguiente: "F8.1 Casual, ronda corta: cazar sube a la superficie, árbol alcanzable, reflejo de ahogamiento y tejado de la cabaña; luego otra medida del banco K (medida 9: 3/8, criterio ≥ 6/8)"
 ---
 # F8 Perfiles reales de juego
 
@@ -15,6 +15,8 @@ Roles de juego de largo horizonte: Casual, Speedrunner (hasta el dragón), Redst
 **F8.0a hecha (2026-10-24, rama `deploy`).** Servidor propio `servidor-local/` (26.1.2, 25567, RCON 25577) y `servidor/rcon.py`; taxonomía de amenazas por nombre; decisores por personaje; perfiles v2 `casual` y `speedrunner` validados en JS y Python; rutinas `rutina_madera` y `rutina_noche`; memoria persistente.
 Puerta G0, parte 1: `probar_supervivencia.py` en 26.1.2 pasa **todas** las secciones con los criterios de F7.2 (comer, fabricar, refugiarse en llano y ladera, atacar zombi y esqueleto, esperar, dormir, apartarse, caza, reflejos; medidas en `entrenamiento/habilidades_medidas_local.json`). Soma, 5 min en libre con el decisor `guion` en el mundo local, sin errores; `rutina_madera 3` hecha en 68 s. Falta la parte 2 de G0: E0 (explorar robusto), que es F8.0b.
 **F8.0b hecha (2026-10-24).** La fundación C3-C7 (fabricar genérico, fundir, poner, sacar del cofre, antorchas, escalera, subir, desatascarse, cazar, cubo) pasa el banco H-hab en 26.1.2 (9 secciones con sus criterios). El banco E0 de explorar da llano 10/10, montaña 10/10, río 10/10 y cueva 8/10: sale del túnel en las 10, pero 2 salidas hacia el norte del llano no superan el terreno de allí. Los manglares quedan para E3. Ver [[explorar decidía el suelo con el primer bloque]] y [[minecraft-data no trae recetas de horno]]. Ver [[2026-10-23-perfiles-v2-guion-mas-red]] y [[En 26.1 time query daytime ya no existe]].
+
+**F8.1 parada sin pasar el banco K (2026-10-25).** El capataz del Casual recorre todas sus etapas, y el banco K elige puntos con ovejas y árboles, corta si caen los bots y da las causas de muerte. Medida 9: pico de hierro 7/8 (mediana del día 0,37), cama 3/8 (mediana 1,34) y 3/8 en el criterio, que pide ≥ 6/8. Lo que falta, según los registros, son cuatro habilidades concretas, no el diseño: cazar desde bajo tierra, árboles inalcanzables, ahogamiento y el tejado de `construir`. Ver [[2026-10-25-1401-banco-k-casual-medida-9]], [[Una presa que desaparece no está muerta]], [[Pedir ovejas elige llanos pelados]], [[El navegador pasa bloques sin posición a las exclusiones]] y [[El tejado de la cabaña no se alcanza desde fuera]].
 
 ## Siguiente paso
 Ver campo «siguiente». Casual es el primer rol completo (F8.1) y su red llega en F8.G; Speedrunner va al final (F8.7-F8.8).

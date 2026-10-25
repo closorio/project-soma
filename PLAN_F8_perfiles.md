@@ -199,6 +199,42 @@ nado fuera del mundo del usuario (con la superficie del agua como destino) y des
 - **Pendiente**: ese terreno y los manglares, que siguen sin suelo seco ni superficie de agua libre (raíces anegadas). Pasan a E3
   (viajes largos, F8.4).
 
+## Estado de F8.1 (2026-10-25): parada sin pasar el banco K
+Hecho en la rama `deploy`:
+- **El capataz** (`bot/capataz.js`, `bot/progresion.js`): recorre las etapas de `perfiles/v2/casual.json`, con mantenimiento
+  (amenaza, noche, poca vida con monstruos a la vista, hambre, comer para regenerar), reposición de picos gastados, etapa empezada
+  pegajosa, alternativas tras dos fallos, `ir_a_mena` tras «nada que minar» y `rutina_madera` tras «falta material» en la casa.
+  Prueba en seco: `probar_capataz_seco.js` (28/28).
+- **El banco K** (`entrenamiento/experimentos_roles.py`): puntos con ≥ 3 ovejas y ≥ 3 árboles cerca (`terreno()`), corte de la
+  rotación si cae el proceso de los bots, hitos por separado con su día mediano, la casa y las causas de muerte del registro del
+  servidor.
+- **Arreglos** que salieron de las medidas:
+  - el navegador pasaba bloques sin posición a las exclusiones y tumbaba a los cuatro bots;
+  - `cazar` se acerca a la presa, cuenta solo si entra botín y prueba con otra si una no se alcanza;
+  - el servidor local no se pausa vacío.
+
+**Medidas** (criterio fijado antes de medir: pico de hierro y cama en ≤ 2 días en ≥ 6/8; muertes ≤ 1 cada 3 días):
+
+| Medida | Cambio principal | Pico ≤ 2 d | Cama ≤ 2 d | Muertes | Nota |
+|---|---|---|---|---|---|
+| 4 | capataz completo | 8/8 | 0/8 | ~1,5 cada 3 d | casi sin ovejas en la semilla |
+| 6 | puntos en el llano | — | — | — | cayó el proceso (`zonas.js`) |
+| 7 | guardas, puntos con ovejas | 4/4 (rot. 1) | 0/4 | 6 en rot. 1 | `pelear` se rendía a > 16 |
+| 8 | `cazar` se acerca, poca vida → apartarse | 5/8 | 1/8 | 5 | llano pelado; caza «muerta» sin botín |
+| **9** | caza por botín, puntos con árboles | **7/8** (mediana 0,37) | **3/8** (mediana 1,34) | 3 (creeper, agua, esqueleto) | rot. 1 sin muertes |
+
+Resultado: **3/8, no pasa.** Lo que falta, por lo que dicen los registros de la medida 9:
+1. **Cazar desde bajo tierra**: tras la etapa de hierro el bot está en la mina (y = 45-50 en las que se miraron) y sigue a la oveja
+   de la superficie con movimientos que no cavan; 19 de 28 cazas fallaron con «no la alcancé» (5 con éxito). Arreglo:
+   `subirASuperficie` (`escalera.js`) al empezar `cazar` si no hay cielo encima.
+2. **Árbol inalcanzable**: K1 (rot. 2) hizo 40 `ir_a_arbol` con éxito, 34 «bloqueado» y solo 10 troncos.
+3. **Ahogamiento y creepers**: una muerte de cada en la medida 9; en la 7, tres ahogamientos.
+4. **La casa**: en vivo, `construir cabana_techada` levanta casi toda la cabaña y falla en el tejado, porque las casillas interiores
+   solo se alcanzan desde dentro o desde arriba (ver «El tejado de la cabaña no se alcanza desde fuera» en el vault).
+
+Ver en el vault [[El navegador pasa bloques sin posición a las exclusiones]], [[Una presa que desaparece no está muerta]] y
+[[Pedir ovejas elige llanos pelados]].
+
 ## Fases
 | fase | contenido | puerta (criterio fijado antes de medir) | servidor | trabajador / máquina |
 |---|---|---|---|---|
