@@ -22,24 +22,32 @@ module.exports = async function cazar(bot, [animal, cantidad], tarea) {
   if (!tipo || !bot.registry.entitiesByName[tipo]) return { exito: false, causa: 'animal desconocido: ' + animal }
   const n = Math.max(1, parseInt(cantidad) || 1), antes = inventario(bot)
   let muertos = 0, causa = null, yaFui = false, perdidas = 0
+  const descartadas = new Set() // ids de las que no alcanzó
   try { await ponerArma(bot) } catch (_) {}
   while (muertos < n) {
     if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
-    let presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+    const candidatas = () => Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO && !descartadas.has(e.id))
+      .sort((a, b) => dist(bot, a) - dist(bot, b))
+    let presa = candidatas()[0]
     // F8.1: si no ve ninguno, ir adonde se vio uno la última vez (lo apunta explorar) y volver a mirar
     const visto = memoria(bot, 'animales_vistos', () => ({}))[tipo]
     if (!presa && visto && Date.now() - visto.t < RECUERDO_MS && !yaFui) {
       yaFui = true
       const [x, y, z] = visto.pos
       await moverHasta(bot, new goals.GoalNear(x, y, z, 6), () => bot.entity.position.distanceTo({ x, y, z }) <= 8, { ms: 60000, tarea, mov: prudentes(bot) })
-      presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+      presa = candidatas()[0]
     }
     if (!presa) { causa = `no hay ${tipo} cerca`; break }
     // F8.1: pelear se rinde con el animal a más de 16 («huyó» en 2 ms): con la presa a 128, acercarse primero siguiéndola
     if (dist(bot, presa) > 12) {
       const ida = () => !bot.entities[presa.id] || presa.isValid === false
       await moverHasta(bot, new goals.GoalFollow(presa, 4), () => ida() || dist(bot, presa) <= 6, { ms: 60000, tarea, mov: prudentes(bot) })
-      if (ida() || dist(bot, presa) > 14) { causa = 'no la alcancé'; break }
+      // F8.1 (banco K 8: 20 de 21 cazas acabaron así): la que está tras agua o un desnivel se descarta y se prueba con otra, hasta 3
+      if (ida() || dist(bot, presa) > 14) {
+        descartadas.add(presa.id)
+        if (descartadas.size >= 3) { causa = 'no la alcancé'; break }
+        continue
+      }
     }
     const donde = presa.position.clone(), previo = inventario(bot)
     const r = await pelear(bot, presa, { ms: MS, tarea, parar: () => null })
