@@ -52,7 +52,8 @@ const estadoCapataz = (bot) => memoria(bot, 'capataz', () => ({ etapa: null, pas
 function alternativa(bot, etapa, n) {
   const y = nodo(bot).y
   if (etapa.tipo === 'mineral' && n % 2 === 0 && y > 20) return { habilidad: 'cavar_escalera', args: [String(y - 12), '-'] }
-  return { habilidad: 'explorar', args: ['-', '80', '120'] } // más lejos que el explorar de siempre (40): ovejas, menas, árboles
+  if (etapa.tipo === 'comida') return { habilidad: 'explorar', args: ['-', '120', '150'] } // animales: aún más lejos
+  return { habilidad: 'explorar', args: ['-', '80', '120'] } // más lejos que el explorar de siempre (40): menas, árboles
 }
 
 // Al morir se pierde el inventario (keep_inventory false): las etapas hechas cuyo objetivo era solo de inventario se olvidan (hay que
@@ -94,7 +95,8 @@ function decidir(bot, nombre) {
     return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }
   const comida = sv.comidas(bot).length > 0
   if (bot.food <= HAMBRE && comida) return { habilidad: 'comer', args: [], motivo: 'hambre' }
-  if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) return { habilidad: 'recoger_comida', args: [], motivo: 'hambre sin comida' }
+  if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) // sin cama aún, las ovejas no se comen: son la lana
+    return { habilidad: 'recoger_comida', args: progresion.estado(bot).inv.cama ? [] : ['24', 'sin:sheep'], motivo: 'hambre sin comida' }
   // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
   olvidarSiMurio(bot, nombre, etapas)
   const e = progresion.estado(bot)

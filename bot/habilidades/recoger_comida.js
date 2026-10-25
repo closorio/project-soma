@@ -16,7 +16,7 @@ const ANIMALES = new Set(['cow', 'pig', 'sheep', 'chicken', 'rabbit', 'mooshroom
 const comidaInv = (bot) => sv.comidas(bot).reduce((a, i) => a + i.count, 0)
 const esComida = (bot, e) => { try { const n = e.getDroppedItem().name; return !!bot.registry.foodsByName[n] && sv.comidaComible(n) } catch (_) { return false } }
 
-module.exports = async function recogerComida(bot, [radio], tarea) {
+module.exports = async function recogerComida(bot, [radio, evitar], tarea) {
   const R = parseFloat(radio) || 24, t0 = Date.now(), c0 = comidaInv(bot)
   const fin = (exito, causa, extra = {}) => ({ exito, causa, comida: [c0, comidaInv(bot)], s: +((Date.now() - t0) / 1000).toFixed(1), ...extra })
   if (bot.food > HAMBRE) return fin(false, 'sin hambre')
@@ -27,7 +27,9 @@ module.exports = async function recogerComida(bot, [radio], tarea) {
     for (const e of enSuelo) { const n = e.getDroppedItem().name; await recoger(bot, [String(SUELO), n], tarea); if (tarea && tarea.cancelada) break }
     if (comidaInv(bot) > c0) return fin(true, 'recogido')
   }
-  const presa = Object.values(bot.entities).filter(e => ANIMALES.has(e.name) && dist(bot, e) <= R).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+  // F8.1: «sin:sheep» (el capataz, mientras falte la cama): las ovejas se guardan para la lana
+  const sin = String(evitar || '').startsWith('sin:') ? new Set(String(evitar).slice(4).split(',')) : new Set()
+  const presa = Object.values(bot.entities).filter(e => ANIMALES.has(e.name) && !sin.has(e.name) && dist(bot, e) <= R).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
   if (!presa) return fin(false, 'nada que comer a la vista')
   try { await ponerArma(bot) } catch (_) {}
   const donde = presa.position.clone()
@@ -40,6 +42,12 @@ module.exports = async function recogerComida(bot, [radio], tarea) {
     const sueltos = Object.values(bot.entities).filter(e => e.name === 'item' && e.position.distanceTo(p) <= 4 && esComida(bot, e))
     if (!sueltos.length) break
     await recoger(bot, ['8', sueltos[0].getDroppedItem().name], tarea)
+  }
+  // F8.1: también lo demás que suelte (la lana de una oveja, el cuero): en el banco K se perdía la lana de las ovejas que se comían
+  for (const e of Object.values(bot.entities).filter(x => x.name === 'item' && x.position.distanceTo(p) <= 4)) {
+    let n = null
+    try { n = e.getDroppedItem().name } catch (_) {}
+    if (n && /_wool$|^leather$|^feather$/.test(n)) await recoger(bot, ['8', n], tarea)
   }
   return comidaInv(bot) > c0 ? fin(true, 'cazado', datos) : fin(false, 'no recogí nada', datos)
 }

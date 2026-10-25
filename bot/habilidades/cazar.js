@@ -9,7 +9,7 @@ const { ponerArma } = require('./equipar')
 
 const ALIAS = { oveja: 'sheep', ovejas: 'sheep', vaca: 'cow', vacas: 'cow', cerdo: 'pig', cerdos: 'pig', pollo: 'chicken', pollos: 'chicken',
   gallina: 'chicken', conejo: 'rabbit', conejos: 'rabbit' }
-const RADIO = 32, MS = 30000
+const RADIO = 48, MS = 30000
 const inventario = (bot) => { const c = {}; for (const i of bot.inventory.items()) c[i.name] = (c[i.name] || 0) + i.count; return c }
 
 module.exports = async function cazar(bot, [animal, cantidad], tarea) {
