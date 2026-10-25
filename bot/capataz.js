@@ -98,6 +98,11 @@ function decidir(bot, nombre) {
   // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
   olvidarSiMurio(bot, nombre, etapas)
   const e = progresion.estado(bot)
+  // herramientas gastadas (un pico de piedra dura 131 bloques): reponer el del nivel ya conseguido antes de seguir (en el banco K, sin
+  // pico, minar decía «sin pico» y la etapa no avanzaba)
+  const h00 = hechas(bot, nombre)
+  if (h00.herr_piedra && e.inv.pico < 0.66) return { habilidad: e.inv.piedra >= 3 ? 'fabricar' : 'minar', args: e.inv.piedra >= 3 ? ['pico_piedra'] : ['stone', '3', '8'], motivo: 'pico gastado' }
+  if (h00.herr_madera && e.inv.pico === 0) return { habilidad: 'fabricar', args: ['pico_madera'], motivo: 'pico gastado' }
   const st0 = estadoCapataz(bot), h0 = hechas(bot, nombre)
   // la etapa empezada sigue hasta acabarla aunque su pre deje de cumplirse a medias (el pico de piedra gasta la piedra del pre)
   const empezada = st0.etapa && !h0[st0.etapa] && etapas.find(x => x.id === st0.etapa)
@@ -137,8 +142,9 @@ function alResultado(bot, nombre, d, r) {
 
 // Para el puerto (orden `progreso`): rol, etapa que toca, lo que le falta y las hechas con su día.
 function progreso(bot, nombre) {
-  const { etapas } = rol(nombre), e = progresion.estado(bot), h = hechas(bot, nombre)
-  const et = progresion.etapaActual(etapas, e, h)
+  const { etapas } = rol(nombre), e = progresion.estado(bot), h = hechas(bot, nombre), st = estadoCapataz(bot)
+  const empezada = st.etapa && !h[st.etapa] && etapas.find(x => x.id === st.etapa)
+  const et = empezada || progresion.etapaActual(etapas, e, h) // la misma que decidir: la empezada sigue
   return { rol: nombre, etapa: et ? et.id : null, falta: et ? progresion.falta(et.objetivo, e) : [], hechas: h,
     pendientes: etapas.filter(x => !h[x.id]).map(x => x.id), estado: e }
 }

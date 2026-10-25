@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """F8.1 · banco K (y de cualquier rol v2): N personajes con el capataz de un rol (bot/capataz.js) a la vez, desde cero, en el mundo
 de IO_SERVIDOR (por defecto local, 26.1.2), con el servidor ya en marcha (servidor-local/arrancar.sh).
-Cada rotación: 4 puntos nuevos alrededor del llano más cercano (sobre motion_blocking_no_leaves), inventario vacío, memoria
+Cada rotación: 4 puntos alrededor de un llano distinto y sin estrenar (--zona) (sobre motion_blocking_no_leaves), inventario vacío, memoria
 persistente borrada, `time set 0`, monstruos encendidos, reflejos encendidos, modo libre; dura --dias días de Minecraft (por
 defecto 2 = 40 min). Cada 15 s lee `progreso` de cada personaje (etapas hechas con su día y su hora, y el inventario) y las muertes
 (su memoria persistente).
@@ -44,9 +44,12 @@ def memoria_mb():
             return int(l.split()[1]) // 1024
 
 
-def llano():
-    m = re.search(r"\[(-?\d+), [^,]+, (-?\d+)\]", r("locate biome minecraft:plains"))
-    return (int(m[1]), int(m[2])) if m else (0, 0)
+def llano(zona=0):
+    """El llano más cercano a (1500·zona, 1500·zona): cada medida en terreno sin tocar (la caza de medidas anteriores acaba con las
+    ovejas, y las talas con los árboles cercanos)."""
+    o = 1500 * zona
+    m = re.search(r"\[(-?\d+), [^,]+, (-?\d+)\]", r(f"{OW} positioned {o} 64 {o} run locate biome minecraft:plains"))
+    return (int(m[1]), int(m[2])) if m else (o, o)
 
 
 def poner_en(nombre, x, z):
@@ -143,6 +146,7 @@ def main():
     ap.add_argument("--puertos", type=int, default=3201)
     ap.add_argument("--prefijo", default="K")
     ap.add_argument("--n", type=int, default=4)
+    ap.add_argument("--zona", type=int, default=None, help="terreno de la medida (por defecto, uno nuevo cada vez)")
     a = ap.parse_args()
     try:
         r("list")
@@ -152,11 +156,12 @@ def main():
     salida = LOGS / f"rol-{a.rol}-{time.strftime('%Y%m%d-%H%M')}.json"
     nombres = [f"{a.prefijo}{i + 1}" for i in range(a.n)]
     puertos = [a.puertos + i for i in range(a.n)]
-    centro = llano()
-    print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · llano en {centro}", flush=True)
+    zona = a.zona if a.zona is not None else int(time.time() // 3600) % 40 + 1
+    print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · zonas desde {zona}", flush=True)
     res = {}
     for k in range(a.rotaciones):
-        print(f"== rotación {k + 1}", flush=True)
+        centro = llano(zona + k)  # cada rotación en un llano distinto, sin estrenar
+        print(f"== rotación {k + 1}: llano en {centro}", flush=True)
         rotacion(a, k, centro, nombres, puertos, salida, res)
     filas = [f for rot in res.values() for f in rot.values()]
     bien = [f for f in filas if f["hitos"].get("pico_hierro", 99) <= 2 and f["hitos"].get("cama", 99) <= 2]
