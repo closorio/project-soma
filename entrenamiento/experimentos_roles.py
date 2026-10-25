@@ -114,21 +114,33 @@ def al_llano(x, z):
     return (int(m[1]), int(m[2])) if m else (x, z)
 
 
-def elegir_puntos(n, k, zona, ovejas, separacion=150):
+def usados(cerca=300):
+    """Los puntos de salida de todas las medidas anteriores (logs/rol-*.json): su terreno está talado y cazado."""
+    pts = []
+    for f in LOGS.glob("rol-*.json"):
+        try:
+            pts += [tuple(x["punto"]) for rot in json.loads(f.read_text())["resultados"].values() for x in rot.values()]
+        except (OSError, ValueError, KeyError):
+            pass
+    return lambda x, z: any(math.hypot(x - ux, z - uz) < cerca for ux, uz in pts)
+
+
+def elegir_puntos(n, k, zona, ovejas, separacion=150, evitar=lambda x, z: False):
     """n puntos de salida en llano para la rotación k. Con ovejas > 0 (Casual: la cama pide 3 de lana; decisión del usuario,
     2026-10-24, porque esta semilla tiene muy pocas), solo los que tienen al menos esas ovejas a ≤ 48 bloques, a ≥ separacion
-    entre sí; si en la zona no hay bastantes, en las siguientes. Devuelve [(x, z, ovejas)]."""
+    entre sí y fuera de `evitar`; si en la zona no hay bastantes, en las siguientes (hasta 2·n zonas: con 8 puntos, 6 no
+    bastaban). Devuelve [(x, z, ovejas)]."""
     if not ovejas:
         centro = llano(zona)
         return [(*al_llano(centro[0] + dx, centro[1] + dz), None) for dx, dz in ROTACIONES[k % len(ROTACIONES)][:n]]
     elegidos = []
-    for zz in range(zona, zona + 6):
+    for zz in range(zona, zona + max(6, 2 * n)):
         centro = llano(zz)
         print(f"   buscando puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles alrededor del llano {centro}…", flush=True)
         for radio in (0, 100, 200, 300, 400):
             for g in (range(0, 360, 45) if radio else [0]):
                 x, z = al_llano(round(centro[0] + radio * math.cos(math.radians(g))), round(centro[1] + radio * math.sin(math.radians(g))))
-                if any(math.hypot(x - ex, z - ez) < separacion for ex, ez, _ in elegidos):
+                if any(math.hypot(x - ex, z - ez) < separacion for ex, ez, _ in elegidos) or evitar(x, z):
                     continue
                 c, t = terreno(x, z)
                 if c >= ovejas and t >= TRONCOS:
@@ -184,7 +196,8 @@ def preparar_puntos(zona, ovejas, ruta, n=8):
     if MUNDO != "local":
         raise SystemExit("el terreno fijo solo es para el mundo local (servidor-local/)")
     print(f"preparando {n} puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles desde la zona {zona}…", flush=True)
-    puntos = [(x, z) for x, z, _ in elegir_puntos(n, 0, zona, ovejas)]
+    # F8.1: la zona 60 empezaba en el mismo llano que la rotación 2 de la medida 9: lo ya pisado no vale para la foto
+    puntos = [(x, z) for x, z, _ in elegir_puntos(n, 0, zona, ovejas, evitar=usados())]
     r("save-all flush")
     servidor("parar")
     rr = regiones(puntos)
@@ -192,7 +205,8 @@ def preparar_puntos(zona, ovejas, ruta, n=8):
     servidor("arrancar")
     # lo que hay tras volver a cargar es la referencia (las ovejas se mueven algo al cargar)
     ref = [[x, z, *terreno(x, z)] for x, z in puntos]
-    ruta.write_text(json.dumps({"zona": zona, "semilla": 20261024, "margen": MARGEN, "puntos": ref, "regiones": rr},
+    ruta.write_text(json.dumps({"zona": zona, "zonas": [zona, zona + 2 * n - 1], "semilla": 20261024, "margen": MARGEN,
+                                "fecha": time.strftime("%Y-%m-%d %H:%M"), "puntos": ref, "regiones": rr},
                                ensure_ascii=False, indent=1) + "\n")
     print(f"   {len(rr)} regiones ({copiadas} ficheros) en {FOTO.relative_to(RAIZ)}; puntos en {ruta}", flush=True)
     for x, z, ov, tr in ref:
