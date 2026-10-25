@@ -1,6 +1,7 @@
-// cazar ANIMAL [n=1] (F8.0b, C5): caza n animales de ese tipo (oveja, vaca, cerdo, pollo, conejo; o el nombre del juego) a ≤ 32
-// bloques, con el arma que lleve o a puñetazos (atacar.pelear), y recoge lo que suelten (lana, carne, cuero, plumas). A diferencia
-// de recoger_comida, no mira el hambre ni la hora: es para conseguir materiales (la cama del Casual, la lana del Granjero).
+// cazar ANIMAL [n=1] (F8.0b, C5): caza n animales de ese tipo (oveja, vaca, cerdo, pollo, conejo; o el nombre del juego) a ≤ 128
+// bloques (acercándose antes), con el arma que lleve o a puñetazos (atacar.pelear), y recoge lo que suelten (lana, carne, cuero,
+// plumas). A diferencia de recoger_comida, no mira el hambre ni la hora: es para conseguir materiales (la cama del Casual, la lana
+// del Granjero).
 // Éxito: n muertos. Fallos: no hay ANIMAL cerca · se escapó · tiempo agotado · cancelado. Devuelve { exito, causa, muertos, obtenido }.
 const { goals } = require('mineflayer-pathfinder')
 const memoria = require('../memoria')
@@ -32,6 +33,12 @@ module.exports = async function cazar(bot, [animal, cantidad], tarea) {
       presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
     }
     if (!presa) { causa = `no hay ${tipo} cerca`; break }
+    // F8.1: pelear se rinde con el animal a más de 16 («huyó» en 2 ms): con la presa a 128, acercarse primero siguiéndola
+    if (dist(bot, presa) > 12) {
+      const ida = () => !bot.entities[presa.id] || presa.isValid === false
+      await moverHasta(bot, new goals.GoalFollow(presa, 4), () => ida() || dist(bot, presa) <= 6, { ms: 60000, tarea, mov: prudentes(bot) })
+      if (ida() || dist(bot, presa) > 14) { causa = 'no la alcancé'; break }
+    }
     const donde = presa.position.clone()
     const r = await pelear(bot, presa, { ms: MS, tarea, parar: () => null })
     if (r.causa !== 'muerto') { causa = r.causa === 'huyó' ? 'se escapó' : r.causa; break }

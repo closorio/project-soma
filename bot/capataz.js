@@ -16,7 +16,7 @@ const progresion = require('./progresion')
 const sv = require('./habilidades/sv')
 const { nodo, encerrado } = require('./habilidades/comun')
 
-const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8
+const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8, VIDA_REGENERA = 14
 
 const roles = new Map() // nombre → { perfil, etapas } (las etapas resueltas una vez)
 function rol(nombre) {
@@ -93,8 +93,12 @@ function decidir(bot, nombre) {
   }
   if (reglas.noche !== 'refugio' && sv.esNoche(bot) && (bot.health < VIDA_REFUGIO || sv.aLaVista(bot).length >= 3))
     return { habilidad: 'rutina_noche', args: ['300'], motivo: 'peligro de noche' }
+  // F8.1: en el banco K morían con 1-3 de vida siguiendo con la etapa (cazar, explorar) y monstruos a la vista: con poca vida, apartarse
+  // con la rutina hasta no ver ninguno; y comer antes (la vida solo se regenera con la comida ≥ 18)
+  if (bot.health <= VIDA_PELEA && sv.aLaVista(bot).length) return { habilidad: 'rutina_noche', args: ['300'], motivo: 'poca vida' }
   const comida = sv.comidas(bot).length > 0
   if (bot.food <= HAMBRE && comida) return { habilidad: 'comer', args: [], motivo: 'hambre' }
+  if (bot.health < VIDA_REGENERA && bot.food < 18 && comida) return { habilidad: 'comer', args: [], motivo: 'regenerar' }
   if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) // sin cama aún, las ovejas no se comen: son la lana
     return { habilidad: 'recoger_comida', args: progresion.estado(bot).inv.cama ? [] : ['24', 'sin:sheep'], motivo: 'hambre sin comida' }
   // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
@@ -134,6 +138,9 @@ function alResultado(bot, nombre, d, r) {
     if (r.exito) { st.fallos[d.paso] = 0; st.paso = d.paso + 1 } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
     // minar no ve la mena (está enterrada): lo siguiente, ir hasta la más cercana cavando, y luego minar otra vez
     if (d.habilidad === 'minar' && !r.exito && /nada que minar|no piqué/.test(String(r.causa))) st.luego = { habilidad: 'ir_a_mena', args: [d.args[0], '32'], motivo: 'mena enterrada' }
+    // la casa pide 71 tablones (≈ 18 troncos) y las etapas de antes gastan la madera: talar lo que falte (1 tronco → 4) y volver
+    const sinMadera = d.habilidad === 'construir' && !r.exito && String(r.causa).match(/falta material: (\d+) tablones/)
+    if (sinMadera) st.luego = { habilidad: 'rutina_madera', args: [String(Math.ceil(parseInt(sinMadera[1]) / 4) + 1), '600'], motivo: 'falta madera' }
   }
   const dp = persistente.de(bot)
   if (d.habilidad === 'construir' && r.exito && dp) { dp.casa = r.origen || nodo(bot).toArray(); persistente.guardar(dp) }

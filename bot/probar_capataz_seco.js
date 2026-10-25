@@ -105,6 +105,19 @@ capataz.decidir(b5, 'casual')
 ok(!capataz.hechas(b5, 'casual').madera, 'tras morir, madera sigue hecha')
 console.log('  5 · zombi → atacar, creeper → huir; la etapa empezada sigue; tras morir se rehacen las de inventario')
 
+// 6 · la casa: sin tablones bastantes, construir falla y lo siguiente es talar lo que falta
+const b6 = mundoFalso({ inventario: [['red_bed', 1], ['oak_log', 2], ['iron_pickaxe', 1], ['stone_sword', 1]] })
+for (const id of ['madera', 'herr_madera', 'piedra', 'herr_piedra', 'carbon', 'hierro', 'pico_hierro', 'cama']) capataz.marcarHecha(b6, 'casual', id)
+let d6 = capataz.decidir(b6, 'casual')
+ok(d6.etapa === 'casa' && d6.habilidad === 'construir' && d6.args[0] === 'cabana_techada', `con la cama: ${JSON.stringify(d6)}`)
+capataz.alResultado(b6, 'casual', d6, { exito: false, causa: 'falta material: 63 tablones (tengo 8, troncos 2; hacen falta 71)' })
+d6 = capataz.decidir(b6, 'casual')
+ok(d6.habilidad === 'rutina_madera' && d6.args[0] === '17', `tras «falta material» no tala: ${JSON.stringify(d6)}`)
+// 7 · poca vida: con un zombi lejos (a 12, fuera del radio de amenaza), apartarse; sin monstruos y con pan, comer para regenerar
+ok(capataz.decidir(mundoFalso({ salud: 5, entidades: [{ name: 'zombie', pos: [12.5, 64, 0.5] }] }), 'casual').habilidad === 'rutina_noche', 'con 5 de vida y un zombi a 12 sigue con la etapa')
+ok(capataz.decidir(mundoFalso({ salud: 10, comida: 16, inventario: [['bread', 2]] }), 'casual').habilidad === 'comer', 'con 10 de vida y pan no come para regenerar')
+console.log(`  6 · casa sin tablones: construir → ${d6.habilidad} ${d6.args.join(' ')}`)
+
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)
