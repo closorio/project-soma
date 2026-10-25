@@ -92,10 +92,13 @@ def rotacion(a, k, centro, nombres, puertos, salida, res):
             r(f"effect clear {n}")
             r(f"effect give {n} minecraft:instant_health 1 10 true")
             r(f"effect give {n} minecraft:saturation 1 20 true")
-            poner_en(n, centro[0] + dx, centro[1] + dz)
+            # al llano más cercano a ese punto (a 100 del centro, varios caían fuera del llano: sin árboles ni animales)
+            m = re.search(r"\[(-?\d+), [^,]+, (-?\d+)\]", r(f"{OW} positioned {centro[0] + dx} 64 {centro[1] + dz} run locate biome minecraft:plains"))
+            px, pz = (int(m[1]), int(m[2])) if m else (centro[0] + dx, centro[1] + dz)
+            poner_en(n, px, pz)
             orden(p, "campamento aqui")
             orden(p, "reflejos si")
-            filas[n] = {"rotacion": k, "punto": [centro[0] + dx, centro[1] + dz], "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
+            filas[n] = {"rotacion": k, "punto": [px, pz], "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
         r("time set 0")
         dia0, _ = hora(MUNDO)
         for p in puertos:

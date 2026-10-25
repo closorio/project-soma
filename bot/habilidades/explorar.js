@@ -54,7 +54,11 @@ function mirar(bot) {
   const ents = Object.values(bot.entities).filter(e => e !== bot.entity && e.position.distanceTo(p) <= VISTA)
   v.jugadores = ents.filter(e => e.type === 'player' && !esBot(e.username)).map(e => e.username)
   v.animales = {}
-  for (const e of ents.filter(e => e.type === 'animal' || e.type === 'water_creature')) v.animales[e.name] = (v.animales[e.name] || 0) + 1
+  const vistos = memoria(bot, 'animales_vistos', () => ({})) // F8.1: dónde se vio cada tipo por última vez (cazar vuelve allí)
+  for (const e of ents.filter(e => e.type === 'animal' || e.type === 'water_creature')) {
+    v.animales[e.name] = (v.animales[e.name] || 0) + 1
+    vistos[e.name] = { pos: e.position.floored().toArray(), t: Date.now() }
+  }
   return v
 }
 const suma = (a, b) => {

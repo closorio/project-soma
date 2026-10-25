@@ -2,25 +2,35 @@
 // bloques, con el arma que lleve o a puñetazos (atacar.pelear), y recoge lo que suelten (lana, carne, cuero, plumas). A diferencia
 // de recoger_comida, no mira el hambre ni la hora: es para conseguir materiales (la cama del Casual, la lana del Granjero).
 // Éxito: n muertos. Fallos: no hay ANIMAL cerca · se escapó · tiempo agotado · cancelado. Devuelve { exito, causa, muertos, obtenido }.
-const { dist, esperar } = require('./comun')
+const { goals } = require('mineflayer-pathfinder')
+const memoria = require('../memoria')
+const { dist, esperar, moverHasta, prudentes } = require('./comun')
 const recoger = require('./recoger')
 const { pelear } = require('./atacar')
 const { ponerArma } = require('./equipar')
 
 const ALIAS = { oveja: 'sheep', ovejas: 'sheep', vaca: 'cow', vacas: 'cow', cerdo: 'pig', cerdos: 'pig', pollo: 'chicken', pollos: 'chicken',
   gallina: 'chicken', conejo: 'rabbit', conejos: 'rabbit' }
-const RADIO = 48, MS = 30000
+const RADIO = 128, MS = 30000, RECUERDO_MS = 15 * 60000 // todo lo que el bot ve (el servidor manda los animales a ~128)
 const inventario = (bot) => { const c = {}; for (const i of bot.inventory.items()) c[i.name] = (c[i.name] || 0) + i.count; return c }
 
 module.exports = async function cazar(bot, [animal, cantidad], tarea) {
   const tipo = ALIAS[animal] || animal
   if (!tipo || !bot.registry.entitiesByName[tipo]) return { exito: false, causa: 'animal desconocido: ' + animal }
   const n = Math.max(1, parseInt(cantidad) || 1), antes = inventario(bot)
-  let muertos = 0, causa = null
+  let muertos = 0, causa = null, yaFui = false
   try { await ponerArma(bot) } catch (_) {}
   while (muertos < n) {
     if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
-    const presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+    let presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+    // F8.1: si no ve ninguno, ir adonde se vio uno la última vez (lo apunta explorar) y volver a mirar
+    const visto = memoria(bot, 'animales_vistos', () => ({}))[tipo]
+    if (!presa && visto && Date.now() - visto.t < RECUERDO_MS && !yaFui) {
+      yaFui = true
+      const [x, y, z] = visto.pos
+      await moverHasta(bot, new goals.GoalNear(x, y, z, 6), () => bot.entity.position.distanceTo({ x, y, z }) <= 8, { ms: 60000, tarea, mov: prudentes(bot) })
+      presa = Object.values(bot.entities).filter(e => e.name === tipo && dist(bot, e) <= RADIO).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
+    }
     if (!presa) { causa = `no hay ${tipo} cerca`; break }
     const donde = presa.position.clone()
     const r = await pelear(bot, presa, { ms: MS, tarea, parar: () => null })
