@@ -97,8 +97,17 @@ module.exports = async function atacar(bot, args, tarea) {
     if (hostiles(bot, RADIO).length > MAX_HOSTILES) return 'demasiados'
     return null
   }
+  const donde = e.position.clone()
   const r = await pelear(bot, e, { ms: Math.max(1000, ms - (Date.now() - t0)), tarea, parar })
   const exito = r.causa === 'muerto' || r.causa === 'huyó'
+  // F8.1: fuera del mundo del usuario, recoger lo útil que suelte (el hilo de la araña: 4 hacen una lana para la cama)
+  if (r.causa === 'muerto' && require('../mundo').nombre !== 'usuario' && !hostiles(bot, RADIO).length) {
+    await new Promise(res => setTimeout(res, 500))
+    const util = Object.values(bot.entities).filter(x => x.name === 'item' && x.position.distanceTo(donde) <= 5).some(x => {
+      try { return /^(string|bone|arrow|gunpowder|spider_eye)$/.test(x.getDroppedItem().name) } catch (_) { return false }
+    })
+    if (util) { try { await require('./recoger')(bot, ['6'], tarea) } catch (_) {} }
+  }
   return { exito, causa: r.causa, golpes: r.golpes, arma: arma ? arma.arma : null, ...datos() }
 }
 module.exports.pelear = pelear

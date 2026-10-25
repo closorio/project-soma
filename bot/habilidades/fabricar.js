@@ -189,8 +189,11 @@ function inventario(bot) {
 // Los objetivos de un nombre pedido: un alias, un objeto del juego o la cama del color de la lana que se lleve.
 function objetivosDe(bot, o, n) {
   if (o === 'cama' || o === 'bed') {
-    const lana = bot.inventory.items().find(i => i.name.endsWith('_wool'))
-    return [[(lana ? lana.name.replace(/_wool$/, '') : 'white') + '_bed', n]]
+    // el color del que haya 3 (una cama pide 3 de lana del mismo color); si no, blanca (la que sale de 4 hilos de araña)
+    const c = {}
+    for (const i of bot.inventory.items()) if (i.name.endsWith('_wool')) c[i.name] = (c[i.name] || 0) + i.count
+    const lana = Object.entries(c).sort((a, b) => b[1] - a[1]).find(([, k]) => k >= 3)
+    return [[(lana ? lana[0].replace(/_wool$/, '') : 'white') + '_bed', n]]
   }
   if (GENERICOS[o]) return GENERICOS[o].map(([x, k]) => [x, k * n])
   return bot.registry.itemsByName[o] ? [[o, n]] : null

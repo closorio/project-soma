@@ -26,13 +26,16 @@ function pedir(registry, item, n, inv, camino) {
   inv[item] = 0
   const falta = n - hay
   const recetas = (registry.recipes || {})[(registry.itemsByName[item] || {}).id] || []
-  if (HOJAS.test(item) || !recetas.length || camino.length >= PROFUNDIDAD || camino.includes(item)) {
+  // F8.1: la lana se consigue fuera (ovejas), salvo la blanca con hilo a mano (4 hilos de araña): solo esa receta (no las de tintes)
+  const deHilo = item === 'white_wool' && (inv.string || 0) >= 4
+  if ((HOJAS.test(item) && !deHilo) || !recetas.length || camino.length >= PROFUNDIDAD || camino.includes(item)) {
     out.faltan[item] = falta
     return out
   }
   let mejor = null
   for (const receta of recetas) {
     const { g, mesa, sale } = gasto(registry, receta)
+    if (deHilo && !g.string) continue
     if (Object.keys(g).some(x => camino.includes(x) || x === item)) continue // sin ciclos
     const copia = { ...inv }, veces = Math.ceil(falta / sale), plan = { pasos: [], faltan: {} }
     for (const [x, k] of Object.entries(g)) {

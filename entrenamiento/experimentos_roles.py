@@ -19,8 +19,9 @@ from rcon import rcon, hora  # noqa: E402
 MUNDO = os.environ.get("IO_SERVIDOR") or "local"
 OW = "execute in minecraft:overworld"
 LOGS = RAIZ / "servidor-supervivencia" / "logs"
-ROTACIONES = [[(0, 60), (60, 0), (0, -60), (-60, 0)], [(60, 60), (-60, 60), (60, -60), (-60, -60)],
-              [(0, 120), (120, 0), (0, -120), (-120, 0)]]
+# a 200 bloques entre sí: cada personaje con su terreno (a 60 se repartían las pocas ovejas del llano: 9 en 128 bloques a la redonda)
+ROTACIONES = [[(0, 100), (100, 0), (0, -100), (-100, 0)], [(100, 100), (-100, 100), (100, -100), (-100, -100)],
+              [(0, 200), (200, 0), (0, -200), (-200, 0)]]
 HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv: inv.get("cama", 0) >= 1,
          "antorchas": lambda inv: inv.get("antorchas", 0) >= 8, "horno": lambda inv: inv.get("horno", 0) >= 1,
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
