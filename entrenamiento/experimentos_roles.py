@@ -25,6 +25,7 @@ ROTACIONES = [[(0, 100), (100, 0), (0, -100), (-100, 0)], [(100, 100), (-100, 10
 HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv: inv.get("cama", 0) >= 1,
          "antorchas": lambda inv: inv.get("antorchas", 0) >= 8, "horno": lambda inv: inv.get("horno", 0) >= 1,
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
+HITOS_MEMORIA = ("casa",)  # los de progresion.estado().memoria (la casa construida queda en la memoria persistente)
 MIN_MB = 800
 
 
@@ -142,6 +143,17 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
         t0 = time.time()
         while True:
             time.sleep(15)
+            # F8.1: si el proceso de los bots se cae, la rotación acaba (antes seguía preguntando a puertos muertos y el servidor,
+            # sin jugadores, se pausaba)
+            if bot.poll() is not None:
+                log.flush()
+                error = [l for l in (LOGS / f"bots-rol-{a.rol}-{k}.log").read_text(errors="replace").splitlines() if "Error" in l]
+                for f in filas.values():
+                    f["caido"] = error[-1][:300] if error else f"salió con {bot.returncode}"
+                res[f"rot{k}"] = filas
+                salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "resultados": res}, ensure_ascii=False, indent=1) + "\n")
+                print(f"  ¡el proceso de los bots se cayó! {next(iter(filas.values()))['caido']}", flush=True)
+                break
             if memoria_mb() < MIN_MB:
                 raise SystemExit(f"solo quedan {memoria_mb()} MB de memoria disponible: paro")
             dia, ticks = hora(MUNDO)
@@ -158,6 +170,10 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
                 inv = (pr.get("estado") or {}).get("inv", {})
                 for h, ok in HITOS.items():
                     if ok(inv) and h not in f["hitos"]:
+                        f["hitos"][h] = round(dias, 2)
+                mem = (pr.get("estado") or {}).get("memoria", {})
+                for h in HITOS_MEMORIA:
+                    if mem.get(h) and h not in f["hitos"]:
                         f["hitos"][h] = round(dias, 2)
                 f["muertes"] = muertes(n)
             res[f"rot{k}"] = filas

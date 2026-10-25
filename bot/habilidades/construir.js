@@ -86,7 +86,7 @@ module.exports = async function construir(bot, args, tarea) {
   // movimientos: prudentes y sin pisar la huella de la obra (no se encierra ni se sube a lo recién puesto)
   const mov = prudentes(bot)
   const enHuella = (x, z) => x >= x0 && x < x0 + plano.dim[0] && z >= z0 && z < z0 + plano.dim[2]
-  mov.exclusionAreasStep.push(b => (enHuella(b.position.x, b.position.z) ? 200 : 0))
+  mov.exclusionAreasStep.push(b => (b && b.position && enHuella(b.position.x, b.position.z) ? 200 : 0))
   const lista = [...relleno.map(([x, yy, z]) => ({ dest: new Vec3(x, yy, z), relleno: true })),
     ...plano.bloques.map(b => ({ dest: new Vec3(x0 + b.dx, y + 1 + b.dy, z0 + b.dz) }))]
   const ms = Math.min(MAX_MS, (60 + 10 * lista.length) * 1000), t0 = Date.now()

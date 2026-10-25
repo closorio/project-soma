@@ -32,5 +32,12 @@ for (const [t, bot, sup, pis] of casos) {
 const cueva = mundoFalso({ bloques: { ...col(5, 0, 55, 57, 'air'), '5,54,0': 'stone' } })
 ok(parcela.pisable(cueva, 5, 0, 64).y === 63 && parcela.pisable(cueva, 5, 0, 56).y === 54, 'con dos suelos no elige el más cercano')
 console.log('  dos suelos: elige el más cercano a la altura pedida')
+// F8.1: el navegador pasa a veces un bloque sin posición a las exclusiones de zonas (tumbó el proceso de los bots en el banco K)
+const mov = { bot: { registry: { blocksArray: [] } }, blocksCantBreak: new Set(), exclusionAreasStep: [], exclusionAreasBreak: [] }
+require('./zonas').aplicar(mov)
+let lanza = null
+try { mov.exclusionAreasStep[0]({}); mov.exclusionAreasStep[0](undefined); mov.exclusionAreasBreak[0]({ name: 'stone' }) } catch (e) { lanza = e.message }
+ok(!lanza, `las exclusiones de zonas lanzan con un bloque sin posición: ${lanza}`)
+console.log('  zonas: un bloque sin posición no tumba al navegador')
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

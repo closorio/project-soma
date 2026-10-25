@@ -51,8 +51,9 @@ function puntoFuera(x, z) {
 const NO_ROMPER = /_(log|wood)$|^(chest|trapped_chest|barrel)$/
 function aplicar(mov) {
   for (const b of mov.bot.registry.blocksArray) if (NO_ROMPER.test(b.name)) mov.blocksCantBreak.add(b.id)
-  mov.exclusionAreasStep.push(b => (pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
-  mov.exclusionAreasBreak.push(b => (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
+  // F8.1: el navegador a veces pasa un bloque sin posición (chunk sin cargar) y la excepción tumbaba el proceso de los cuatro bots
+  mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
+  mov.exclusionAreasBreak.push(b => (b && b.position && (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z)) ? 1000 : 0))
   return mov
 }
 

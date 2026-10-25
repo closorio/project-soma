@@ -41,7 +41,7 @@ function movimientos(bot) {
   m.dontCreateFlow = true
   m.maxDropDown = 3
   m.scafoldingBlocks = [...new Set(sv.colocables(bot).map(i => i.type))]
-  const vedado = (k) => (sv.puedeTocar(k.position.x, k.position.y, k.position.z) ? 0 : Infinity)
+  const vedado = (k) => (!k || !k.position || sv.puedeTocar(k.position.x, k.position.y, k.position.z) ? 0 : Infinity) // sin posición: chunk sin cargar
   m.exclusionAreasBreak.push(vedado)
   m.exclusionAreasPlace.push(vedado)
   return m

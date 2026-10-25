@@ -50,7 +50,8 @@ function cavando(bot, c) {
   const m = prudentes(bot)
   m.canDig = true
   m.exclusionAreasBreak.push((k) => {
-    const p = k.position
+    const p = k && k.position
+    if (!p) return Infinity // sin posición (chunk sin cargar): no romper
     const cerca = Math.abs(p.x - c.x) <= 1 && Math.abs(p.z - c.z) <= 1 && p.y >= c.y && p.y <= c.y + 2
     return cerca && sv.puedeTocar(p.x, p.y, p.z) && !sv.NO_PICAR.test(k.name) && sv.mejorHerramienta(bot, k).ms <= 3000 ? 0 : Infinity
   })

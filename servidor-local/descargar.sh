@@ -1,6 +1,7 @@
 #!/bin/bash
 # Primera vez del mundo local (F8): baja el server.jar de Minecraft 26.1.2 de Mojang (sha1 comprobado) y escribe
-# server.properties (127.0.0.1:25567, RCON 25577 con una clave nueva, offline, normal, semilla 20261024; permisos 600).
+# server.properties (127.0.0.1:25567, RCON 25577 con una clave nueva, offline, normal, semilla 20261024, sin pausa al
+# quedarse vacío: si los bots se caen, el reloj sigue y el banco lo ve; permisos 600).
 # No pisa un server.properties que ya exista (la clave RCON es la de ese mundo). Luego: ./arrancar.sh
 set -u
 cd "$(dirname "$0")"
@@ -41,6 +42,7 @@ view-distance=8
 simulation-distance=8
 spawn-protection=0
 enable-command-block=false
+pause-when-empty-seconds=0
 EOF
   chmod 600 server.properties
   echo "server.properties escrito (clave RCON nueva; permisos 600)"
