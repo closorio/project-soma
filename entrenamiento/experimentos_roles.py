@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """F8.1 · banco K (y de cualquier rol v2): N personajes con el capataz de un rol (bot/capataz.js) a la vez, desde cero, en el mundo
 de IO_SERVIDOR (por defecto local, 26.1.2), con el servidor ya en marcha (servidor-local/arrancar.sh).
-Cada rotación: 4 puntos en llanos sin estrenar (--zona); con Casual, solo puntos con ≥ 3 ovejas a ≤ 48 bloques (--ovejas) (sobre motion_blocking_no_leaves), inventario vacío, memoria
-persistente borrada, `time set 0`, monstruos encendidos, reflejos encendidos, modo libre; dura --dias días de Minecraft (por
-defecto 2 = 40 min). Cada 15 s lee `progreso` de cada personaje (etapas hechas con su día y su hora, y el inventario) y las muertes
-(su memoria persistente).
+Cada rotación: 4 puntos en llanos sin estrenar (--zona); con Casual, solo puntos con ≥ 3 ovejas a ≤ 48 bloques (--ovejas) y
+≥ 3 árboles cerca (terreno()), sobre motion_blocking_no_leaves; inventario vacío, memoria persistente borrada, `time set 0`,
+monstruos encendidos, reflejos encendidos, modo libre; dura --dias días de Minecraft (por defecto 2 = 40 min). Cada 15 s lee
+`progreso` de cada personaje (etapas hechas con su día y su hora, y el inventario) y las muertes (su memoria persistente; al acabar,
+la causa, del registro del servidor).
 Criterio de Casual fijado antes de medir (PLAN_F8_perfiles.md, banco K): pico de hierro y cama en ≤ 2 días en ≥ 6 de 8; muertes ≤ 1
 cada 3 días (se informa por ejecución). Escribe logs/rol-ROL-AAAAMMDD-HHMM.json (y lo va escribiendo durante la medida).
 Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]"""
@@ -27,6 +28,7 @@ HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv:
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
 HITOS_MEMORIA = ("casa",)  # los de progresion.estado().memoria (la casa construida queda en la memoria persistente)
 MIN_MB = 800
+TRONCOS = 3  # árboles mínimos en la rejilla de terreno() para un punto de salida
 
 
 def r(cmd):
@@ -70,13 +72,36 @@ def muertes(nombre):
         return 0
 
 
-def ovejas_en(x, z, radio=48):
-    """Cuántas ovejas hay a ≤ radio de (x, z) (carga los trozos un momento: sin ellos el servidor no sabe de sus entidades)."""
+def terreno(x, z, radio=48):
+    """(ovejas a ≤ radio, troncos) alrededor de (x, z), con los trozos cargados un momento (sin ellos el servidor no sabe de sus
+    entidades ni de sus bloques). Troncos: en una rejilla de 21×21 columnas a paso 3 (a ≤ 30), las que tienen un tronco bajo el techo
+    sin hojas (un árbol); medido en esta semilla: bosque 10, llano 4, desierto 2. F8.1: pedir solo ovejas elegía llanos pelados
+    (banco K 8: un día entero buscando árboles)."""
     r(f"forceload add {x - 32} {z - 32} {x + 32} {z + 32}")
     time.sleep(5)
     m = re.search(r"Count: (\d+)", r(f"{OW} positioned {x} 64 {z} if entity @e[type=minecraft:sheep,distance=..{radio}]"))
+    troncos = sum("passed" in r(f"{OW} positioned {x + dx} 0 {z + dz} positioned over motion_blocking_no_leaves if block ~ ~-1 ~ #minecraft:logs")
+                  for dx in range(-30, 31, 3) for dz in range(-30, 31, 3))
     r(f"forceload remove {x - 32} {z - 32} {x + 32} {z + 32}")
-    return int(m[1]) if m else 0
+    return (int(m[1]) if m else 0), troncos
+
+
+MUERTE = r"\[(\d\d:\d\d:\d\d)\] \[Server thread/INFO\]: ({}) (was .+|drowned.*|tried to swim in lava.*|fell .+|blew up.*|burned .+|went up in flames.*|hit the ground.+|died.*|starved.*|suffocated.*|froze.*|withered.*|discovered .+)$"
+
+
+def causas_de_muerte(nombres, desde, hasta):
+    """{nombre: [causa, …]} del registro del servidor local entre dos horas «HH:MM:SS» (el registro solo trae la hora; si la rotación
+    cruza la medianoche, vale lo de después de `desde` o antes de `hasta`)."""
+    f = RAIZ / "servidor-local" / "logs" / "latest.log"
+    out = {n: [] for n in nombres}
+    if MUNDO != "local" or not f.exists():
+        return out
+    patron = re.compile(MUERTE.format("|".join(map(re.escape, nombres))))
+    for l in f.read_text(errors="replace").splitlines():
+        m = patron.search(l)
+        if m and ((desde <= m[1] <= hasta) if desde <= hasta else (m[1] >= desde or m[1] <= hasta)):
+            out[m[2]].append(m[3])
+    return out
 
 
 def al_llano(x, z):
@@ -94,19 +119,19 @@ def elegir_puntos(n, k, zona, ovejas, separacion=150):
     elegidos = []
     for zz in range(zona, zona + 6):
         centro = llano(zz)
-        print(f"   buscando puntos con ≥ {ovejas} ovejas alrededor del llano {centro}…", flush=True)
+        print(f"   buscando puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles alrededor del llano {centro}…", flush=True)
         for radio in (0, 100, 200, 300, 400):
             for g in (range(0, 360, 45) if radio else [0]):
                 x, z = al_llano(round(centro[0] + radio * math.cos(math.radians(g))), round(centro[1] + radio * math.sin(math.radians(g))))
                 if any(math.hypot(x - ex, z - ez) < separacion for ex, ez, _ in elegidos):
                     continue
-                c = ovejas_en(x, z)
-                if c >= ovejas:
+                c, t = terreno(x, z)
+                if c >= ovejas and t >= TRONCOS:
                     elegidos.append((x, z, c))
-                    print(f"   punto {len(elegidos)}: {x}, {z} con {c} ovejas", flush=True)
+                    print(f"   punto {len(elegidos)}: {x}, {z} con {c} ovejas y {t} árboles", flush=True)
                     if len(elegidos) == n:
                         return elegidos
-    raise SystemExit(f"no encuentro {n} puntos con ≥ {ovejas} ovejas (llevo {len(elegidos)})")
+    raise SystemExit(f"no encuentro {n} puntos con ≥ {ovejas} ovejas y ≥ {TRONCOS} árboles (llevo {len(elegidos)})")
 
 
 def rotacion(a, k, puntos, nombres, puertos, salida, res):
@@ -138,6 +163,7 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             filas[n] = {"rotacion": k, "punto": [px, pz], "ovejas": nov, "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
         r("time set 0")
         dia0, _ = hora(MUNDO)
+        inicio = time.strftime("%H:%M:%S")
         for p in puertos:
             orden(p, "modo libre")
         t0 = time.time()
@@ -182,6 +208,11 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
                                                     for n, f in filas.items()), flush=True)
             if dias >= a.dias or time.time() - t0 > a.dias * 1200 * 1.5:
                 break
+        causas = causas_de_muerte(nombres, inicio, time.strftime("%H:%M:%S"))
+        for n in nombres:
+            filas[n]["causas"] = causas[n]
+        res[f"rot{k}"] = filas
+        salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "resultados": res}, ensure_ascii=False, indent=1) + "\n")
     finally:
         try:
             os.killpg(bot.pid, signal.SIGTERM)
@@ -224,10 +255,21 @@ def main():
     filas = [f for rot in res.values() for f in rot.values()]
     bien = [f for f in filas if f["hitos"].get("pico_hierro", 99) <= 2 and f["hitos"].get("cama", 99) <= 2]
     muertes_3d = [round(f["muertes"] * 3 / a.dias, 2) for f in filas]
+    # F8.1: cada hito por separado (cuántos y el día mediano) y las causas de muerte, para no tener que leer los registros
+    def hito(h):
+        dias = sorted(f["hitos"][h] for f in filas if h in f["hitos"])
+        return {"n": len(dias), "de": len(filas), "mediana": dias[len(dias) // 2] if dias else None}
+    causas = {}
+    for f in filas:
+        for c in f.get("causas", []):
+            causas[c] = causas.get(c, 0) + 1
     resumen = {"pico_hierro_y_cama_en_2_dias": len(bien), "de": len(filas), "pasa": len(bien) >= 6 * len(filas) / 8,
-               "muertes_por_3_dias": muertes_3d, "muertes_ok": all(m <= 1 for m in muertes_3d)}
+               "muertes_por_3_dias": muertes_3d, "muertes_ok": all(m <= 1 for m in muertes_3d),
+               "hitos": {h: hito(h) for h in ("pico_hierro", "cama", "casa")}, "causas_de_muerte": causas}
     print(f"pico de hierro y cama en ≤ 2 días: {len(bien)}/{len(filas)} (criterio ≥ 6/8: {'PASA' if resumen['pasa'] else 'NO PASA'}) · "
           f"muertes por 3 días {muertes_3d} ({'bien' if resumen['muertes_ok'] else 'demasiadas'})", flush=True)
+    print("hitos: " + " · ".join(f"{h} {v['n']}/{v['de']} (mediana día {v['mediana']})" for h, v in resumen["hitos"].items()), flush=True)
+    print("causas de muerte: " + (", ".join(f"{c} ×{n}" for c, n in sorted(causas.items(), key=lambda x: -x[1])) or "ninguna"), flush=True)
     salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "resumen": resumen, "resultados": res},
                                  ensure_ascii=False, indent=1) + "\n")
     print("FIN", salida, flush=True)
