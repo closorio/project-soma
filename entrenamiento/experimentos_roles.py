@@ -213,8 +213,18 @@ def preparar_puntos(zona, ovejas, ruta, n=8):
         print(f"   {x}, {z}: {ov} ovejas, {tr} árboles", flush=True)
 
 
-def restaurar(banco):
-    """Vuelve a poner la foto de las regiones de los puntos (con el servidor parado) y comprueba ovejas y árboles."""
+def uuid_offline(nombre):
+    """El UUID de un jugador sin conexión (servidor offline): versión 3 del md5 de «OfflinePlayer:nombre»."""
+    import hashlib, uuid
+    h = bytearray(hashlib.md5(("OfflinePlayer:" + nombre).encode()).digest())
+    h[6], h[8] = h[6] & 0x0F | 0x30, h[8] & 0x3F | 0x80
+    return str(uuid.UUID(bytes=bytes(h)))
+
+
+def restaurar(banco, nombres=()):
+    """Vuelve a poner la foto de las regiones de los puntos (con el servidor parado) y comprueba ovejas y árboles. Borra además
+    dónde se quedaron los personajes: la medida 10 empezó con 4 muertes por asfixia en los 10 primeros segundos, porque se
+    desconectaron en sus túneles y la foto los había vuelto a llenar de piedra."""
     rr = banco["regiones"]
     faltan = [f for f in rr if not (FOTO / "region" / f).exists()]
     if faltan:
@@ -222,6 +232,9 @@ def restaurar(banco):
     r("save-all flush")
     servidor("parar")
     n = copiar_regiones(rr, FOTO, OVERWORLD)
+    for nombre in nombres:
+        for f in (LOCAL / "world" / "players" / "data").glob(uuid_offline(nombre) + ".dat*"):
+            f.unlink()
     servidor("arrancar")
     print(f"   restauradas {len(rr)} regiones ({n} ficheros)", flush=True)
     mal = []
@@ -376,7 +389,7 @@ def main():
         print(f"== rotación {k + 1}", flush=True)
         if banco:
             if not a.sin_restaurar:
-                restaurar(banco)
+                restaurar(banco, nombres)
             puntos = [(x, z, ov) for x, z, ov, _ in banco["puntos"]]
         else:
             puntos = elegir_puntos(a.n, k, zona + 7 * k, ovejas)  # cada rotación en zonas sin estrenar (las de la anterior quedan atrás)

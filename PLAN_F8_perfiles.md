@@ -232,6 +232,11 @@ Resultado: **3/8, no pasa.** Lo que falta, por lo que dicen los registros de la 
 4. **La casa**: en vivo, `construir cabana_techada` levanta casi toda la cabaña y falla en el tejado, porque las casillas interiores
    solo se alcanzan desde dentro o desde arriba (ver «El tejado de la cabaña no se alcanza desde fuera» en el vault).
 
+**Terreno fijo (2026-10-25, tarde).** Desde la medida 10 el banco K mide en 8 puntos fijos (`entrenamiento/puntos_k.json`), con
+la foto de su terreno restaurada antes de cada medida (`--puntos`) y los 8 personajes a la vez. Tarda 42 min en lugar de 107. Las
+rutinas acaban «sin avance» tras 20 decisiones sin troncos. **Medida 10, la base**: pico 6/8 (mediana 1,12), cama 2/8 y 2/8 en el
+criterio; 4 muertes reales en 16 días·bot. Las siguientes se comparan con ella punto a punto (`--comparar`).
+
 Ver en el vault [[El navegador pasa bloques sin posición a las exclusiones]], [[Una presa que desaparece no está muerta]] y
 [[Pedir ovejas elige llanos pelados]].
 
