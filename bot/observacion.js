@@ -49,7 +49,9 @@ function ponerPerfil(bot, nombre) { return (memoria(bot).perfil = cargarPerfil(n
 async function conPerfil(bot, nombre, fn) {
   const antes = memoria(bot).perfil
   ponerPerfil(bot, nombre)
-  try { return await fn() } finally { memoria(bot).perfil = antes }
+  const durante = memoria(bot).perfil
+  // si alguien cambió el perfil mientras tanto («perfil explorador» en mitad de una rutina), se queda el nuevo, no el de antes
+  try { return await fn() } finally { if (memoria(bot).perfil === durante) memoria(bot).perfil = antes }
 }
 const VISTA = 48, RADIO_OBJ = 8, META = 10, RADIO_AMENAZA = 16
 const NOCHE = [12480, 23520] // 0,52-0,98 del día, como el simulador

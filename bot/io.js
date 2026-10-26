@@ -535,7 +535,7 @@ class Personaje {
   textoEstado() {
     const bot = this.bot, p = bot.entity.position.floored()
     const perfil = observacion.perfilDe(bot).nombre
-    const ahora = this.enCurso ? `con la orden «${this.enCurso.texto}»` : this.modo === 'libre' ? 'decidiendo con la red' : `${this.quieto}, esperando órdenes`
+    const ahora = this.enCurso ? `con la orden «${this.enCurso.texto}»` : this.modo === 'libre' ? (this.decisor.nombre === 'capataz' ? `jugando de ${this.decisor.rol}` : `decidiendo con ${this.decisor.nombre === 'guion' ? 'el guion' : 'la red'}`) : `${this.quieto}, esperando órdenes`
     const n = bot.inventory.items().filter(i => i.name.endsWith('_log')).reduce((a, i) => a + i.count, 0)
     const ultima = this.ultima ? ` Última orden: «${this.ultima.texto}», ${this.ultima.exito ? 'hecha' : 'sin hacer'}.` : ''
     return `${this.visible}: modo ${PALABRAS[this.modo]}${this.modo === 'libre' ? ` (perfil ${perfil})` : ''}, ${ahora}; al terminar una orden, ` +
@@ -611,7 +611,7 @@ class Personaje {
         if (o.modo === 'libre') {
           try { this.decisor.preparar() } catch (e) { return { exito: false, texto: `No puedo pasar a modo libre: ${e.message}.` } }
           this.ponerModo('libre', 'orden «modo libre»')
-          return { exito: true, texto: `Modo libre: decido yo, con la red y el perfil ${observacion.perfilDe(this.bot).nombre}.` }
+          return { exito: true, texto: this.decisor.nombre === 'capataz' ? `Modo libre: juego de ${this.decisor.rol}.` : `Modo libre: decido yo, con ${this.decisor.nombre === 'guion' ? 'el guion' : 'la red'} y el perfil ${observacion.perfilDe(this.bot).nombre}.` }
         }
         this.ponerModo('ordenes', 'orden «modo órdenes»')
         return { exito: true, texto: 'Modo órdenes: espero lo que me digas.' }

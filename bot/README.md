@@ -7,6 +7,26 @@ Cuatro personajes (Soma, Eco, Iris y Alma) en un proceso Mineflayer. Cada uno ti
 
 ## Arrancar
 
+### Con make (desde la raíz del repo; `make` enseña todos los objetivos)
+Hace falta `make` (`sudo apt install make`). El `Makefile` pone en el PATH el node de nvm y el Python del venv.
+```
+make instalar                                   # una vez: npm ci y entrenamiento/.venv con numpy
+make servidor-arrancar                          # server local 26.1.2 (127.0.0.1:25567); make servidor-parar al acabar
+make casual BOTS="Soma Eco"                     # dos bots con el rol casual, en libre, en segundo plano (Soma 3001, Eco 3002)
+make estados BOTS="Soma Eco"                    # qué hace cada uno · make progreso PUERTO=3002: etapa, lo que falta y lo hecho
+make rol PUERTO=3002 ROL=speedrunner            # cambiar de rol en caliente (o por el chat: «Eco, rol speedrunner»)
+make orden PUERTO=3001 TEXTO="vuelve al campamento"   # cualquier orden en lenguaje sencillo; make quieto / make libre
+make bots-parar                                 # por su PID (nunca pkill)
+make casual MUNDO=companero BOTS=Soma           # al server del compañero (26.1.x, online-mode=false); antes: make companero-ping
+```
+Qué esperar del Casual (banco K, medidas 9-10):
+- recorre solo sus etapas: madera → herramientas → piedra → carbón → hierro → pico de hierro (hacia el día 1 de juego, unos 20 min reales);
+- la cama sale en 1 de cada 3 o 4 partidas: le cuesta cazar ovejas si está en la mina;
+- la casa aún no la termina: falla en el tejado;
+- muere de vez en cuando (agua, zombis, creepers) y, al morir, rehace las etapas de inventario.
+
+El Speedrunner no se ha medido: llega hasta el hierro y el cubo; del Nether en adelante sus pasos están pendientes.
+
 ```
 cd bot && node io.js Soma Eco:3002:cooperativo Iris:3003          # los tres, en modo órdenes (quietos)
 node io.js Soma Eco:3002:cooperativo Iris:3003:recolector:libre     # Iris empieza en modo libre
@@ -53,7 +73,7 @@ curl -s "127.0.0.1:3001/?c=estado"; python3 mente/alma/mente.py --mundo companer
 ```
 - **Lo que tiene que hacer el compañero:** server en 26.1.2; en `server.properties`, `online-mode=false` (los bots no tienen cuenta Microsoft; con `true` salen expulsados con «Failed to verify username»), `server-ip=` vacío, `server-port=25565`; dejar pasar TCP 25565 en su firewall (en Windows, el aviso de Java al arrancar el server); darte su IP local (`ipconfig` / `ip a`). Si tiene lista blanca: Soma, Eco, Iris, Alma y tu nombre.
 - **Tu cliente:** en TLauncher instalar y elegir 26.1.x y entrar por «Multijugador → Dirección directa → IP:25565». Sin ViaProxy ni plugins.
-- Como no es el mundo del usuario, van activas las reglas de supervivencia: reflejos (`reflejos [si|no]`), informes `hambre/golpe/noche/dia`, `minar` y `recoger` con las reglas de F7.7. Sin zonas ni cofres; `obras.json` sin rectángulo (`permitido: null`): `mina` y `construye` se niegan hasta acordarlo con el compañero. Ojo: `refugiarse` cava y `salir_del_refugio` pone bloques sin mirar el rectángulo (como en el mundo de supervivencia). Diario en `mundos/companero/diario.md`, registro en `entrenamiento/ejecuciones/modos-companero-AAAAMMDD.jsonl`.
+- Como no es el mundo del usuario, van activas las reglas de supervivencia: reflejos (`reflejos [si|no]`), informes `hambre/golpe/noche/dia`, `minar` y `recoger` con las reglas de F7.7. Sin zonas ni cofres. Desde F8.0b/F8.1 el rectángulo de obras solo manda en el mundo del usuario: aquí `mina`, `construye`, el capataz de los roles (talar, minar, cavar escaleras, cazar, poner la mesa y el horno, levantar la cabaña), `refugiarse` y `salir_del_refugio` tocan cualquier sitio que no esté en `mundos/companero/zonas.json` (vacío). **Acordadlo antes con el compañero** o poned sus zonas protegidas en ese archivo. Diario en `mundos/companero/diario.md`, registro en `entrenamiento/ejecuciones/modos-companero-AAAAMMDD.jsonl`.
 - Sin RCON todavía (`servidor/rcon.py` no está en este PC): las herramientas de `entrenamiento/` que mandan al servidor (`medir*.py`, `experimentos*.py`, `reponer_serie.py`) no sirven aquí hasta recrearlo y que el compañero active `enable-rcon`. `medir_carga.py` es solo para servidores locales.
 - Si más adelante sube a 26.2/26.3: ViaProxy en este PC (`bind-address 127.0.0.1:25568`, `target-version 26.3`, `auth-method NONE`) o ViaVersion + ViaBackwards en Paper; los bots siguen con `version: 26.1`.
 

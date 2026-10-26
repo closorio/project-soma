@@ -82,6 +82,12 @@ function hacedor(bot, { falla = false, sinTroncos = false, alPedir = () => {} } 
   r = await rutinas.ejecutar(bot, 'rutina_madera', ['5', '30'], { cancelada: false }, h.hacer)
   ok(!r.exito && r.causa === 'interrumpida' && h.pedidas.length === 1, `con la tarea cancelada: ${r.causa} tras ${h.pedidas.length}`)
   console.log(`  2 · rutina_madera: atasco tras ${rutinas.ATASCO} fallos e interrumpida con una orden nueva`)
+  // un «perfil explorador» en mitad de la rutina se queda al acabar (antes la rutina lo pisaba con el de antes)
+  bot = arbol(); observacion.ponerPerfil(bot, 'cooperativo')
+  h = hacedor(bot, { alPedir: (n, tarea) => { if (n === 1) { observacion.ponerPerfil(bot, 'explorador'); tarea.cancelada = true } } })
+  r = await rutinas.ejecutar(bot, 'rutina_madera', ['5', '30'], { cancelada: false }, h.hacer)
+  ok(observacion.perfilDe(bot).nombre === 'explorador', `cambiado en mitad de la rutina, al acabar es ${observacion.perfilDe(bot).nombre}`)
+  console.log(`  2 · perfil cambiado en mitad de la rutina: se queda ${observacion.perfilDe(bot).nombre}`)
   // F8.1: todo «sale bien» pero no entra ningún tronco (K4, banco K 9: 2.990 ir_a_arbol con éxito): acaba «sin avance»
   bot = arbol(); h = hacedor(bot, { sinTroncos: true })
   r = await rutinas.ejecutar(bot, 'rutina_madera', ['5', '30'], { cancelada: false }, h.hacer)
