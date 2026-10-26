@@ -8,16 +8,17 @@ Cuatro personajes (Soma, Eco, Iris y Alma) en un proceso Mineflayer. Cada uno ti
 ## Arrancar
 
 ### Con make (desde la raíz del repo; `make` enseña todos los objetivos)
-Hace falta `make` (`sudo apt install make`). El `Makefile` pone en el PATH el node de nvm y el Python del venv.
+Hace falta `make` (`sudo apt install make`). El `Makefile` pone en el PATH el node de nvm y el Python del venv. Objetivos y
+variables en inglés.
 ```
-make instalar                                   # una vez: npm ci y entrenamiento/.venv con numpy
-make servidor-arrancar                          # server local 26.1.2 (127.0.0.1:25567); make servidor-parar al acabar
+make install                                    # una vez: npm ci y entrenamiento/.venv con numpy
+make server-start                               # server local 26.1.2 (127.0.0.1:25567); make server-stop al acabar
 make casual BOTS="Soma Eco"                     # dos bots con el rol casual, en libre, en segundo plano (Soma 3001, Eco 3002)
-make estados BOTS="Soma Eco"                    # qué hace cada uno · make progreso PUERTO=3002: etapa, lo que falta y lo hecho
-make rol PUERTO=3002 ROL=speedrunner            # cambiar de rol en caliente (o por el chat: «Eco, rol speedrunner»)
-make orden PUERTO=3001 TEXTO="vuelve al campamento"   # cualquier orden en lenguaje sencillo; make quieto / make libre
-make bots-parar                                 # por su PID (nunca pkill)
-make casual MUNDO=companero BOTS=Soma           # al server del compañero (26.1.x, online-mode=false); antes: make companero-ping
+make status-all BOTS="Soma Eco"                 # qué hace cada uno · make progress PORT=3002: etapa, lo que falta y lo hecho
+make role PORT=3002 ROLE=speedrunner            # cambiar de rol en caliente (o por el chat: «Eco, rol speedrunner»)
+make order PORT=3001 TEXT="vuelve al campamento"   # cualquier orden en lenguaje sencillo; make idle / make free
+make bots-stop                                  # por su PID (nunca pkill)
+make casual WORLD=companero BOTS=Soma           # al server del compañero (26.1.x, online-mode=false); antes: make partner-ping
 ```
 Qué esperar del Casual (banco K, medidas 9-10):
 - recorre solo sus etapas: madera → herramientas → piedra → carbón → hierro → pico de hierro (hacia el día 1 de juego, unos 20 min reales);
