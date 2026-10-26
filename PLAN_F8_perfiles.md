@@ -169,7 +169,7 @@ Fundación mínima para medir cualquier rol: **C1 → C3 → C4 → C5**. C6-C7 
 Elytra queda fuera.
 
 ## Estado de F8.0a (2026-10-24)
-Hecho en la rama `deploy`: `servidor/rcon.py` (un servidor por mundo, respuestas en varios paquetes y cerrojo entre procesos);
+Hecho en la rama `develop`: `servidor/rcon.py` (un servidor por mundo, respuestas en varios paquetes y cerrojo entre procesos);
 `servidor-local/` en 26.1.2 (Java 25, semilla 20261024, `keep_inventory` y `spawn_phantoms` apagados) y el mundo `local`;
 taxonomía de amenazas por nombre (`bot/habilidades/taxonomia.js`); decisores por personaje (`bot/decisores.js`, CLI
 `NOMBRE:PUERTO:PERFIL:MODO:DECISOR[@RUTA]`, orden `decisor`); perfiles v2 `casual` y `speedrunner` con validadores JS y Python;
@@ -178,7 +178,7 @@ rutinas `rutina_madera` y `rutina_noche` (`bot/rutinas.js`, guion de F3 en JS); 
 `time query day` mide otra cosa, y lo usan `experimentos_sv.py`, `probar_noche.py` y `experimento_mente_sv.py`.
 
 ## Estado de F8.0b (2026-10-24)
-Hecho en la rama `deploy`. **Hora de 26.1**: `rcon.hora()` lee el reloj en 1.21.11 y en 26.1, y la usan los tres bancos.
+Hecho en la rama `develop`. **Hora de 26.1**: `rcon.hora()` lee el reloj en 1.21.11 y en 26.1, y la usan los tres bancos.
 **Fundación C3-C7** (`bot/habilidades/`):
 - `fabricar` genérico con el planificador de recetas (`planificador.js`; cama, cubo, cofre, horno, herramientas y armadura de
   hierro, ojos de ender);
@@ -200,7 +200,7 @@ nado fuera del mundo del usuario (con la superficie del agua como destino) y des
   (viajes largos, F8.4).
 
 ## Estado de F8.1 (2026-10-25): parada sin pasar el banco K
-Hecho en la rama `deploy`:
+Hecho en la rama `develop`:
 - **El capataz** (`bot/capataz.js`, `bot/progresion.js`): recorre las etapas de `perfiles/v2/casual.json`, con mantenimiento
   (amenaza, noche, poca vida con monstruos a la vista, hambre, comer para regenerar), reposición de picos gastados, etapa empezada
   pegajosa, alternativas tras dos fallos, `ir_a_mena` tras «nada que minar» y `rutina_madera` tras «falta material» en la casa.
