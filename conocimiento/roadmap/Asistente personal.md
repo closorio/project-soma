@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F-asistente
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-10-31
-siguiente: "A1 con planes/asistente/A1.md (Sonnet; prompt en planes/asistente/README.md), desde el 2026-11-07 por el límite semanal"
+actualizado: 2026-11-01
+siguiente: "A1 con Sonnet desde el 2026-11-07 (planes/asistente/A1.md). Antes de A2: diagnosticar el fallo intermitente de colocar en 26.3 por Via (poner/mesa «sin apoyo», TRAMPAS), con un modelo fuerte"
 ---
 # Asistente personal
 
@@ -19,6 +19,8 @@ Todo es guion, sin red que entrenar.
 
 ## Estado
 **A0 hecha (2026-10-31): puerta 7/7.** El mundo del usuario es vanilla 26.3 en `servidor/` y Soma entra por ViaProxy 3.4.14 (25568), con `bot/tick_end.js`. Camina, pica, pone, usa el cofre, fabrica en la mesa y duerme, con 10 min sin cortes. Ver [[2026-10-31-2110-a0-humo-26-3-por-viaproxy]], [[26.3 expulsa al bot sin tick_end]] y [[26.3 trae la lista blanca activada]]. Límite: ≤ 5 % del cupo semanal de Claude ([[2026-10-31-asistente-limite-semanal-5]]).
+
+**Cierre de P (2026-11-01).** El banco usa Oqva, y la prueba de humo, `usar_cama`. Las fichas tienen en cuenta las zonas de trabajo, las puertas y `usar_cama`. Prueba de humo con las reglas libres: **5/7**, porque colocar falla a ratos a través de Via (poner 2/5 y la mesa «sin apoyo»; en la pasada anterior, poner 5/5). Queda abierto, con un modelo fuerte, antes de A2.
 
 **Fase P hecha (2026-10-31): lista para Sonnet.** El mundo 26.3 va sin límites ([[2026-10-31-mundo-del-usuario-sin-limites]]). Hay un banco común (`entrenamiento/arena.py`), las puertas de A1, A2, A4 y A5 están escritas como código (`entrenamiento/banco_asistente.py`), y cada fase tiene su ficha en `planes/asistente/`.
 
