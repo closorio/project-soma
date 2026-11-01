@@ -4,7 +4,7 @@ fase: F-asistente
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-10-31
-siguiente: "A1 rol asistente, órdenes y memoria; antes, decidir si se archivan zonas.json, cofres.json y obras.json del mundo 1.21.11 borrado"
+siguiente: "Parada hasta el 2026-11-07 (límite semanal del 5 %). Luego A1: rol asistente, órdenes y memoria; antes, decidir si se archivan zonas.json, cofres.json y obras.json del mundo 1.21.11 borrado"
 ---
 # Asistente personal
 
