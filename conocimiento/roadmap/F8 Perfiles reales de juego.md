@@ -22,6 +22,7 @@ Puerta G0, parte 1: `probar_supervivencia.py` en 26.1.2 pasa **todas** las secci
 Ver campo «siguiente». Casual es el primer rol completo (F8.1) y su red llega en F8.G; Speedrunner va al final (F8.7-F8.8).
 
 ## Enlaces
-- Decisiones: [[2026-10-23-perfiles-v2-guion-mas-red]]
+- Decisiones: [[2026-10-23-perfiles-v2-guion-mas-red]], [[2026-11-01-reparto-de-roles-f8]]
+- Builder, Redstoner y Sentinela (count): [[F8 Roles de count]]
 - Aprendizajes: [[CUDA frente a numpy en redes pequeñas]], [[En 26.1 time query daytime ya no existe]]
 - Detalle: `PLAN_F8_perfiles.md` (fuera del vault).
