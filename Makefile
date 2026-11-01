@@ -22,6 +22,8 @@ CMD     ?= list         # una orden de RCON para el server local
 BASE    ?=              # banco K: JSON de una medida anterior para comparar punto a punto
 ZONE    ?=              # banco K: zona sin usar para preparar los puntos fijos
 DAYS    ?= 2            # banco K: días de juego
+BENCHES ?= smoke-26-3 bench-k  # nightly: bancos en serie, sin Claude
+HOURS   ?= 24           # report: horas hacia atrás
 MODE    ?= libre        # bots: libre u ordenes al arrancar
 
 WORLD_ := $(strip $(WORLD))
@@ -38,7 +40,7 @@ pedir = curl -s --max-time 30 "127.0.0.1:$(strip $(1))/?c=$$(python3 -c 'import 
 
 .PHONY: help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping user-server-download user-server-start user-server-stop user-server-save user-server-status \
-        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
+        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
         order test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
@@ -75,6 +77,9 @@ help:
 	@echo "  bench-smoke         8 bots, 0,1 días, en los puntos fijos (3-4 min)"
 	@echo "  bench-k [BASE=…]    banco K del Casual en los puntos fijos (≈ 45 min), comparado con BASE si se da"
 	@echo "  bench-prepare ZONE=…  elige 8 puntos fijos nuevos y fotografía su terreno"
+	@echo "Sin gastar Claude:"
+	@echo "  report [HOURS=24]   parte de ≤ 20 líneas: éxitos, fallos, muertes, expulsiones y último experimento"
+	@echo "  nightly [BENCHES=\"smoke-26-3 bench-k\"]   bancos en serie en segundo plano; luego make report"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
 	@echo "Examples:  make server-start && make casual BOTS=\"Soma Eco\"   ·   make progress PORT=3002"
@@ -153,6 +158,14 @@ assistant:
 
 smoke-26-3:
 	python entrenamiento/humo_26_3.py
+
+# --- sin gastar Claude: parte corto y bancos en serie (economía de tokens, 2026-10-31) ---------------------------------------
+report:
+	@python entrenamiento/parte.py --horas $(strip $(HOURS))
+
+nightly:
+	@setsid nohup entrenamiento/nocturno.sh "$(strip $(BENCHES))" > /dev/null 2>&1 < /dev/null & \
+	  echo "nocturno en marcha: $(strip $(BENCHES)) (registro en entrenamiento/ejecuciones/nocturno-*.log; luego make report)"
 
 # --- bots -----------------------------------------------------------------------------------------------------------------------
 # NOMBRE:PORT:STYLE:libre:capataz@ROLE por cada nombre de BOTS, con puertos consecutivos desde PORT

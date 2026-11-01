@@ -52,3 +52,15 @@ Reglas:
 - `git pull` antes de escribir en el vault; al terminar, commit y push solo de esas notas, y avisa con
   `cliente.py enviar "nueva decisión: [[nombre]]"`. Si tu usuario no quiere commits automáticos, déjalas sin commitear y díselo.
 - `PLAN.md` y `PLAN_F7_supervivencia.md` siguen siendo el detalle técnico: no los muevas al vault.
+
+## Economía de tokens (decisión [[2026-10-31-economia-de-tokens]])
+
+El entrenamiento y los bancos corren en esta máquina; Claude solo diseña, escribe código y lee veredictos.
+- Una tarea por sesión: `/clear` al cambiar de tarea, `/compact` antes de una pausa larga. Modelo por defecto: Sonnet; Opus o
+  Fable con `/model` solo para diseñar una fase.
+- Sin modo plan, brainstorming ni subagentes en tareas acotadas: el diseño, en 2-3 frases en el chat, y a trabajar.
+- Leer por trozos: `grep -n` y `sed -n A,Bp`. Nunca enteros `bot/io.js` ni los `PLAN*.md`.
+- Para saber qué pasó, `make report` (≤ 20 líneas), no los registros. Bancos largos con `make nightly` o en segundo plano, sin
+  sondeos; se lee la nota de experimento o la última línea, no la salida entera.
+- No releer lo que ya está en la conversación ni re-verificar lo que el comando ya confirmó.
+- Sin sesiones de Alma (`mente.py`, `experimento_mente*.py`) salvo que el usuario lo pida: cada una gasta Claude.
