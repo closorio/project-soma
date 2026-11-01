@@ -1,5 +1,15 @@
 {
  "permitido": null,
  "obras": [],
- "minados": []
+ "minados": [
+  {
+   "t": "2026-11-01 01:34:54",
+   "personaje": "Soma",
+   "x": -1392,
+   "y": 73,
+   "z": 651,
+   "tipo": "stone",
+   "herramienta": "stone_pickaxe"
+  }
+ ]
 }
