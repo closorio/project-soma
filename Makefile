@@ -24,6 +24,7 @@ ZONE    ?=              # banco K: zona sin usar para preparar los puntos fijos
 DAYS    ?= 2            # banco K: días de juego
 BENCHES ?= smoke-26-3 bench-k  # nightly: bancos en serie, sin Claude
 HOURS   ?= 24           # report: horas hacia atrás
+PHASE   ?= A1           # bench-assistant: A1 · A2 · A4 · A5 (planes/asistente/)
 MODE    ?= libre        # bots: libre u ordenes al arrancar
 
 WORLD_ := $(strip $(WORLD))
@@ -40,7 +41,7 @@ pedir = curl -s --max-time 30 "127.0.0.1:$(strip $(1))/?c=$$(python3 -c 'import 
 
 .PHONY: help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping user-server-download user-server-start user-server-stop user-server-save user-server-status \
-        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
+        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
         order test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
@@ -80,6 +81,8 @@ help:
 	@echo "Sin gastar Claude:"
 	@echo "  report [HOURS=24]   parte de ≤ 20 líneas: éxitos, fallos, muertes, expulsiones y último experimento"
 	@echo "  nightly [BENCHES=\"smoke-26-3 bench-k\"]   bancos en serie en segundo plano; luego make report"
+	@echo "  verify              todo lo que se comprueba sin servidor: pruebas en seco, perfiles, herramientas del vault, Python"
+	@echo "  bench-assistant PHASE=A2 [WORLD=local]   la puerta de una fase del asistente (entrenamiento/banco_asistente.py)"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
 	@echo "Examples:  make server-start && make casual BOTS=\"Soma Eco\"   ·   make progress PORT=3002"
@@ -166,6 +169,15 @@ report:
 nightly:
 	@setsid nohup entrenamiento/nocturno.sh "$(strip $(BENCHES))" > /dev/null 2>&1 < /dev/null & \
 	  echo "nocturno en marcha: $(strip $(BENCHES)) (registro en entrenamiento/ejecuciones/nocturno-*.log; luego make report)"
+
+# antes de cada commit (planes/asistente/README.md): sale con error si falla cualquier cosa
+verify: test validate-profiles
+	@cd conocimiento/herramientas && python -m unittest -q test_herramientas
+	@python -m py_compile entrenamiento/*.py && echo "entrenamiento/*.py: compila"
+	@echo "verify: todo bien"
+
+bench-assistant:
+	python entrenamiento/banco_asistente.py --fase $(strip $(PHASE)) --mundo $(if $(filter usuario,$(WORLD_)),usuario,local)
 
 # --- bots -----------------------------------------------------------------------------------------------------------------------
 # NOMBRE:PORT:STYLE:libre:capataz@ROLE por cada nombre de BOTS, con puertos consecutivos desde PORT

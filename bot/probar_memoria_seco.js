@@ -16,7 +16,7 @@ const fin = () => { console.log(fallos ? `${fallos} de ${pruebas} comprobaciones
 const parte = process.argv[2]
 if (!parte) {
   const a = spawnSync(process.execPath, [__filename, 'otro'], { env: { ...process.env, IO_SERVIDOR: 'local' }, stdio: 'inherit' })
-  const env = { ...process.env }; delete env.IO_SERVIDOR
+  const env = { ...process.env, IO_REGLAS: 'duras' }; delete env.IO_SERVIDOR // P2: el del usuario con las reglas de siempre
   const b = spawnSync(process.execPath, [__filename, 'usuario'], { env, stdio: 'inherit' })
   const bien = a.status === 0 && b.status === 0
   console.log(bien ? 'probar_memoria_seco: todo bien' : 'probar_memoria_seco: HAY FALLOS')

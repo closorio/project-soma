@@ -67,7 +67,7 @@ module.exports = async function construir(bot, args, tarea) {
   const nombre = (palabras.find(a => a.startsWith('nombre=')) || '').slice(7) || nombrePlano
   if (!planos.PLANOS[nombrePlano]) return { exito: false, causa: `plano desconocido: ${nombrePlano} (hay: ${planos.nombres().join(', ')})` }
   // F8.1: el rectángulo de obras solo manda en el mundo del usuario (fuera, sv.puedeTocar y las zonas, como minar desde F8.0b)
-  if (mundo.nombre === 'usuario' && !obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
+  if (!mundo.reglasLibres && !obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
   if (obras.enCurso()) return { exito: false, causa: `hay una obra en curso (${obras.enCurso().id}): termínala o deshazla` }
   const plano = planos.PLANOS[nombrePlano](materia)
   // parcela

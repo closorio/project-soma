@@ -44,6 +44,18 @@ function servidor() {
     tickEnd: (sv || {}).tick_end === true } // host null: io.js avisa
 }
 const SERVIDOR = servidor()
+// Reglas del mundo (P2 del asistente, 2026-10-31): «libres» son las de supervivencia (cavar, minar hondo, memoria, reflejos,
+// sin rectángulo de obras). Todos los mundos las tienen salvo el del usuario, que las tiene solo si su mundo.json dice
+// `"reglas": "libre"` (el mundo 26.3, sin límites: el usuario los pone con !zona). Las zonas vedadas mandan siempre, y
+// verter lava en el mundo del usuario sigue prohibido por nombre (habilidades/agua.js).
+// IO_REGLAS=duras|libres las fuerza (las pruebas en seco miran así el mundo del usuario con las reglas de siempre).
+function reglas() {
+  if (process.env.IO_REGLAS === 'duras') return false
+  if (process.env.IO_REGLAS === 'libres') return true
+  if (nombre !== 'usuario') return true
+  try { return JSON.parse(fs.readFileSync(path.join(carpetaDatos, 'mundo.json'), 'utf8')).reglas === 'libre' } catch (_) { return false }
+}
+const REGLAS_LIBRES = reglas()
 
 // Ruta real de un archivo de datos de este mundo (sigue los enlaces).
 function ruta(archivo) {
@@ -53,7 +65,7 @@ function ruta(archivo) {
 }
 
 module.exports = {
-  nombre, carpetaDatos, host: SERVIDOR.host, puertoMc: SERVIDOR.puertoMc, version: SERVIDOR.version, tickEnd: SERVIDOR.tickEnd, ruta,
+  nombre, carpetaDatos, host: SERVIDOR.host, puertoMc: SERVIDOR.puertoMc, version: SERVIDOR.version, tickEnd: SERVIDOR.tickEnd, reglasLibres: REGLAS_LIBRES, ruta,
   diario: ruta('diario.md'), zonas: ruta('zonas.json'), cofres: ruta('cofres.json'), obras: ruta('obras.json'),
   // el mundo del usuario conserva los nombres de siempre; los demás llevan su nombre (entrenamiento/ejecuciones/modos-supervivencia-…)
   sufijo: nombre === 'usuario' ? '' : '-' + nombre,

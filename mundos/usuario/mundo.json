@@ -1,4 +1,6 @@
 {
+ "reglas": "libre",
+ "nota_reglas": "Sin límites (decisión del usuario del 2026-10-31): el asistente actúa en todas partes salvo en las zonas que marque el usuario con !zona. Sin esta clave, el mundo del usuario vuelve a las reglas duras de siempre (solo dentro del rectángulo de obras).",
  "servidor": {
   "host": "localhost",
   "puerto": 25568,

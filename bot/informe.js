@@ -71,7 +71,7 @@ function cuenta(habs) {
 //   refugiado    queda encerrado en una celda de 1×2 (comun.encerrado, mirado cada CADA ms), con la posición
 //   reaparecido  vuelve a aparecer tras morir (muerto lo anota io.js), con la posición
 const HAMBRE = 6, GOLPES = 3000, NOCHE = [12480, 23520], CADA = 2000
-function vigilar(bot, activo = mundo.nombre !== 'usuario') {
+function vigilar(bot, activo = mundo.reglasLibres) {
   if (!activo) return false
   let hambriento = false, noche = null, refugiado = false, muerto = false, golpe = null
   const pos = () => bot.entity?.position?.floored().toArray()

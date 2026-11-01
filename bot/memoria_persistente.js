@@ -10,7 +10,7 @@ const path = require('path')
 const mundo = require('./mundo')
 const memoria = require('./memoria')
 
-const activo = () => mundo.nombre !== 'usuario'
+const activo = () => mundo.reglasLibres
 const ruta = (personaje) => path.join(mundo.carpetaDatos, `memoria_${personaje}.json`)
 const MAX_MUERTES = 50
 const vacia = (personaje) => ({ v: 1, personaje, mundo: mundo.nombre, base: null, refugio: null, cofres: [], horno: [], mesa: [],

@@ -83,7 +83,7 @@ const cuantosColocables = (bot) => colocables(bot).reduce((a, i) => a + i.count,
 // dentro del rectángulo de obras (obras.json: permitido), como minar y construir. En el de supervivencia, en cualquier otro sitio.
 function puedeTocar(x, y, z) {
   if (zonas.pasoVedado(x, y, z) || zonas.talaProtegida(x, y, z) || cofres.esCofre(x, y, z) || obras.esDeObra(x, y, z)) return false
-  return mundo.nombre !== 'usuario' || obras.enPermitido(x, z)
+  return mundo.reglasLibres || obras.enPermitido(x, z)
 }
 const NO_PICAR = /^(bedrock|obsidian|crying_obsidian|reinforced_deepslate|end_portal_frame|barrier|spawner|chest|trapped_chest|barrel|.*shulker_box)$/
 const LIQUIDOS = /^(water|lava|bubble_column)$/
@@ -106,12 +106,12 @@ function mejorHerramienta(bot, k) {
 // activo: los reflejos de supervivencia (por defecto, fuera del mundo del usuario; IO_REFLEJOS=si|no lo fuerza; orden `reflejos`).
 // golpe: el último golpe de un monstruo ({ t, id, nombre, tipo }); atendido: hasta cuándo se ha respondido (un golpe con t ≤
 // atendido ya no pide reacción). apartado: dónde y cuándo se apartó por última vez (no repetirlo en el mismo sitio).
-const REFLEJOS_POR_DEFECTO = process.env.IO_REFLEJOS ? process.env.IO_REFLEJOS === 'si' : mundo.nombre !== 'usuario'
+const REFLEJOS_POR_DEFECTO = process.env.IO_REFLEJOS ? process.env.IO_REFLEJOS === 'si' : mundo.reglasLibres
 const estado = (bot) => memoria(bot, 'reflejos', () => ({ activo: REFLEJOS_POR_DEFECTO, golpe: null, atendido: 0, apartado: null, n: {} }))
 const activos = (bot) => !!estado(bot).activo
 // Las reglas de supervivencia de la interrupción (habilidades/index.js): fuera del mundo del usuario siempre (también midiendo sin
 // reflejos); en el del usuario, solo si se encienden los reflejos a mano.
-const reglasSupervivencia = (bot) => mundo.nombre !== 'usuario' || activos(bot)
+const reglasSupervivencia = (bot) => mundo.reglasLibres || activos(bot)
 // ¿Le ha golpeado un monstruo hace menos de `ms` (y desde `desde`), sin respuesta aún? Solo con los reflejos activos.
 function golpeReciente(bot, ms = 3000, desde = 0) {
   const e = estado(bot), g = e.golpe

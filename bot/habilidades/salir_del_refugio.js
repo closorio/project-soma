@@ -22,7 +22,7 @@ const CAE = /sand$|gravel$|concrete_powder$/ // F7.7: bloques que caen; valen pa
 // Con qué subir el pozo: los colocables y, fuera del mundo del usuario, si no hay, los que caen (F7.7).
 function paraSubir(bot) {
   const c = sv.colocables(bot)
-  return c.length || mundo.nombre === 'usuario' ? c : bot.inventory.items().filter(i => CAE.test(i.name))
+  return c.length || !mundo.reglasLibres ? c : bot.inventory.items().filter(i => CAE.test(i.name))
 }
 
 // ¿En un pozo? Paredes sólidas a los 4 lados de los pies y de la cabeza (el techo puede estar abierto: no está «encerrado»).
@@ -122,7 +122,7 @@ module.exports = async function salirDelRefugio(bot, args, tarea) {
   const antes = foto(bot, b)
   const listo = () => !encerrado(bot) && !enPozo(bot) && bot.entity.onGround
   const pozo = salida.x === b.x && salida.z === b.z && salida.y > b.y
-  if (pozo && mundo.nombre !== 'usuario' && !paraSubir(bot).length && bot.inventory.items().some(i => i.name.endsWith('_log'))) {
+  if (pozo && mundo.reglasLibres && !paraSubir(bot).length && bot.inventory.items().some(i => i.name.endsWith('_log'))) {
     try { await fabricarTablones(bot, 4) } catch (_) {} // F7.7: lo que hizo la mente en el pozo de arena
   }
   let r = pozo && (await subirPozo(bot, salida, tarea)) && listo() ? 'listo' : null

@@ -109,7 +109,7 @@ module.exports = async function explorar(bot, [rumbo, bloques, segundos, modo], 
 
   let visto = mirar(bot), causa = null, seco = p0.floored(), agua = false
   let mov = nadar ? prudentes(bot) : prudentesSecos(bot)
-  const puedeCavar = mundo.nombre !== 'usuario' // F8.0b: la segunda vuelta que pica y pone, solo fuera del mundo del usuario
+  const puedeCavar = mundo.reglasLibres // F8.0b: la segunda vuelta que pica y pone, solo fuera del mundo del usuario
   // F8.0b: fuera del mundo del usuario, el agua no acaba la exploración: se aprende a nadar (como «nadando») y se sigue
   let aprendioANadar = false
   const nadarDesdeAhora = () => { if (puedeCavar && !nadar) { nadar = true; aprendioANadar = true; mov = prudentes(bot) } return nadar }

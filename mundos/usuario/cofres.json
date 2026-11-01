@@ -1,1 +1,15 @@
-../../cofres.json
+{
+ "nota": "Cofres del mundo del usuario en 26.3 (desde el 2026-10-31). Los del mundo 1.21.11 están en ../../cofres.json.",
+ "cofres": [
+  {
+   "nombre": "Soma--1419-200-641",
+   "bloques": [
+    [
+     -1419,
+     200,
+     641
+    ]
+   ]
+  }
+ ]
+}

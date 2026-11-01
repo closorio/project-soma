@@ -234,7 +234,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const b = mundoFalso({ entidades: [{ name: 'zombie', pos: [3.5, 64, 0.5] }] }); b.pathfinder = { setGoal() {} }; b.stopDigging = () => {}
     const padre = { cancelada: false }
     h.ejecutar(b, 'prueba_espera', [], padre).then(r => { console.log(r.causa + ' ' + padre.cancelada); process.exit(0) })`],
-  { cwd: __dirname, env: { ...process.env, IO_SERVIDOR: '' } }).toString().trim()
+  { cwd: __dirname, env: { ...process.env, IO_SERVIDOR: '', IO_REGLAS: 'duras' } }).toString().trim() // P2: reglas de siempre
   ok(enUsuario === 'amenaza true', `en el mundo del usuario, como antes: la amenaza cancela la tarea de fuera (${enUsuario})`)
   bb = cuerpo({ entidades: [z(2.5)], bloques: celda(0, 64, 0) })
   res = await habilidades.ejecutar(bb, 'prueba_espera', ['800'], tarea())

@@ -94,7 +94,7 @@ async function ponerMesa(bot) {
   }
   // F8.1: sin hueco al lado (en el túnel de una escalera, todo roca) y fuera del mundo del usuario: picar una casilla de un lado
   // (con suelo firme debajo y sin líquidos alrededor) y poner allí la mesa
-  if (mundo.nombre === 'usuario') return null
+  if (!mundo.reglasLibres) return null
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
     if (!sv.solido(k) || sv.NO_PICAR.test(k.name) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue

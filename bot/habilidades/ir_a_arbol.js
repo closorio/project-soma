@@ -38,7 +38,7 @@ async function alcanzarTronco(bot, t, tarea) {
 module.exports = async function irAArbol(bot, [pasos], tarea, excluir = []) {
   const r = await cerebro.bucle(bot, parseInt(pasos) || 80, { hasta: 'enfrente', tarea, excluir })
   const datos = { pasos: r.pasos, tronco: r.tronco ? [r.tronco.x, r.tronco.y, r.tronco.z] : null }
-  if (r.fin === 'enfrente' && mundo.nombre !== 'usuario' && r.tronco && !alAlcance(bot).length) {
+  if (r.fin === 'enfrente' && mundo.reglasLibres && r.tronco && !alAlcance(bot).length) {
     if (!(await alcanzarTronco(bot, r.tronco, tarea))) return { exito: false, causa: 'tronco fuera de alcance', ...datos }
     const t = cerebro.ultimo(bot).tronco
     return { exito: true, causa: 'árbol enfrente', ...datos, tronco: [t.x, t.y, t.z], ladera: true }

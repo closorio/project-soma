@@ -196,9 +196,11 @@ async function principal() {
   ok(e.length === 1 && e[0].tipo === 'refugiado' && igual(e[0].datos, [0, 64, 0]), `refugiado: ${JSON.stringify(e)}`)
   enc.emit('end')
 
-  const usuario = execFileSync(process.execPath, ['-e', "const E=require('events');console.log(require('./informe').vigilar(new E()))"],
-    { cwd: __dirname, env: { ...process.env, IO_SERVIDOR: '' } }).toString().trim()
-  ok(usuario === 'false', `en el mundo del usuario vigilar se activa (${usuario})`)
+  // P2 del asistente: el mundo del usuario con "reglas": "libre" (el 26.3) sí vigila; con las reglas de siempre (IO_REGLAS=duras),
+  // no. process.exit: si vigilara, sus temporizadores no dejarían terminar al hijo
+  const usuario = execFileSync(process.execPath, ['-e', "const E=require('events');console.log(require('./informe').vigilar(new E()));process.exit(0)"],
+    { cwd: __dirname, env: { ...process.env, IO_SERVIDOR: '', IO_REGLAS: 'duras' } }).toString().trim()
+  ok(usuario === 'false', `en el mundo del usuario sin reglas libres vigilar se activa (${usuario})`)
   ok(['hambre', 'noche', 'dia', 'reaparecido'].every(t => informe.AVISOS.has(t)), 'faltan avisos nuevos en informe.AVISOS')
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

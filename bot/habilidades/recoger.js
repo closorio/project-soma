@@ -12,7 +12,7 @@ const obras = require('../obras')
 const zonas = require('../zonas')
 const { conMovimientos, dist, esperar, prudentes } = require('./comun')
 
-const SV = mundo.nombre !== 'usuario'
+const SV = mundo.reglasLibres
 
 // Meta: un sitio desde el que el objeto entra en la caja de recogida (caja del jugador +1 en horizontal, +0,5 en vertical).
 // Con GoalNear(…, 1) el bot intentaba subirse al tocón donde cae el tronco, sin hueco para la cabeza.

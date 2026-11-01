@@ -23,7 +23,7 @@ const { moverHasta, lejania, esperar, nodo, hayCamino, prudentes } = require('./
 
 const ALCANCE = 4.5, MAX_N = 32, MAX_RADIO = 12, Y_MIN = 50, MAX_MS = 300000
 const NUNCA = /^(bedrock|chest|trapped_chest|barrel|ender_chest|shulker_box|spawner|crafting_table|furnace|bed|.*_bed|.*_door|.*_sign)$/
-const SV = mundo.nombre !== 'usuario' // F7.7: las reglas nuevas, solo fuera del mundo del usuario (allí, como antes)
+const SV = mundo.reglasLibres // F7.7: las reglas nuevas, solo fuera del mundo del usuario (allí, como antes)
 const CARAS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
 const MAX_CAIDA = 3
 

@@ -1,6 +1,6 @@
 # Plan · Asistente personal (línea lateral F-asistente)
 
-> Plan del 2026-10-31. Se ejecuta en la sesión principal, sin trabajadores, por el límite de uso (ver «Límite de uso»); los criterios de cada fase están fijados aquí **antes de medir**. Este documento no implementa nada. Resumen en el vault: `conocimiento/roadmap/Asistente personal.md`.
+> Plan del 2026-10-31. **Para ejecutarlo: las fichas de `planes/asistente/`** (una por fase, para Sonnet; protocolo en su README). Se ejecuta en la sesión principal, sin trabajadores, por el límite de uso (ver «Límite de uso»); los criterios de cada fase están fijados aquí **antes de medir**. Este documento no implementa nada. Resumen en el vault: `conocimiento/roadmap/Asistente personal.md`.
 
 ## Contexto
 El usuario (2026-10-31) pide un roadmap lateral, fuera de F6-F8, para un **asistente personal** en Minecraft. Debe ser un personaje que, con órdenes sencillas por chat o voz, haga lo siguiente:
@@ -40,10 +40,7 @@ El asistente es **un rol v2 del capataz** (`perfiles/v2/asistente.json`). En mod
 ## Restricciones
 - **Versión:** el bot habla siempre **26.1** (`mundo.json` → `version: '26.1'`) y el proxy traduce. Los bloques nuevos de 26.3 (álamo, bosque moteado) llegan como sustitutos de 26.1, y el asistente **no los usa** en v1.
 - **Dónde se mide:** todo lo medible va en `servidor-local/` (26.1.2, con RCON), con bancos repetibles. En el mundo del usuario solo se hace una prueba de humo por fase.
-- **Mundo del usuario:**
-  - Las zonas vedadas siguen vedadas.
-  - Lo que se abre es minar bajo y=50, la memoria persistente y la cama fija. Se activa con la bandera `"asistente": {"y_min": -59, "memoria": true, "cama": "fija"}` en `mundos/usuario/mundo.json`.
-  - La bandera solo vale para el personaje con rol `asistente`.
+- **Mundo del usuario (decidido en la fase P, 2026-10-31):** es un mundo nuevo y **sin límites**. Lleva `"reglas": "libre"` en `mundos/usuario/mundo.json`, y `bot/mundo.js` exporta `reglasLibres`: con las reglas libres funciona como el de supervivencia (minar hondo, cavar, memoria y reflejos). El usuario pone límites con `!zona`, y las zonas vedadas mandan siempre. Verter lava sigue prohibido por nombre. Los datos del mundo 1.21.11 quedan como archivo en la raíz (`mundos/usuario/LEEME.md`). Ver `conocimiento/decisiones/2026-10-31-mundo-del-usuario-sin-limites.md`.
 - **F2-F8 no cambian de comportamiento.** Todos los cambios son aditivos, y Casual y Speedrunner siguen igual en el banco K.
 - **RAM:** se sigue el procedimiento de `PLAN_F7_supervivencia.md` (un servidor cada vez con el cliente abierto). El proxy suma ≈ 200-300 MB.
 - **Nombres:**
@@ -65,6 +62,13 @@ Llegan por el chat del juego o por `curl "127.0.0.1:PORT/?c=orden …"`, y por v
 | `base aquí` | alias de «campamento aquí» | fija la base y el cofre de entrega |
 
 Se reutilizan tal cual: `tala N`, `guarda`, `recoge`, `funde`, `fabrica`, `duerme`, `come`, `ven`, `sígueme`, `quédate`, `campamento`, `modo libre/órdenes` y `estado`.
+
+## Fase P · Preparación para Sonnet (hecha el 2026-10-31)
+Antes de A1, este modelo dejó lo que Sonnet necesita para no equivocarse:
+- **P1:** los datos del mundo del usuario empiezan de cero.
+- **P2:** las reglas por mundo (`reglasLibres`, `IO_REGLAS=duras|libres` para las pruebas, y `bot/probar_reglas_mundo_seco.js`).
+- **P3:** el banco común `entrenamiento/arena.py`, y las puertas A1, A2, A4 y A5 **como código** en `entrenamiento/banco_asistente.py`, escritas antes de las habilidades. Se lanzan con `make bench-assistant PHASE=…` y se comprueban con `make verify`.
+- **P4:** las fichas `planes/asistente/{README,TRAMPAS,A1,A2,A3,A4,A5}.md` y el borrador de la prueba de A1 (`planes/asistente/pruebas/probar_asistente_seco.js`, 30 frases).
 
 ## Fases
 Orden: **A0 → A1 → A2 → A4 → A3 (∥ A5) → A6 opcional.** A4 va antes que A3 porque las expediciones matan.
@@ -218,5 +222,5 @@ Todo el trabajo de Claude en esta línea cabe en **≤ 5 % del cupo semanal**. S
 
 ## Preguntas que solo el usuario puede responder
 - Respondidas el 2026-10-31: el asistente es **Soma**, el mundo 26.3 es **nuevo con semilla aleatoria** y servidor y proxy van **solo en 127.0.0.1**.
-- Pendiente para A1: `zonas.json`, `cofres.json` y `obras.json` del mundo del usuario (los enlaces de `mundos/usuario/`) son del mundo 1.21.11, que ya no existe. Sus coordenadas no significan nada en el mundo nuevo. ¿Se archivan y se empieza de cero?
+- Respondida el 2026-10-31 (fase P): los datos del mundo 1.21.11 se archivan y el mundo 26.3 empieza de cero, sin límites.
 - ¿Las habilidades se nombran en español, como las existentes? El plan lo supone.
