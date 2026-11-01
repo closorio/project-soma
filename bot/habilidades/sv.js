@@ -10,7 +10,7 @@ const cofres = require('../cofres')
 const obras = require('../obras')
 const observacion = require('../observacion')
 const { hostiles, esperar, esAmenaza } = require('./comun')
-const { anotarAgresor } = require('./taxonomia')
+const { anotarAgresor, NUNCA_ATACAR } = require('./taxonomia')
 const { tipoHostil, COMIDA_MALA, esColocable, valorArma, PUNTOS_ARMADURA, PIEZAS, NOCHE } = observacion
 
 const RADIO_N = 16 // hostiles que cuentan como «a la vista» (hostiles_n de la observación)
@@ -131,6 +131,15 @@ function vigilarGolpes(bot, alGolpe = () => {}) {
   })
 }
 
+// «defiéndeme» (2026-11-01): ¿el golpe a `victima` lo da alguien con quien el guardaespaldas pelea? Solo cuentan los golpes al
+// protegido o al propio bot, de una entidad que no sea un jugador ni de NUNCA_ATACAR (el creeper, el warden…). Es defensivo:
+// un mob que no ha pegado no cuenta, por hostil o cerca que esté.
+function esAgresor(bot, victima, fuente, protegido) {
+  if (!victima || !fuente || fuente === bot.entity || fuente.type === 'player') return false
+  if (victima !== bot.entity && victima !== protegido) return false
+  return !NUNCA_ATACAR.has(fuente.name)
+}
+
 // ---- el refugio en la memoria del personaje ----
 // refugio: la casilla de los pies dentro de la celda (la usan los sentidos: refugio_dist); refugioInfo: cómo se hizo (modo, salida,
 // bloques puestos y picados, para salir y para que el banco de pruebas reponga el terreno).
@@ -160,5 +169,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, anotarRefugio, refugioInfo,
   centrar }

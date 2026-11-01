@@ -372,6 +372,23 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     'consigue comida': 'caza', espera: 'quedate', 'tala 3 troncos': 'tala', 'haz un refugio': 'construye', 'huye del creeper': 'huye' }
   for (const [t, tipo] of Object.entries(esperado)) { const o = ordenes.interpretar(t); ok(o && o.tipo === tipo, `«${t}» → ${o && o.tipo} (esperaba ${tipo})`) }
 
+  // «defiéndeme» (2026-11-01): el parser y el filtro defensivo (solo pelea con quien pega al protegido o al bot)
+  for (const [t, a] of [['defiéndeme', undefined], ['protégeme', undefined], ['defiende a Pepe', 'pepe'], ['escolta a ana', 'ana']]) {
+    const o = ordenes.interpretar(t); ok(o && o.tipo === 'escolta' && o.a === a, `«${t}» → ${JSON.stringify(o)} (esperaba escolta${a ? ' a ' + a : ''})`)
+  }
+  ok(ordenes.interpretar('defiéndete').tipo === 'ataca', '«defiéndete» sigue siendo atacar')
+  {
+    const yo = { id: 0, type: 'player' }, bx = { entity: yo }
+    const amigo = { id: 1, type: 'player', username: 'Pepe' }, otro = { id: 2, type: 'player', username: 'Ana' }
+    const zombi = { id: 3, type: 'hostile', name: 'zombie' }, ender = { id: 4, type: 'hostile', name: 'enderman' }
+    const creeper = { id: 5, type: 'hostile', name: 'creeper' }, vaca = { id: 6, type: 'animal', name: 'cow' }
+    const casos = [[amigo, zombi, true, 'un zombi pega al protegido'], [yo, zombi, true, 'un zombi pega al bot'],
+      [amigo, ender, true, 'un enderman pega al protegido'], [amigo, otro, false, 'otro jugador le pega'],
+      [amigo, creeper, false, 'un creeper (nunca se pelea)'], [vaca, zombi, false, 'el zombi pega a una vaca'],
+      [amigo, undefined, false, 'daño sin atacante (caída, fuego)']]
+    for (const [v, f, quiero, txt] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
+  }
+
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
   process.exit(fallos ? 1 : 0)
 }
