@@ -1,6 +1,6 @@
 # Plan · Asistente personal (línea lateral F-asistente)
 
-> Plan del 2026-10-31. Lo ejecutan trabajadores, una fase cada uno, como en F8; los criterios de cada fase están fijados aquí **antes de medir**. Este documento no implementa nada. Resumen en el vault: `conocimiento/roadmap/Asistente personal.md`.
+> Plan del 2026-10-31. Se ejecuta en la sesión principal, sin trabajadores, por el límite de uso (ver «Límite de uso»); los criterios de cada fase están fijados aquí **antes de medir**. Este documento no implementa nada. Resumen en el vault: `conocimiento/roadmap/Asistente personal.md`.
 
 ## Contexto
 El usuario (2026-10-31) pide un roadmap lateral, fuera de F6-F8, para un **asistente personal** en Minecraft. Debe ser un personaje que, con órdenes sencillas por chat o voz, haga lo siguiente:
@@ -14,9 +14,11 @@ Pide además dos cosas: un **alcance reducido que no cueste entrenar**, y que fu
 
 ## Decisiones del usuario (2026-10-31)
 1. El asistente vive en **el mundo propio del usuario** (`servidor/`, hoy 1.21.11 y sin recrear), **migrado a 26.3**. El banco local (`servidor-local/`, 26.1.2) sigue igual y es donde se mide.
-2. Se llega a 26.3 con un **puente ViaProxy y el parche `tick_end`**: el bot habla 26.1 y el proxy traduce al servidor vanilla 26.3. Ver `conocimiento/decisiones/2026-10-31-asistente-en-26-3-por-viaproxy.md`.
+2. Se llega a 26.3 con un **puente ViaProxy y el parche `tick_end`**: el bot habla 26.1 y el proxy traduce al servidor vanilla 26.3. Ver `conocimiento/decisiones/2026-10-31-tick-end-por-envoltorio.md`, que sustituye a la de ViaProxy: `tick_end` va por un envoltorio y no se fija mineflayer a master.
 3. Granja v1 **mínima**: trigo, vacas, ovejas y gallinas. El asistente no construye cercados ni huertos: los hace el usuario y los marca con `!zona`.
 4. **Sin red neuronal en v1**: todo es guion determinista, un rol v2 del capataz más habilidades. La fase A6, opcional, clona la zona gris por DAgger solo si una medida lo justifica. Ver `conocimiento/decisiones/2026-10-31-asistente-todo-guion-sin-red.md`.
+5. **Límite de uso: ≤ 5 % del cupo semanal de Claude** para todo el trabajo de esta línea. Ver «Límite de uso» y `conocimiento/decisiones/2026-10-31-asistente-limite-semanal-5.md`.
+6. Respuestas antes de A0: el asistente es **Soma**; el mundo 26.3 es **nuevo, con semilla aleatoria** (el 1.21.11 ya no estaba en el disco); servidor y proxy **solo en 127.0.0.1**.
 
 ## Hechos que condicionan el plan (comprobados el 2026-10-31)
 - **Java 26.3 «Wilderness Bound»** salió el 15-09-2026 y pide Java 25. Ya está en `~/.minecraft/runtime/java-runtime-epsilon`, el que usa `servidor-local/arrancar.sh`.
@@ -83,12 +85,13 @@ Orden: **A0 → A1 → A2 → A4 → A3 (∥ A5) → A6 opcional.** A4 va antes 
   - `arrancar.sh` usa Java 25, `-Xmx2G`, `online-mode=false` y RCON en 25575.
   - Hay también `parar.sh` y `guardar.sh`.
   - `server.properties` lleva `pause-when-empty-seconds=0`.
-  - Si el usuario conserva el mundo 1.21.11, se copia antes de abrirlo en 26.3, porque la conversión no tiene vuelta.
-- **Proxy.** `servidor/proxy/descargar.sh` baja **ViaProxy ≥ 3.4.13** y comprueba su sha256. `arrancar.sh` lo lanza en modo CLI: escucha en 127.0.0.1:25568, apunta a 127.0.0.1:25565, versión de destino 26.3 y sin autenticación. El usuario entra **directo** al 25565 con su cliente 26.3, y el bot entra por el **25568** hablando 26.1.
-- **mineflayer.** En `bot/package.json` se fija a un **commit de master** posterior al PR #4137 (`github:PrismarineJS/mineflayer#<sha>`). Si eso rompe las pruebas en seco, se usa la otra vía: un envoltorio en `io.js` que añade `tick_end` tras cada `position`, `position_look`, `look` y `flying`. Lo que se elija se apunta en un aprendizaje.
+  - `white-list=false`: 26.3 la trae activada y con offline no sirve (ver «26.3 trae la lista blanca activada»).
+  - El mundo es nuevo, con semilla aleatoria.
+- **Proxy.** `servidor/proxy/descargar.sh` baja **ViaProxy 3.4.14** y comprueba su sha256. `arrancar.sh` lo lanza en modo CLI: escucha en 127.0.0.1:25568, apunta a 127.0.0.1:25565, versión de destino 26.3 y sin autenticación. El usuario entra **directo** al 25565 con su cliente 26.3, y el bot entra por el **25568** hablando 26.1.
+- **tick_end.** Lo manda `bot/tick_end.js`, un envoltorio que escribe `tick_end` tras cada `position`, `position_look`, `look` y `flying`. Se enciende con `servidor.tick_end: true` en `mundos/usuario/mundo.json`. `bot/package.json` no cambia. Fijar mineflayer a un commit de master posterior al PR #4137 queda como plan B.
 - **Datos del mundo.** `mundos/usuario/mundo.json` lleva `servidor.puerto: 25568`, `version: '26.1'`, `rcon` y la bandera `asistente`.
-- **Makefile**, con nombres en inglés: `server-*` se parametriza con `WORLD=usuario`, y se añaden `proxy-download`, `proxy-start`, `proxy-stop` y `proxy-ping`.
-- **Puerta A0** (humo en el mundo del usuario, 1 sesión). Todo esto tiene que pasar:
+- **Makefile**, con nombres en inglés: `user-server-download/start/stop/save/status`, `proxy-download/start/stop/ping`, `assistant` (Soma en modo órdenes en el mundo del usuario) y `smoke-26-3` (la puerta).
+- **Puerta A0** (humo en el mundo del usuario, 1 sesión; la prueba es `entrenamiento/humo_26_3.py`, con `make smoke-26-3`). Todo esto tiene que pasar:
   - el bot sigue conectado ≥ 10 min sin `invalid_player_movement`;
   - camina 100 bloques con el navegador;
   - pica 10 bloques y pone 5;
@@ -180,12 +183,22 @@ Solo se abre si una puerta de A2 o A3 falla por decisiones de «cuándo volver»
 - DAgger con la receta de F7.4, que tarda 4-6 min de CPU;
 - la misma puerta que falló, repetida con la red.
 
+## Límite de uso (pedido del usuario, 2026-10-31)
+Todo el trabajo de Claude en esta línea cabe en **≤ 5 % del cupo semanal**. Soma no usa Claude en ejecución.
+- **Medida.** Claude Code no da el porcentaje a los scripts. Al empezar y al acabar cada sesión, el usuario mira `/usage`, y la diferencia se apunta en el diario del día: `uso F-asistente: +N % (acumulado semanal M %)`.
+- **Corte.** Al llegar al 5 %, se para en el siguiente punto estable (pruebas en verde y commit) y se sigue la semana siguiente. Sin el dato, no se abre una fase nueva en esa sesión.
+- **Para gastar poco:**
+  - sin subagentes, trabajadores ni workflows;
+  - sin sesiones de Alma;
+  - bancos y pruebas de humo en segundo plano, sin sondeos;
+  - leer solo los fragmentos necesarios.
+
 ## Coste total
-≈ **50-60 h de trabajador, 10-12 sesiones con servidor y ≈ 8-10 puntos de cupo.** No hay minutos de entrenamiento salvo en A6. Cada fase se para donde llegue y se anota la decisión del usuario.
+≈ **10-12 sesiones con servidor** y 0 minutos de entrenamiento, salvo en A6. Con el límite del 5 %, el calendario es ≈ **una fase por semana**: A0 la semana del 2026-10-31 y el resto en 5-6 semanas más. Cada fase se para donde llegue y se anota la decisión del usuario.
 
 ## Riesgos
 - **Via rompe los clics de ventana.** A0 lo mide primero, y el criterio de abandono y las alternativas están escritos.
-- **mineflayer fijado a un commit de master** puede romper el `npm ci` del compañero en `develop`. Se fija por sha, se le avisa por el hub, y `make test` es la puerta.
+- **El envoltorio de `tick_end` duplicaría el paquete** si una versión nueva de mineflayer lo manda sola. Al subir mineflayer se quita o se comprueba con `make smoke-26-3`.
 - **Lava y acuíferos bajo y=10.** M2 de F8 ya lo marca como difícil. Por eso A3 es la última fase obligatoria y A4 va antes.
 - **RAM con cliente, servidor, proxy y bot a la vez** en 15,9 GB. Se usan las ventanas A/B de F7, y el servidor del usuario va con `-Xmx2G`.
 - **El corral se llena.** `criar` tiene un tope duro por especie.
@@ -204,6 +217,6 @@ Solo se abre si una puerta de A2 o A3 falla por decisiones de «cuándo volver»
   - catálogo: `perfiles/v2/_etapas.json`.
 
 ## Preguntas que solo el usuario puede responder
-- ¿El asistente es Soma o un personaje nuevo? ¿Con qué nombre?
-- ¿Se conserva el mundo 1.21.11 del usuario, con copia y conversión a 26.3, o se empieza un mundo 26.3 nuevo?
-- ¿Las habilidades se nombran en español, como las existentes, o en inglés? El plan supone español porque son órdenes y nombres internos, no comandos que se teclean.
+- Respondidas el 2026-10-31: el asistente es **Soma**, el mundo 26.3 es **nuevo con semilla aleatoria** y servidor y proxy van **solo en 127.0.0.1**.
+- Pendiente para A1: `zonas.json`, `cofres.json` y `obras.json` del mundo del usuario (los enlaces de `mundos/usuario/`) son del mundo 1.21.11, que ya no existe. Sus coordenadas no significan nada en el mundo nuevo. ¿Se archivan y se empieza de cero?
+- ¿Las habilidades se nombran en español, como las existentes? El plan lo supone.

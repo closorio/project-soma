@@ -196,7 +196,8 @@ Meta: 2-3 personajes en el mismo mundo, cada uno con su perfil, con la misma red
 ### Asistente personal (línea lateral F-asistente, plan del 2026-10-31)
 **Encargo (2026-10-31):** un asistente personal en el mundo propio del usuario, en **Minecraft Java 26.3**, que con órdenes sencillas haga cinco cosas: minar en un punto fijo, traer minerales de las cuevas profundas, cuidar una granja de cultivos y animales, farmear, y volver a recoger sus cosas si muere. El alcance tiene que ser reducido y no costar entrenamiento. Plan completo, con criterios fijados antes de medir: **`PLAN_asistente.md`**.
 - **Decisiones del usuario:**
-  - El mundo del usuario (`servidor/`) se recrea en vanilla 26.3. El bot habla 26.1 por **ViaProxy ≥ 3.4.13**, con mineflayer fijado a master por el `tick_end`.
+  - El mundo del usuario (`servidor/`) se recrea en vanilla 26.3. El bot habla 26.1 por **ViaProxy 3.4.14**, con un envoltorio que manda `tick_end` (`bot/tick_end.js`; mineflayer no cambia).
+  - Límite de uso: ≤ 5 % del cupo semanal de Claude para toda la línea.
   - La granja es mínima: trigo, vacas, ovejas y gallinas, en cercados que pone el usuario.
   - **No hay red**: es un rol v2 `asistente` del capataz, todo guion.
 - **Fases:** A0 puente 26.3 → A1 rol, órdenes y memoria → A2 minar en un punto → A4 muerte y recuperación → A3 expedición profunda ∥ A5 granja → A6 red de zona gris (opcional).
@@ -210,7 +211,7 @@ Meta: 2-3 personajes en el mismo mundo, cada uno con su perfil, con la misma red
 
 ## Riesgos y reglas
 - **Brecha simulador→mundo real:** ya apareció dos veces (árbol en la misma columna; troncos altos). Cada fallo en Minecraft se traslada al simulador.
-- Mineflayer 4.39 (la última, 2026-10-23) soporta hasta 26.1 (protocolo 775); 26.2 y 26.3 sin soporte upstream (PRs abiertos en minecraft-data, minecraft-protocol y mineflayer). No subir ningún server sin comprobarlo (`require('minecraft-data')('26.3')` devuelve null). **2026-10-31:** la excepción es el mundo del usuario para el asistente, que va en 26.3 con el bot hablando 26.1 a través de ViaProxy; ver `PLAN_asistente.md`, A0.
+- Mineflayer 4.39 (la última, 2026-10-23) soporta hasta 26.1 (protocolo 775); 26.2 y 26.3 sin soporte upstream (PRs abiertos en minecraft-data, minecraft-protocol y mineflayer). No subir ningún server sin comprobarlo (`require('minecraft-data')('26.3')` devuelve null). **2026-10-31:** la excepción es el mundo del usuario para el asistente, que va en 26.3 con el bot hablando 26.1 a través de ViaProxy y con `bot/tick_end.js` encendido; ver `PLAN_asistente.md`, A0.
 - **minecraft-data 26.1 y tipos de entidad:** ghast, slime, phantom, magma_cube, shulker y ender_dragon son `mob` (los ignora `hostiles()`); enderman, piglin y zombified_piglin son `hostile` aunque sean neutrales. Antes de F8 hay que clasificar los hostiles por nombre.
 - Servidor propio siempre local y offline; nunca exponerlo a internet. El del compañero es suyo (wifi, offline); los puertos de control de los bots siguen solo en 127.0.0.1.
 - Sin claves de API de terceros en el proyecto. Reutilizar de Mindcraft/Voyager solo ideas.

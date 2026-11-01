@@ -2,10 +2,12 @@
 tipo: decision
 fecha: 2026-10-31
 autor: seppuq
-estado: vigente
+estado: sustituida
 fases: ["[[Asistente personal]]"]
 ---
 # El asistente llega a 26.3 por ViaProxy
+
+Sustituida por [[2026-10-31-tick-end-por-envoltorio]] (2026-10-31): `tick_end` va por un envoltorio, sin fijar mineflayer a master.
 
 ## Contexto
 El asistente personal tiene que funcionar en el mundo propio del usuario en Minecraft Java 26.3. Hay tres obstáculos:
