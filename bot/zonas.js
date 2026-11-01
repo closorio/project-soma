@@ -59,10 +59,11 @@ function puntoFuera(x, z) {
 
 // Enseña al navegador a no pisar zonas vedadas ni romper bloques protegidos, troncos ni cofres (coste ≥ 100: no los rompe).
 const NO_ROMPER = /_(log|wood)$|^(chest|trapped_chest|barrel)$/
-function aplicar(mov) {
+// pisarVedadas (2026-11-01, «defiéndeme»): el guardaespaldas entra en las vedadas a seguir y defender; romper sigue igual.
+function aplicar(mov, { pisarVedadas = false } = {}) {
   for (const b of mov.bot.registry.blocksArray) if (NO_ROMPER.test(b.name)) mov.blocksCantBreak.add(b.id)
   // F8.1: el navegador a veces pasa un bloque sin posición (chunk sin cargar) y la excepción tumbaba el proceso de los cuatro bots
-  mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
+  if (!pisarVedadas) mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
   mov.exclusionAreasBreak.push(b => (b && b.position && (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z)) ? 1000 : 0))
   return require('./puertas').aplicar(mov) // 2026-11-01: las puertas de madera son paso (las abre puertas.vigilar)
 }

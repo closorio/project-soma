@@ -39,5 +39,11 @@ let lanza = null
 try { mov.exclusionAreasStep[0]({}); mov.exclusionAreasStep[0](undefined); mov.exclusionAreasBreak[0]({ name: 'stone' }) } catch (e) { lanza = e.message }
 ok(!lanza, `las exclusiones de zonas lanzan con un bloque sin posición: ${lanza}`)
 console.log('  zonas: un bloque sin posición no tumba al navegador')
+// «defiéndeme» (2026-11-01): el guardaespaldas pisa las vedadas, pero no rompe más que el resto
+const nuevo = () => ({ bot: { registry: { blocksArray: [] } }, blocksCantBreak: new Set(), exclusionAreasStep: [], exclusionAreasBreak: [] })
+const normal = require('./zonas').aplicar(nuevo()), escolta = require('./zonas').aplicar(nuevo(), { pisarVedadas: true })
+ok(escolta.exclusionAreasStep.length === normal.exclusionAreasStep.length - 1 && escolta.exclusionAreasBreak.length === normal.exclusionAreasBreak.length,
+  `pisarVedadas quita solo la exclusión de paso (paso ${normal.exclusionAreasStep.length} → ${escolta.exclusionAreasStep.length}, romper ${normal.exclusionAreasBreak.length} → ${escolta.exclusionAreasBreak.length})`)
+console.log('  zonas: escoltando pisa las vedadas, sin romper más')
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

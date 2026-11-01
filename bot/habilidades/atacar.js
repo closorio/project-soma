@@ -1,4 +1,4 @@
-// atacar [tipo|id:N|-] [segundos=20] [puno] [acorralado] (F7.2): pelear con un hostil a la vista (≤ 16): el de ese tipo (zombie, skeleton,
+// atacar [tipo|id:N|-] [segundos=20] [puno] [acorralado] [vedadas] (F7.2): pelear con un hostil a la vista (≤ 16): el de ese tipo (zombie, skeleton,
 // spider…), la entidad N (el reflejo de defensa ataca a quien le acaba de golpear) o, con «-» o nada, el más cercano.
 // Equipa la mejor arma (sv.mejorArma), le persigue sin romper ni poner bloques y le golpea con la barra de ataque llena (espada cada
 // 0,65 s) en cuanto lo tiene a ≤ 3 bloques, mirándole. Al esqueleto se le acerca (de lejos dispara).
@@ -75,6 +75,7 @@ async function pelear(bot, e, { ms = 20000, tarea = null, parar = () => null, mo
 module.exports = async function atacar(bot, args, tarea) {
   const [quien, segundos] = args || []
   const conPuno = (args || []).includes('puno'), acorralado = (args || []).includes('acorralado')
+  const vedadas = (args || []).includes('vedadas') // «defiéndeme»: puede entrar en las zonas vedadas (sin romper ni poner)
   const ms = (parseFloat(segundos) || 20) * 1000, t0 = Date.now(), salud0 = bot.health
   const e = elegir(bot, quien)
   if (!e) return { exito: false, causa: 'sin hostil' }
@@ -98,7 +99,7 @@ module.exports = async function atacar(bot, args, tarea) {
     return null
   }
   const donde = e.position.clone()
-  const r = await pelear(bot, e, { ms: Math.max(1000, ms - (Date.now() - t0)), tarea, parar })
+  const r = await pelear(bot, e, { ms: Math.max(1000, ms - (Date.now() - t0)), tarea, parar, mov: vedadas ? prudentes(bot, { pisarVedadas: true }) : null })
   const exito = r.causa === 'muerto' || r.causa === 'huyó'
   // F8.1: fuera del mundo del usuario, recoger lo útil que suelte (el hilo de la araña: 4 hacen una lana para la cama)
   if (r.causa === 'muerto' && require('../mundo').reglasLibres && !hostiles(bot, RADIO).length) {

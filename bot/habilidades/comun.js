@@ -27,8 +27,8 @@ async function conLimite(promesa, ms, alAgotar = () => {}) {
 }
 
 // Movimientos prudentes: sin romper ni poner bloques (el mundo del jugador no se toca al seguirle o huir).
-function prudentes(bot) {
-  const m = zonas.aplicar(new Movements(bot))
+function prudentes(bot, opciones) {
+  const m = zonas.aplicar(new Movements(bot), opciones)
   m.canDig = false
   m.allow1by1towers = false
   m.scafoldingBlocks = []

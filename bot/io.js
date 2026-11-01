@@ -753,7 +753,7 @@ class Personaje {
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
       case 'escolta': {
-        // 2026-11-01: le sigue como «sígueme» y, si alguien le pega a él o al bot (sv.esAgresor), corta, pelea (atacar id:N, con
+        // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y, si alguien le pega a él o al bot (sv.esAgresor), corta, pelea (atacar id:N, con
         // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Defensivo: el mob que no pega no cuenta.
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
         const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
@@ -775,11 +775,12 @@ class Personaje {
           while (!(tarea && tarea.cancelada)) {
             const queda = SIGUEME_MAX - (Date.now() - t0)
             if (queda <= 0) { r = 'tiempo agotado'; break }
-            const marcha = moverHasta(bot, new GoalSeguirFuera(e, 2), vivo, { ms: queda, tarea, entidad: e })
+            // entra tras él en las zonas vedadas (GoalFollow, no GoalSeguirFuera): pisa, pero no rompe ni pone
+            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), vivo, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
             if (r !== 'listo') break
-            const p = await this.ejecutarHabilidad('atacar', ['id:' + agresor.id, '20'], tarea)
+            const p = await this.ejecutarHabilidad('atacar', ['id:' + agresor.id, '20', 'vedadas'], tarea)
             if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
             agresor = null
           }
