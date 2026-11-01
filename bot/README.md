@@ -62,6 +62,18 @@ servidor-local/parar.sh
 - Ojo en 26.1: `time query daytime` ya no existe (los relojes son «timelines»: `time query day` da los ticks del día, no el número de día); `time set N` sigue igual.
 - Fuera del mundo del usuario cada personaje guarda su memoria en `mundos/<mundo>/memoria_<nombre>.json` (base, refugio, muertes; no viaja por git) y la recupera al arrancar.
 
+### Mundo del usuario en 26.3 por ViaProxy (A0 del asistente)
+El mundo del usuario es un servidor vanilla **26.3** en `servidor/` (127.0.0.1:25565, RCON 25575, offline, sin lista blanca). El usuario entra directo con su cliente 26.3. Soma entra por **ViaProxy** (`servidor/proxy/`, 127.0.0.1:25568), que traduce de 26.1 a 26.3. `mundos/usuario/mundo.json` lleva el puerto 25568, `version: "26.1"` y `tick_end: true`. Esto último enciende `bot/tick_end.js`: sin `client_tick_end`, 26.3 expulsa al bot a los 1,5 s.
+
+```
+make user-server-download proxy-download   # la primera vez
+make user-server-start proxy-start         # primero el servidor, luego el proxy
+make proxy-ping                            # responde el servidor de detrás: 26.3 (777)
+make assistant                             # Soma en modo órdenes (bots-stop WORLD=usuario lo para)
+make smoke-26-3                            # puerta A0, ≈ 10 min (PLAN_asistente.md)
+make proxy-stop user-server-stop
+```
+
 ### Apuntar al server del compañero (26.1, por wifi)
 Desde el 2026-10-23 los bots también van al server Java de un compañero en la misma wifi: `IO_SERVIDOR=companero`. Host, puerto y versión salen de `mundos/companero/mundo.json` (`servidor: {host, puerto, version}`); `IO_HOST`, `IO_PORT_SERVIDOR` e `IO_VERSION` los sobreescriben. **mineflayer 4.39 (la última) llega hasta Minecraft 26.1 (protocolo 775); 26.2 y 26.3 no tienen soporte**: el server tiene que estar en **26.1.x** (26.1.2 es la última), o los bots no entran.
 ```

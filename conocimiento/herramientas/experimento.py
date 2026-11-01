@@ -5,7 +5,8 @@ Formatos que entiende:
   - serie medida en Minecraft (medir_ejecutor.py: ejecutor_medido.json o ejecuciones/serie-*.medido.json): troncos por
     episodio de cada variante política · perfil, media ± desviación típica;
   - comparación en el simulador (comparar_politicas.py: comparacion_politicas*.json): nota, fidelidad media al guion y la
-    diferencia frente a la referencia.
+    diferencia frente a la referencia;
+  - puerta del asistente (entrenamiento/humo_26_3.py y siguientes): una lista de pruebas sí/no.
 Uso: experimento.py RUTA.json [--titulo T] [--autor A] [--veredicto mejora|igual|peor|dudoso] [--vault RUTA] [--dry-run]
 El autor por defecto es SOMA_AGENTE. No pisa una nota que ya exista (puede tener la conclusión escrita a mano).
 Después: rellenar «Conclusión» y «veredicto», y commit + push (ver CLAUDE.md)."""
@@ -77,14 +78,33 @@ def _nota_comparacion(datos, fuente, autor, titulo, veredicto):
     return dia, hm, titulo, fm, L
 
 
+def _nota_pruebas(datos, fuente, autor, titulo, veredicto):
+    """Una puerta del asistente (PLAN_asistente.md): una lista de pruebas sí/no; pasa si pasan todas."""
+    pruebas = datos["pruebas"]
+    fecha, dia, hm = _fecha(datos)
+    titulo = titulo or datos.get("titulo") or "puerta %s" % datos.get("puerta", "?")
+    hechas = sum(1 for p in pruebas if p.get("pasa"))
+    fm = {"tipo": "experimento", "fecha": fecha, "autor": autor, "titulo": titulo, "entorno": datos.get("entorno", "minecraft"),
+          "politica": datos.get("politica", ""), "N": len(pruebas), "semilla": datos.get("semilla", ""),
+          "metrica": "pruebas que pasan", "valor": "%d/%d" % (hechas, len(pruebas)), "base": "todas",
+          "veredicto": veredicto, "fuente": fuente}
+    L = ["# %s" % titulo, "", "Puerta %s: %s (%d/%d pruebas)." % (datos.get("puerta", "?"), "pasa" if hechas == len(pruebas)
+         else "no pasa", hechas, len(pruebas)), "", "| prueba | pasa | detalle |", "|---|---|---|"]
+    L += ["| %s | %s | %s |" % (p.get("nombre"), "sí" if p.get("pasa") else "no", str(p.get("detalle", "")).replace("|", "/"))
+          for p in pruebas]
+    return dia, hm, titulo, fm, L
+
+
 def nota(datos, fuente, autor, titulo=None, veredicto="pendiente"):
     """(nombre de archivo, texto) de la nota de experimento para esos datos."""
     if isinstance(datos, dict) and isinstance(datos.get("episodios"), list) and datos["episodios"]:
         dia, hm, titulo, fm, L = _nota_medida(datos, fuente, autor, titulo, veredicto)
     elif isinstance(datos, dict) and isinstance(datos.get("politicas"), dict) and datos["politicas"]:
         dia, hm, titulo, fm, L = _nota_comparacion(datos, fuente, autor, titulo, veredicto)
+    elif isinstance(datos, dict) and isinstance(datos.get("pruebas"), list) and datos["pruebas"]:
+        dia, hm, titulo, fm, L = _nota_pruebas(datos, fuente, autor, titulo, veredicto)
     else:
-        raise ValueError("formato desconocido: ni serie medida (episodios) ni comparación (politicas)")
+        raise ValueError("formato desconocido: ni serie medida (episodios), ni comparación (politicas), ni puerta (pruebas)")
     L += ["", "Fuente: `%s`" % fuente, "", "## Conclusión", "", "(Qué significa, si cambia algo del roadmap y qué se hace después.)", ""]
     nombre = "%s-%s-%s.md" % (dia or "sin-fecha", hm or "0000", notas.babosa(titulo))
     return nombre, notas.a_frontmatter(fm) + "\n".join(L)

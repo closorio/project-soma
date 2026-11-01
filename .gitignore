@@ -8,6 +8,10 @@ tlauncher/
 # servidores: mundos, jars, librerías, copias, registros y datos de jugadores
 servidor/*
 !servidor/rcon.py
+!servidor/*.sh
+!servidor/proxy/
+servidor/proxy/*
+!servidor/proxy/*.sh
 servidor-local/*
 !servidor-local/*.sh
 !servidor-local/*.py

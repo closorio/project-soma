@@ -1,0 +1,16 @@
+{
+ "servidor": {
+  "host": "localhost",
+  "puerto": 25568,
+  "version": "26.1",
+  "tick_end": true,
+  "nota": "Mundo del usuario (A0 del asistente, PLAN_asistente.md): servidor vanilla 26.3 en servidor/ (127.0.0.1:25565, donde entra el usuario con su cliente 26.3). El bot entra por ViaProxy (servidor/proxy/, 25568) hablando 26.1, la última versión de mineflayer 4.39; tick_end enciende bot/tick_end.js."
+ },
+ "rcon": {
+  "puerto": 25575,
+  "nota": "La clave está en servidor/server.properties (permisos 600, fuera de git)."
+ },
+ "aparicion": null,
+ "campamento": null,
+ "puntos": []
+}

@@ -11,7 +11,7 @@ RAIZ := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 NVM_BIN := $(lastword $(sort $(wildcard $(HOME)/.nvm/versions/node/*/bin)))
 export PATH := $(RAIZ)/entrenamiento/.venv/bin:$(NVM_BIN):$(PATH)
 
-WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (su server 26.1 por wifi) · usuario · supervivencia
+WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (su server 26.1 por wifi) · usuario (26.3 por ViaProxy) · supervivencia
 ROLE    ?= casual       # rol v2 del capataz (perfiles/v2/): casual · speedrunner
 BOTS    ?= Soma         # uno o varios nombres: "Soma Eco Iris"
 PORT    ?= 3001         # puerto de control del primero; los demás, consecutivos (Soma 3001, Eco 3002…)
@@ -22,6 +22,7 @@ CMD     ?= list         # una orden de RCON para el server local
 BASE    ?=              # banco K: JSON de una medida anterior para comparar punto a punto
 ZONE    ?=              # banco K: zona sin usar para preparar los puntos fijos
 DAYS    ?= 2            # banco K: días de juego
+MODE    ?= libre        # bots: libre u ordenes al arrancar
 
 WORLD_ := $(strip $(WORLD))
 ROLE_ := $(strip $(ROLE))
@@ -29,11 +30,15 @@ LOGS := $(RAIZ)/servidor-supervivencia/logs
 PID := $(LOGS)/bots-$(WORLD_).pid
 LOG := $(LOGS)/bots-$(WORLD_).log
 RCON := python $(RAIZ)/servidor/rcon.py --servidor local
+RCON_USER := python $(RAIZ)/servidor/rcon.py --servidor usuario
+# quién decide en libre al arrancar los bots (el asistente usa guion)
+BOT_DECIDER ?= capataz@$(ROLE_)
 # la orden al puerto de un bot, con el texto en la URL bien codificado
 pedir = curl -s --max-time 30 "127.0.0.1:$(strip $(1))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$(2)")"; echo
 
 .PHONY: help install install-bot install-python server-download server-start server-stop server-save server-status \
-        rcon partner-ping bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
+        rcon partner-ping user-server-download user-server-start user-server-stop user-server-save user-server-status \
+        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
         order test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
@@ -48,6 +53,13 @@ help:
 	@echo "  rcon CMD=\"time set day\"   cualquier orden de consola"
 	@echo "Server del compañero (26.1.x, online-mode=false; host en mundos/companero/mundo.json):"
 	@echo "  partner-ping        ¿responde y habla 26.1 (protocolo 775)?"
+	@echo "Mundo del usuario (servidor/, Minecraft 26.3, 127.0.0.1:25565, RCON 25575) y su proxy (ViaProxy, 25568):"
+	@echo "  user-server-download · proxy-download   la primera vez: jars con su suma comprobada y la configuración"
+	@echo "  user-server-start · proxy-start         en segundo plano (primero el servidor, luego el proxy)"
+	@echo "  user-server-stop · proxy-stop · user-server-save · user-server-status"
+	@echo "  proxy-ping          ¿el proxy responde y tiene detrás el servidor 26.3 (protocolo 777)?"
+	@echo "  assistant           Soma en el mundo del usuario, en modo órdenes (bots-stop WORLD=usuario lo para)"
+	@echo "  smoke-26-3          puerta A0: conexión, caminar, picar, poner, cofre, mesa y cama (≈ 15 min)"
 	@echo "Bots (en segundo plano; registro en servidor-supervivencia/logs/bots-WORLD.log):"
 	@echo "  casual              BOTS en modo libre con el rol casual      (= bots ROLE=casual)"
 	@echo "  speedrunner         lo mismo con el rol speedrunner (sin medir: llega hasta el hierro y el cubo)"
@@ -103,11 +115,44 @@ rcon:
 	@$(RCON) "$(strip $(CMD))"
 
 # --- server del compañero -------------------------------------------------------------------------------------------------------
+# el JS va en una variable de entorno: con «\» de make dentro de las comillas, node recibía la barra y no arrancaba
 partner-ping:
-	@cd bot && node -e 'const m = require("../mundos/companero/mundo.json").servidor; \
-	  require("minecraft-protocol").ping({ host: process.env.IO_HOST || m.host, port: +(process.env.IO_PORT_SERVIDOR || m.puerto) }, (e, r) => { \
-	    if (e) return console.log(`$${m.host}:$${m.puerto} no responde (${e.code || e.message}): IP, firewall o server apagado`); \
-	    console.log(`$${m.host}:$${m.puerto} → $${r.version.name} (protocolo $${r.version.protocol})` + (r.version.protocol === 775 ? ": vale" : ": no es 26.1, los bots no entrarán")) })'
+	@cd bot && node -e "$$PARTNER_PING"
+
+# --- mundo del usuario en 26.3 y su proxy (A0 del asistente, PLAN_asistente.md) -------------------------------------------------
+user-server-download:
+	servidor/descargar.sh
+
+user-server-start:
+	servidor/arrancar.sh
+
+user-server-stop:
+	servidor/parar.sh
+
+user-server-save:
+	servidor/guardar.sh
+
+user-server-status:
+	@$(RCON_USER) list
+	@$(RCON_USER) "time query day"
+
+proxy-download:
+	servidor/proxy/descargar.sh
+
+proxy-start:
+	servidor/proxy/arrancar.sh
+
+proxy-stop:
+	servidor/proxy/parar.sh
+
+proxy-ping:
+	@cd bot && node -e "$$PROXY_PING"
+
+assistant:
+	@$(MAKE) --no-print-directory bots WORLD=usuario BOTS=Soma PORT=3001 MODE=ordenes BOT_DECIDER=guion
+
+smoke-26-3:
+	python entrenamiento/humo_26_3.py
 
 # --- bots -----------------------------------------------------------------------------------------------------------------------
 # NOMBRE:PORT:STYLE:libre:capataz@ROLE por cada nombre de BOTS, con puertos consecutivos desde PORT
@@ -117,7 +162,7 @@ bots:
 	@rm -f $(PID)
 	@# el PID lo escribe el propio proceso antes de hacerse node (exec): con «… &» y $$! quedaba el de una subshell intermedia,
 	@# y bots-stop no paraba a nadie
-	@p=$(strip $(PORT)); args=""; for n in $(BOTS); do args="$$args $$n:$$p:$(strip $(STYLE)):libre:capataz@$(ROLE_)"; p=$$((p + 1)); done; \
+	@p=$(strip $(PORT)); args=""; for n in $(BOTS); do args="$$args $$n:$$p:$(strip $(STYLE)):$(strip $(MODE)):$(strip $(BOT_DECIDER))"; p=$$((p + 1)); done; \
 	  cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) IO_BOTS="$$(echo $(BOTS) | tr ' ' ,)" \
 	    setsid nohup bash -c 'echo $$$$ > "$$0"; exec node io.js "$$@"' $(PID) $$args > $(LOG) 2>&1 < /dev/null & \
 	  for i in 1 2 3 4 5 6 7 8 9 10; do [ -s $(PID) ] && break; sleep 0.2; done; \
@@ -163,6 +208,25 @@ print("hechas: " + (", ".join(f"{k} (día {v.get('dia')})" for k, v in (d.get("h
 print("pendientes: " + (", ".join(d.get("pendientes") or []) or "ninguna"))
 endef
 export PROGRESO
+
+define PARTNER_PING
+const m = require("../mundos/companero/mundo.json").servidor
+const host = process.env.IO_HOST || m.host, port = +(process.env.IO_PORT_SERVIDOR || m.puerto)
+require("minecraft-protocol").ping({ host, port }, (e, r) => {
+  if (e) return console.log(`$${host}:$${port} no responde ($${e.code || e.message}): IP, firewall o server apagado`)
+  console.log(`$${host}:$${port} → $${r.version.name} (protocolo $${r.version.protocol})` + (r.version.protocol === 775 ? ": vale" : ": no es 26.1, los bots no entrarán"))
+})
+endef
+export PARTNER_PING
+
+define PROXY_PING
+require("minecraft-protocol").ping({ host: "127.0.0.1", port: 25568, version: "26.1" }, (e, r) => {
+  if (e) return console.log(`127.0.0.1:25568 no responde ($${e.code || e.message}): make user-server-start proxy-start`)
+  // el ping de estado lo contesta el servidor de detrás (26.3, 777): ViaProxy traduce a 26.1 al entrar, no aquí
+  console.log(`127.0.0.1:25568 responde → servidor $${r.version.name} (protocolo $${r.version.protocol})` + (r.version.protocol === 777 ? ": vale (el bot entra hablando 26.1)" : ": no es 26.3, revisa servidor/"))
+})
+endef
+export PROXY_PING
 
 role:
 	@$(call pedir,$(PORT),decisor capataz $(ROLE_))
