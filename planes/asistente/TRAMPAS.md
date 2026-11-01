@@ -16,6 +16,7 @@ Cada una costó una sesión descubrirla. Síntoma → causa → qué hacer.
 
 ## Bancos y pruebas en el mundo
 - **«sin sitio», «nada que minar aquí» en el terreno de verdad** → desiertos, laderas, agua. Las puertas que ponen o pican van en una plataforma de `arena.py`, cada prueba en su trozo (`s.en(dx, dz)`), nunca justo donde otra ya picó.
+- **Con las reglas libres, `minar` no pica una plataforma de una capa** («nada que minar aquí»): solo pica lo que suelta a ≤ 3 de caída → las plataformas de `arena.py` tienen 3 capas; no las adelgaces.
 - **Al pasar por un cofre desaparecen la mesa, la cama o la piedra** → `depositar` guarda todo lo que no es herramienta, arma, armadura ni comida → da el material de cada prueba justo antes (`m.dar(...)`).
 - **Las habilidades acaban en «amenaza» o «monstruos cerca»** → la noche y los monstruos cortan la tarea (`habilidades/index.js`) → pacífico mientras dura la prueba (lo pone `Sesion`), salvo que la puerta pida monstruos.
 - **`spreadplayers` dice «Could not spread»** → con 0 de separación falla, y sobre agua no deja a nadie → `spreadplayers X Z 1 30 false Soma`, o `s.suelo_firme()`.

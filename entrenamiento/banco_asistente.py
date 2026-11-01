@@ -54,7 +54,7 @@ def fase_A2(m, s, a):
     buenas = 0
     for k in range(a.n):
         s.plataforma(lado=91)
-        cx, cy, cz = s.base[0] + 40, s.y - 4, s.base[2]
+        cx, cy, cz = s.base[0] + 40, s.y - 7, s.base[2]  # dentro de la cantera, bajo las 3 capas
         s.cantera(dx=40, lado=12, alto=8, menas=(("iron_ore", 12), ("coal_ore", 12)))
         s.en(0, 0)
         m.r(f"clear {m.personaje}")

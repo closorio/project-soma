@@ -135,14 +135,19 @@ class Sesion:
         return self.base
 
     def plataforma(self, lado=21, y=200, suelo="grass_block"):
-        """Suelo de `lado`×`lado` a la altura y-1 sobre la base, con 5 de aire encima; se borra al salir."""
+        """Suelo de `lado`×`lado` (3 capas, la de arriba en y-1) sobre la base; se borra al salir."""
         bx, _, bz = self.base or self.suelo_firme()
         h = lado // 2
         self.y = y
-        if lado * lado * 5 <= 32768:  # «fill» admite 32768 bloques; a y=200 el cielo ya es aire, así que en las grandes basta el suelo
-            self.m.r(f"fill {bx - h} {y} {bz - h} {bx + h} {y + 4} {bz + h} air")
-        self.m.r(f"fill {bx - h} {y - 1} {bz - h} {bx + h} {y - 1} {bz + h} {suelo}")
-        self.borrar.append((bx - h, y - 1, bz - h, bx + h, y + 4, bz + h))
+        # Suelo de 3 capas (hierba sobre 2 de tierra): con las reglas libres, minar solo pica lo que suelta a ≤ 3 de caída, y en una
+        # capa sola sobre el vacío no picaba nada («nada que minar aquí», 2026-10-31). «fill» admite 32768 bloques: por franjas.
+        for x0 in range(bx - h, bx + h + 1, 32):
+            x1 = min(x0 + 31, bx + h)
+            self.m.r(f"fill {x0} {y - 3} {bz - h} {x1} {y - 2} {bz + h} dirt")
+            self.m.r(f"fill {x0} {y - 1} {bz - h} {x1} {y - 1} {bz + h} {suelo}")
+            if lado <= 41:  # a y=200 el cielo ya es aire; en las pequeñas se limpia por si acaso
+                self.m.r(f"fill {x0} {y} {bz - h} {x1} {y + 4} {bz + h} air")
+            self.borrar.append((x0, y - 3, bz - h, x1, y + 4, bz + h))
 
     def en(self, dx, dz):
         """A su trozo de plataforma, desplazado (dx, dz) del centro."""
@@ -153,7 +158,7 @@ class Sesion:
         """Un cubo de piedra de lado×alto×lado bajo el trozo (dx, dz) de la plataforma, con menas en sitios fijos (minar es
         determinista). Devuelve la caja (x1, y1, z1, x2, y2, z2). La plataforma tiene que existir antes."""
         bx, _, bz = self.base
-        x1, z1, y2 = bx + dx - lado // 2, bz + dz - lado // 2, self.y - 2
+        x1, z1, y2 = bx + dx - lado // 2, bz + dz - lado // 2, self.y - 4  # bajo las 3 capas del suelo
         caja = (x1, y2 - alto + 1, z1, x1 + lado - 1, y2, z1 + lado - 1)
         self.m.r("fill %d %d %d %d %d %d stone" % caja)
         k = 0
