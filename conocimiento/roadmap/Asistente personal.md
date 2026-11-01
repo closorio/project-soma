@@ -4,7 +4,7 @@ fase: F-asistente
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-01
-siguiente: "A1 con Sonnet desde el 2026-11-07 (planes/asistente/A1.md). Antes de A2: diagnosticar el fallo intermitente de colocar en 26.3 por Via (poner/mesa «sin apoyo», TRAMPAS), con un modelo fuerte"
+siguiente: "A1 con Sonnet desde el 2026-11-07 (planes/asistente/A1.md). El fallo de colocar en 26.3 no se reproduce (22/22 y dos humos 7/7, 2026-11-01)"
 ---
 # Asistente personal
 
@@ -27,6 +27,8 @@ Todo es guion, sin red que entrenar.
 **Plan (2026-10-31).** Es un rol v2 del capataz (`asistente`) con seis órdenes nuevas y cuatro habilidades compuestas, montadas sobre las que ya existen. Se llega a 26.3 con un puente ViaProxy; ver [[2026-10-31-tick-end-por-envoltorio]], que sustituye a [[2026-10-31-asistente-en-26-3-por-viaproxy]]. No hay red en v1; ver [[2026-10-31-asistente-todo-guion-sin-red]].
 
 Fases: A0 puente 26.3 → A1 rol, órdenes y memoria → A2 minar en un punto → A4 muerte y recuperación → A3 expedición profunda ∥ A5 granja → A6 red (opcional). Coste: ≈ 50-60 h de trabajador y 10-12 sesiones con servidor.
+
+**Colocar en 26.3 y guardaespaldas (2026-11-01).** El fallo de colocar no se reproduce tras las plataformas de 3 capas: 22/22 y dos humos 7/7; queda la instrumentación (TRAMPAS). Orden nueva «defiéndeme» / «defiende a X»: le sigue y solo pelea con quien le pega a él o al bot (`entrenamiento/prueba_escolta.py`: 2/2).
 
 ## Siguiente paso
 Ver campo «siguiente». El asistente es Soma, en un mundo 26.3 nuevo. Antes de A1, el usuario decide qué hacer con los datos del mundo 1.21.11 borrado.
