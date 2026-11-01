@@ -193,9 +193,24 @@ Meta: 2-3 personajes en el mismo mundo, cada uno con su perfil, con la misma red
 - **Fases:** F8.0a infraestructura → F8.0b cuerpo base (E0 explorar robusto; carbón, horno, hierro, cama, cofre, cubo) → F8.1 Casual → F8.2 Minero ∥ F8.3 Granjero → F8.G red → F8.9 balance mínimo → F8.4 Explorador → F8.5 Builder → F8.6 Redstoner → F8.7-F8.8 Speedrunner (Nether, End).
 - **Puertas:** `probar_supervivencia.py` 13/13 en 26.1.2 y E0 10/10 → Casual con hierro y cama en ≤ 2 días en ≥ 6/8 → … → Speedrunner S9 1/3 (el dragón es informativo).
 
+### Asistente personal (línea lateral F-asistente, plan del 2026-10-31)
+**Encargo (2026-10-31):** un asistente personal en el mundo propio del usuario, en **Minecraft Java 26.3**, que con órdenes sencillas haga cinco cosas: minar en un punto fijo, traer minerales de las cuevas profundas, cuidar una granja de cultivos y animales, farmear, y volver a recoger sus cosas si muere. El alcance tiene que ser reducido y no costar entrenamiento. Plan completo, con criterios fijados antes de medir: **`PLAN_asistente.md`**.
+- **Decisiones del usuario:**
+  - El mundo del usuario (`servidor/`) se recrea en vanilla 26.3. El bot habla 26.1 por **ViaProxy ≥ 3.4.13**, con mineflayer fijado a master por el `tick_end`.
+  - La granja es mínima: trigo, vacas, ovejas y gallinas, en cercados que pone el usuario.
+  - **No hay red**: es un rol v2 `asistente` del capataz, todo guion.
+- **Fases:** A0 puente 26.3 → A1 rol, órdenes y memoria → A2 minar en un punto → A4 muerte y recuperación → A3 expedición profunda ∥ A5 granja → A6 red de zona gris (opcional).
+- **Puertas:**
+  - A0: 10 min conectado, con cofre, mesa y cama a través de Via.
+  - A2: ≥ 64 bloques en el cofre en ≥ 4/5.
+  - A4: ≥ 80 % recuperado en ≥ 6/8.
+  - A3: ≥ 16 de hierro en ≥ 4/5, con 0 muertes por lava.
+  - A5: cosecha y resiembra 9/9 en 8/8.
+- **Coste:** ≈ 50-60 h de trabajador y 10-12 sesiones con servidor.
+
 ## Riesgos y reglas
 - **Brecha simulador→mundo real:** ya apareció dos veces (árbol en la misma columna; troncos altos). Cada fallo en Minecraft se traslada al simulador.
-- Mineflayer 4.39 (la última, 2026-10-23) soporta hasta 26.1 (protocolo 775); 26.2 y 26.3 sin soporte upstream (PRs abiertos en minecraft-data, minecraft-protocol y mineflayer). No subir ningún server sin comprobarlo (`require('minecraft-data')('26.3')` devuelve null).
+- Mineflayer 4.39 (la última, 2026-10-23) soporta hasta 26.1 (protocolo 775); 26.2 y 26.3 sin soporte upstream (PRs abiertos en minecraft-data, minecraft-protocol y mineflayer). No subir ningún server sin comprobarlo (`require('minecraft-data')('26.3')` devuelve null). **2026-10-31:** la excepción es el mundo del usuario para el asistente, que va en 26.3 con el bot hablando 26.1 a través de ViaProxy; ver `PLAN_asistente.md`, A0.
 - **minecraft-data 26.1 y tipos de entidad:** ghast, slime, phantom, magma_cube, shulker y ender_dragon son `mob` (los ignora `hostiles()`); enderman, piglin y zombified_piglin son `hostile` aunque sean neutrales. Antes de F8 hay que clasificar los hostiles por nombre.
 - Servidor propio siempre local y offline; nunca exponerlo a internet. El del compañero es suyo (wifi, offline); los puertos de control de los bots siguen solo en 127.0.0.1.
 - Sin claves de API de terceros en el proyecto. Reutilizar de Mindcraft/Voyager solo ideas.
