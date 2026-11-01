@@ -210,10 +210,10 @@ proxy-ping:
 	@cd bot && node -e "$$PROXY_PING"
 
 assistant:
-	@$(MAKE) --no-print-directory bots WORLD=usuario BOTS=Oqva PORT=3001 MODE=ordenes BOT_DECIDER=guion
+	@$(MAKE) --no-print-directory bots WORLD=usuario BOTS=Oqva PORT=$(strip $(PORT)) MODE=ordenes BOT_DECIDER=guion
 
 smoke-26-3:
-	python entrenamiento/humo_26_3.py
+	python entrenamiento/humo_26_3.py --puerto $(strip $(PORT))
 
 # --- sin gastar Claude: parte corto y bancos en serie (economía de tokens, 2026-10-31) ---------------------------------------
 report:

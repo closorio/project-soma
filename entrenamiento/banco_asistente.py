@@ -2,8 +2,8 @@
 """Puertas del asistente A1, A2, A4 y A5 (PLAN_asistente.md), escritas ANTES de las habilidades: los criterios de abajo
 están fijados y no se cambian para que algo pase. Cada fase es una función `fase_AX(m, s, a)` que apunta sus pruebas con
 `s.anota`. Las piezas (plataforma, cantera, huerto, corral, restauración) están en arena.py.
-Hace falta el servidor del mundo y Soma conectado en el puerto 3001, en modo órdenes:
-  local:   make server-start && make bots WORLD=local BOTS=Soma MODE=ordenes BOT_DECIDER=guion
+Hace falta el servidor del mundo y Oqva (o el primero de IO_BOTS) conectado en el puerto 3001, en modo órdenes:
+  local:   make server-start && make bots WORLD=local BOTS=Oqva MODE=ordenes BOT_DECIDER=guion
   usuario: make user-server-start proxy-start assistant      (humo: una pasada, --n 1)
 Uso: python entrenamiento/banco_asistente.py --fase A2 [--mundo local|usuario] [--n N] [--minutos M]   (o make bench-assistant)
 A3 (expedición) no está aquí: va en terreno de verdad, con el banco K (planes/asistente/A3.md)."""
@@ -36,10 +36,10 @@ def fase_A1(m, s, a):
     s.anota("ve a", sum(bien) == len(bien), f"{sum(bien)}/{len(bien)} a ≤ 3")
     s.en(0, 0)
     r = m.orden("orden base aquí")
-    mem = DATOS(m.nombre) / "memoria_Soma.json"
+    mem = DATOS(m.nombre) / f"memoria_{m.personaje}.json"
     base = mem.exists() and '"base": [' in mem.read_text(encoding="utf-8")
     s.anota("base aquí", base, r[:80])
-    reiniciar_bots(m.nombre)
+    reiniciar_bots(m.nombre, m.puerto)
     ok = m.esperar_conectado(90)
     time.sleep(5)
     e = m.orden("estado")
@@ -188,14 +188,15 @@ def main():
     ap.add_argument("--mundo", default="local", choices=["local", "usuario"])
     ap.add_argument("--n", type=int, help="ejecuciones (por defecto, las de la puerta)")
     ap.add_argument("--minutos", type=float, help="minutos por ejecución donde aplica (A2: 30, A5: 20)")
+    ap.add_argument("--puerto", type=int, default=3001, help="puerto de control del bot (otro si ya hay un Oqva jugando)")
     a = ap.parse_args()
     a.n = a.n or N_POR_DEFECTO[a.fase]
     a.minutos = a.minutos or MIN_POR_DEFECTO.get(a.fase, 0)
-    m = Mundo(a.mundo)
+    m = Mundo(a.mundo, puerto=a.puerto)
     if not m.esperar_conectado():
-        print(f"Soma no está en el mundo {a.mundo}: mira el docstring (cómo arrancarlo)")
+        print(f"{m.personaje} no está en el mundo {a.mundo}: mira el docstring (cómo arrancarlo)")
         return 1
-    with Sesion(m, ficheros=[DATOS(a.mundo) / f for f in ("cofres.json", "obras.json", "zonas.json", "memoria_Soma.json")]) as s:
+    with Sesion(m, ficheros=[DATOS(a.mundo) / f for f in ("cofres.json", "obras.json", "zonas.json", f"memoria_{m.personaje}.json")]) as s:
         s.suelo_firme()
         FASES[a.fase](m, s, a)
     datos = s.datos(a.fase, TITULOS[a.fase], "minecraft 26.3" if a.mundo == "usuario" else "minecraft 26.1.2")

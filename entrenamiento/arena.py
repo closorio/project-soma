@@ -15,12 +15,16 @@ Uso:
         s.anota("poner", r.get("exito"), r.get("causa"))
     guardar(s.datos("A2", "minar en un punto"))   # JSON en entrenamiento/ejecuciones/ y nota en el vault
 """
-import json, re, subprocess, sys, time, urllib.parse, urllib.request
+import json, os, re, subprocess, sys, time, urllib.parse, urllib.request
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "servidor"))
 from rcon import rcon  # noqa: E402
+
+# El personaje del asistente: el primero de IO_BOTS o, sin él, Oqva (antes Soma; 2026-11-01). Así un cambio de nombre no rompe
+# el banco.
+PERSONAJE = (os.environ.get("IO_BOTS") or "Oqva").replace(",", " ").split()[0]
 
 POS = re.compile(r"\[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]")
 
@@ -28,8 +32,8 @@ POS = re.compile(r"\[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]")
 class Mundo:
     """Un mundo con su RCON y un personaje con su puerto de control."""
 
-    def __init__(self, nombre="usuario", personaje="Soma", puerto=3001):
-        self.nombre, self.personaje, self.puerto = nombre, personaje, puerto
+    def __init__(self, nombre="usuario", personaje=None, puerto=3001):
+        self.nombre, self.personaje, self.puerto = nombre, personaje or PERSONAJE, puerto
 
     def r(self, orden):
         return rcon(orden, servidor=self.nombre)
@@ -215,10 +219,10 @@ def muertes_desde(log, desde):
     return Path(log).read_text(encoding="utf-8", errors="replace")[desde:].count("ha muerto")
 
 
-def reiniciar_bots(mundo):
-    """Para los bots de ese mundo y arranca solo a Soma en modo órdenes (como make assistant)."""
+def reiniciar_bots(mundo, puerto=3001):
+    """Para los bots de ese mundo y arranca solo al personaje del asistente en modo órdenes (como make assistant)."""
     subprocess.run(["make", "--no-print-directory", "bots-stop", f"WORLD={mundo}"], cwd=RAIZ, capture_output=True)
-    subprocess.run(["make", "--no-print-directory", "bots", f"WORLD={mundo}", "BOTS=Soma", "PORT=3001", "MODE=ordenes",
+    subprocess.run(["make", "--no-print-directory", "bots", f"WORLD={mundo}", f"BOTS={PERSONAJE}", f"PORT={puerto}", "MODE=ordenes",
                     "BOT_DECIDER=guion"], cwd=RAIZ, capture_output=True)
 
 

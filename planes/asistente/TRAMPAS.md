@@ -19,12 +19,19 @@ Cada una costó una sesión descubrirla. Síntoma → causa → qué hacer.
 - **Con las reglas libres, `minar` no pica una plataforma de una capa** («nada que minar aquí»): solo pica lo que suelta a ≤ 3 de caída → las plataformas de `arena.py` tienen 3 capas; no las adelgaces.
 - **Al pasar por un cofre desaparecen la mesa, la cama o la piedra** → `depositar` guarda todo lo que no es herramienta, arma, armadura ni comida → da el material de cada prueba justo antes (`m.dar(...)`).
 - **Las habilidades acaban en «amenaza» o «monstruos cerca»** → la noche y los monstruos cortan la tarea (`habilidades/index.js`) → pacífico mientras dura la prueba (lo pone `Sesion`), salvo que la puerta pida monstruos.
-- **`spreadplayers` dice «Could not spread»** → con 0 de separación falla, y sobre agua no deja a nadie → `spreadplayers X Z 1 30 false Soma`, o `s.suelo_firme()`.
+- **`spreadplayers` dice «Could not spread»** → con 0 de separación falla, y sobre agua no deja a nadie → `spreadplayers X Z 1 30 false Oqva`, o `s.suelo_firme()`.
 - **`setworldspawn` sin argumentos MUEVE el punto de aparición** (no lo consulta). Para mirarlo: `data get level SpawnX` (o no lo toques).
 - **`time query daytime` ya no existe en 26.1+** → usa `rcon.hora()` de `servidor/rcon.py`.
 - **La salida de RCON se mezcla entre conexiones** → `servidor/rcon.py` ya pone un cerrojo por servidor; no abras tu propio socket.
 - **`effect give … resistance 1200 4`**: son segundos y nivel 5, inmune. Aun así, un ahogado lo mató de noche en A0 → pacífico.
-- **minecraft-data no trae recetas de horno** → `fundir.js` lleva su tabla. **No hay `bot.pathfinder` con puertas**: el navegador no las abre.
+- **minecraft-data no trae recetas de horno** → `fundir.js` lleva su tabla.
+- **Puertas:** desde el 2026-11-01, el navegador cruza las de madera (`bot/puertas.js`). Las de hierro no, porque piden palanca o botón.
+- **«fuera de la zona de trabajo»** → hay al menos una zona `modo: 'trabajo'` en `zonas.json`, y fuera de ellas no se pica ni se pone (andar sí). Si una prueba falla así, mira `zonas.json` del mundo. `Sesion` lo devuelve como estaba al acabar.
+- **ABIERTO (2026-11-01): colocar falla a ratos en el mundo 26.3** («sin apoyo» en `poner`/mesa). En `colocar.js` eso quiere decir que `placeBlock` no cuajó en ningún apoyo firme, y el error se traga. Con el mismo montaje, poner dio 5/5 y luego 2/5. Primera pista: [[Paper rechaza el borde pegado a un bloque]] (la cara y el punto de clic). Lo diagnostica un modelo fuerte antes de A2. A1 no depende de colocar.
+- **`EADDRINUSE` en el puerto 3001 y el bot no entra** → ya hay otro Oqva en marcha (p. ej. jugando en el servidor del compañero). No lo pares: usa otro puerto, `make assistant smoke-26-3 PORT=3011` o `PORT=3011 entrenamiento/nocturno.sh "smoke-26-3"`, y `--puerto 3011` en `banco_asistente.py`.
+- **El bot es Oqva** (2026-11-01; Soma queda como alias en el chat). No entres al juego con la cuenta Oqva mientras el bot está conectado: mismo nombre, y el servidor echa a uno.
+- **Paper (el servidor del compañero)** recoloca al bot si salta o gira. Para eso están `IO_TICK_END=tick` e `IO_PLAYER_INPUT=si` (`bot/tick_end.js`). En el vanilla 26.3 del usuario no hacen falta.
+- **`dormir` dijo «sin sitio para la cama» en la plataforma de la prueba de humo** (2026-11-01, sin explicar: `sitioCama` debería encontrar sitio en suelo llano). La puerta usa ya `usar_cama`, que es lo que hace «duerme». Si un día hace falta `dormir` en una plataforma, empieza por ahí.
 
 ## Código del bot
 - **Habilidad nueva**: contrato `async (bot, args, tarea) => ({ exito, causa, ...datos })`. Mira `tarea.cancelada` en cada vuelta. Se registra en `bot/habilidades/index.js` (`HABILIDADES`) y, si es una acción del capataz, en `perfiles/v2/_etapas.json` → `acciones`.

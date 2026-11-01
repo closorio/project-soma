@@ -49,9 +49,10 @@ for (const [frase, esperado] of CASOS) {
   else console.log(`  FALLO «${frase}»: ${JSON.stringify(r)} (esperaba ${JSON.stringify(esperado)})`)
 }
 assert.ok(CASOS.length === 30, 'tienen que ser 30 frases')
-// el nombre delante sigue funcionando
-const d = destinatario('Soma, ve a 1 2 3', ['Soma', 'Eco'])
-const okNombre = d.a === 'Soma' && (interpretar(d.resto) || {}).tipo === 've_a'
-if (!okNombre) console.log('  FALLO «Soma, ve a 1 2 3»: ' + JSON.stringify(d))
+// el nombre delante sigue funcionando: Oqva (2026-11-01) y su alias de antes, Soma
+const d = destinatario('Oqva, ve a 1 2 3', ['Oqva', 'Eco'])
+const d2 = destinatario('Soma, ve a 1 2 3', ['Oqva', 'Eco'])
+const okNombre = d.a === 'Oqva' && (interpretar(d.resto) || {}).tipo === 've_a' && d2.a === 'Oqva' && (interpretar(d2.resto) || {}).tipo === 've_a'
+if (!okNombre) console.log('  FALLO «Oqva/Soma, ve a 1 2 3»: ' + JSON.stringify([d, d2]))
 console.log(`probar_asistente_seco: ${bien}/30` + (bien === 30 && okNombre ? ', todo bien' : ', HAY FALLOS'))
 process.exit(bien === 30 && okNombre ? 0 : 1)

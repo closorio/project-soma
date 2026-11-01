@@ -6,6 +6,10 @@ diseño ya está decidido en `PLAN_asistente.md` y aquí: **no se rediseña**. L
 
 ## Prompt para pegar tras `/clear` (cambia A1 por la fase que toque)
 
+A1 empieza el **2026-11-07**, con la semana de uso nueva. El bot del asistente es **Oqva**; «Soma, …» sigue valiendo como alias. El banco lo toma de `IO_BOTS` y, si no hay, usa Oqva.
+
+**Antes de A2** hay que cerrar el fallo abierto de colocar en 26.3 (TRAMPAS, «ABIERTO»), con Opus o Fable. A1 puede ir antes.
+
 ```
 Ficha A1 del asistente. Lee planes/asistente/README.md, planes/asistente/TRAMPAS.md y planes/asistente/A1.md, y nada más
 salvo los trozos de código que la ficha cite (grep -n y sed -n, nunca ficheros enteros). Sigue el protocolo.
@@ -37,7 +41,7 @@ Di qué pasó en tres líneas y deja el trabajo en un punto estable (pruebas en 
 A1 → A2 → A4 → A5 → A3. A3 es la más difícil (cuevas y lava de verdad): si falla dos veces, se escala.
 
 ## Cómo se arranca cada mundo
-- Banco (26.1.2): `make server-start`, y Soma solo, en modo órdenes:
-  `make bots WORLD=local BOTS=Soma MODE=ordenes BOT_DECIDER=guion`. Parar: `make bots-stop WORLD=local server-stop`.
+- Banco (26.1.2): `make server-start`, y Oqva solo, en modo órdenes:
+  `make bots WORLD=local BOTS=Oqva MODE=ordenes BOT_DECIDER=guion`. Parar: `make bots-stop WORLD=local server-stop`.
 - Mundo del usuario (26.3): `make user-server-start proxy-start assistant`. Parar: `make bots-stop WORLD=usuario proxy-stop user-server-stop`.
 - Nunca dos servidores a la vez con el cliente del usuario abierto (RAM). Para saber qué pasó: `make report`.

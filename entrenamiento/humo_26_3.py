@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Puerta A0 del asistente (PLAN_asistente.md): ¿Soma trabaja en el mundo del usuario en 26.3, a través de ViaProxy?
-Hace falta: servidor/ y servidor/proxy/ en marcha, y Soma conectado (make assistant: puerto 3001, modo órdenes).
+"""Puerta A0 del asistente (PLAN_asistente.md): ¿Oqva (el personaje del asistente) trabaja en el mundo del usuario en 26.3, a través de ViaProxy?
+Hace falta: servidor/ y servidor/proxy/ en marcha, y Oqva conectado (make assistant: puerto 3001, modo órdenes).
 Criterio fijado antes de medir: pasan todas estas pruebas.
   conexión: ≥ 10 min seguidos sin expulsión ni desconexión
   caminar:  ≥ 90 bloques en horizontal con explorar (terreno de verdad, en la llanura más cercana)
@@ -8,7 +8,7 @@ Criterio fijado antes de medir: pasan todas estas pruebas.
   poner:    5/5 de tierra, comprobados por RCON
   cofre:    poner un cofre, guardar y sacar
   mesa:     poner una mesa y fabricar un pico de piedra
-  cama:     dormir de noche y amanecer
+  cama:     usar la cama de noche (como «duerme») y amanecer
 Se mide el protocolo, no el terreno ni el combate. Todo menos caminar se hace en una plataforma de arena.py, en pacífico, y
 se restaura al acabar (ver entrenamiento/arena.py). El mundo 26.3 va sin límites ("reglas": "libre" en su mundo.json):
 cofres.json se devuelve como estaba, porque la prueba registra en él su cofre.
@@ -28,9 +28,9 @@ def main():
     ap.add_argument("--puerto", type=int, default=3001)
     ap.add_argument("--centro", type=int, nargs=2, metavar=("X", "Z"))
     a = ap.parse_args()
-    m = Mundo("usuario", "Soma", a.puerto)
+    m = Mundo("usuario", puerto=a.puerto)
     if not m.esperar_conectado():
-        print("Soma no está en el servidor: make user-server-start proxy-start assistant")
+        print(f"{m.personaje} no está en el servidor: make user-server-start proxy-start assistant")
         return 1
     desde = LOG.stat().st_size if LOG.exists() else 0
     with Sesion(m, ficheros=[RAIZ / "mundos" / "usuario" / "cofres.json", RAIZ / "mundos" / "usuario" / "obras.json"]) as s:
@@ -91,7 +91,7 @@ def main():
         m.r("gamerule players_sleeping_percentage 0")
         m.r("time set 13000")
         time.sleep(2)
-        z = m.hab("dormir 120", 200)
+        z = m.hab("usar_cama", 200)  # lo que hace «duerme» desde el 2026-11-01 (pone la cama, duerme y la deja puesta)
         s.anota("cama", bool(z.get("exito")), str(z.get("causa")))
         m.r("time set day")
 
