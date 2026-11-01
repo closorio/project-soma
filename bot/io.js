@@ -29,6 +29,24 @@ const observacion = require('./observacion')
 const zonas = require('./zonas')
 const CHAT_ZONA = new Set() // órdenes de chat ya atendidas (varios personajes oyen lo mismo)
 const ESQUINAS = new Map() // usuario -> primera esquina de la zona que está marcando
+// «continúa» (2026-11-01): las órdenes de trabajo que se retoman si otra las interrumpe, y con qué les faltaba. Moverse, pelear o
+// comer no se retoman: «continúa» es volver al trabajo
+const ORDENES_TRABAJO = new Set(['tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
+  'fabrica', 'funde', 'pon', 'ilumina', 'baja', 'sube', 'agua', 'vierte', 'duerme'])
+function pendienteDe(o, r) {
+  if (!ORDENES_TRABAJO.has(o.tipo)) return null
+  if (o.tipo === 'tala' && r.troncos != null) return o.n - r.troncos > 0 ? { ...o, n: o.n - r.troncos } : null
+  if (o.tipo === 'mina' && r.hechos != null) return o.n - r.hechos > 0 ? { ...o, n: o.n - r.hechos } : null
+  if (o.tipo === 'construye' && o.obra) return { ...o, retomar: o.obra }
+  return { ...o }
+}
+const textoDe = (p, texto) => (p.tipo === 'tala' ? `tala ${p.n} troncos` : p.tipo === 'mina' ? texto.replace(/\d+/, String(p.n)) : texto)
+// El aviso al no talar lo protegido: las zonas por su nombre y, aparte, si hay zonas de trabajo y el tronco cae fuera
+function noTalo(nombres) {
+  const otras = nombres.filter(n => n !== zonas.FUERA_DE_TRABAJO)
+  return [otras.length ? `No talo en ${otras.join(', ')}: es zona protegida.` : '',
+    otras.length < nombres.length ? 'Solo talo dentro de la zona de trabajo.' : ''].filter(Boolean).join(' ')
+}
 const { PERSONAJES, esBot, pruebas, BOTS } = require('./habilidades/comun')
 const depositar = require('./habilidades/depositar')
 const cofres = require('./cofres')
@@ -74,7 +92,7 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', quedate: () => 'M
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
   come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
-  sal: () => 'Salgo del refugio.', duerme: () => 'A dormir.', fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
+  sal: () => 'Salgo del refugio.', duerme: () => 'Voy a la cama.', dame: (o) => (o.objeto === 'todo' ? 'Te doy lo que llevo.' : `Te doy ${o.n || 'los'} ${o.objeto}.`), fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
   equipate: () => 'Me equipo.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
   explora: (o) => `Voy a explorar ${o.rumbo === '-' ? 'por ahí' : 'hacia el ' + o.rumbo}, ${o.n} bloques${o.nada ? ', nadando si hace falta' : ''}.`, mina: (o) => `Voy a minar ${o.n} de ${o.bloque}.`,
@@ -131,8 +149,22 @@ class Personaje {
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
     bot.loadPlugin(pathfinder)
+    require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
     sv.vigilarGolpes(bot, () => setImmediate(() => this.reposo())) // F7.2: los golpes de monstruos, para el reflejo de defensa
+    // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
+    // recoloca (forcedMove); eso y por qué el navegador rehace la ruta van al registro (make move-log), como mucho 1 línea / 2 s
+    const mov = { n: 0, t: 0 }
+    bot.on('forcedMove', () => {
+      mov.n++
+      if (Date.now() - mov.t < 2000) return
+      mov.t = Date.now(); this.ev(`[mov] el server me recolocó en ${bot.entity.position.floored()} (${mov.n} en total)`)
+    })
+    const rehechas = { t: 0 }
+    bot.on('path_reset', (r) => {
+      if (!(this.enCurso || this.enHabilidad || this.libre) || r === 'goal_updated' || r === 'goal_moved' || Date.now() - rehechas.t < 2000) return
+      rehechas.t = Date.now(); this.ev(`[mov] ruta rehecha: ${r} en ${bot.entity.position.floored()}`)
+    })
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
@@ -206,13 +238,13 @@ class Personaje {
     const cuales = [...antes].join(', ')
     if (!libre) { const t = `No talo: los troncos que veo están en zona protegida (${cuales}).`; bot.chat(t); return t }
     const { x, y, z } = libre
-    if (antes.size) bot.chat(`No talo en ${cuales}: es zona protegida. Voy a por un tronco de fuera, en ${x}, ${z}.`)
+    if (antes.size) bot.chat(`${noTalo([...antes])} Voy a por el tronco de ${x}, ${z}.`)
     const tarea = this.nuevaTarea()
     await bot.pathfinder.goto(new goals.GoalNear(x, y, z, 2))
     const b = bot.blockAt(libre)
     if (!b || !b.name.endsWith('_log')) return `el tronco de ${x},${y},${z} ya no está`
     if (zonas.talaProtegida(x, y, z) || cofres.esCofre(x, y, z)) { // zonas.json se relee solo: pudo cambiar mientras andaba
-      const t = `No talo en ${zonas.protegidoPor(x, y, z) || 'el cofre'}: es zona protegida.`; bot.chat(t); return t
+      const t = zonas.talaProtegida(x, y, z) ? noTalo([zonas.protegidoPor(x, y, z)]) : 'No talo en el cofre: es zona protegida.'; bot.chat(t); return t
     }
     await bot.dig(b)
     const r = await habilidades.ejecutar(bot, 'recoger', ['6', '_log'], tarea)
@@ -308,7 +340,7 @@ class Personaje {
   // cada REPOSO_MS y en cuanto le golpea un monstruo.
   reposo() {
     const bot = this.bot
-    if (this.enHabilidad || this.reflejando || this.enCurso || !bot || !bot.entity || !sv.activos(bot)) return
+    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity || !sv.activos(bot)) return
     let x = null
     try { x = reflejos.siguiente(bot, {}) } catch (e) { this.ev('[reflejo] error: ' + e.message); return }
     if (!x) return
@@ -559,10 +591,26 @@ class Personaje {
     // quién manda: el chat (con su usuario), la mente (puerto con de=mente), u otro por el puerto (Ío, pruebas)
     const quien = origen.via === 'chat' ? `chat de ${origen.usuario}` : origen.de === 'mente' ? 'mente' : origen.de ? `puerto (${origen.de})` : 'puerto'
     if (!o) {
-      const t = texto.trim() ? `No te entiendo («${texto}»). ${ordenes.AYUDA}` : `¿Qué hago? ${ordenes.AYUDA}`
+      // corto (pedido del usuario, 2026-10-31): la lista entera solo con «ayuda»
+      const t = texto.trim() ? `No reconozco «${texto}».` : '¿Qué hago? Di «ayuda» para ver las órdenes.'
       if (origen.via === 'chat') this.decir(t)
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
+    }
+    // 2026-11-01: «continúa» retoma la última orden de trabajo interrumpida, con lo que le faltaba (this.pendiente)
+    if (o.tipo === 'continua') {
+      if (!this.pendiente) {
+        const t = 'No tengo nada a medias.'
+        if (origen.via === 'chat') this.decir(t)
+        this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: t, s: 0 })
+        return t
+      }
+      const p = this.pendiente
+      this.pendiente = null
+      const fin = this.ordenAccion(p.o, p.texto, quien)
+      if (esperarFin) return (await fin).texto
+      fin.catch(e => this.ev('[orden] fallo: ' + e.message))
+      return `Sigo con «${p.texto}».`
     }
     const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true, rol: true }
     if (inmediata[o.tipo]) {
@@ -637,7 +685,11 @@ class Personaje {
     let r
     try { r = await this.hacer(o, tarea, quien) } catch (e) { r = { exito: false, texto: 'No pude: ' + e.message } }
     const interrumpida = tarea.cancelada && o.tipo !== 'quedate'
-    if (interrumpida) r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
+    if (interrumpida) {
+      r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
+      const p = pendienteDe(o, r)
+      if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
+    } else if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null // terminada: ya no hay nada a medias
     if (this.enCurso && this.enCurso.t0 === t0) this.enCurso = null
     const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre'
     this.decir(r.texto)
@@ -681,6 +733,11 @@ class Personaje {
         const texto = r.causa === 'llegué' || r.causa === 'ya estaba' ? 'Aquí estoy.'
           : r.zona ? `Estás en ${r.zona}, que es zona protegida: te espero en el borde.` : `No llego: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
+      }
+      case 'dame': {
+        const [r, d] = await paso('dar', [this.jugadorDe(quien), o.objeto, o.n ? String(o.n) : ''])
+        const lista = Object.entries(r.dado || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
+        return { exito: !!r.exito, texto: r.exito ? `Toma: ${lista}.` : `No puedo darte nada: ${r.causa}.`, pasos: [d] }
       }
       case 'sigueme': {
         const u = this.jugadorDe(quien)
@@ -729,14 +786,25 @@ class Personaje {
         const [r, d] = await paso('explorar', ['volver', '120', '150'])
         return { exito: !!r.exito, texto: r.exito ? 'Ya estoy en el campamento.' : `No llego al campamento: ${r.causa}.`, pasos: [d] }
       }
-      case 'mina': {
-        const [r, d] = await paso('minar', [o.bloque, String(o.n), '8'])
-        const texto = r.exito ? `Miné ${r.rotos.length} de ${o.bloque}${r.causa.startsWith('minado a medias') ? ` (${r.causa.slice(17)})` : ''}.` : `No miné nada: ${r.causa}.`
-        return { exito: !!r.exito, texto, pasos: [d] }
+      case 'mina': { // 2026-11-01: si no ve el mineral, va a la mena más cercana (ir_a_mena, cavando) y sigue hasta completar
+        let total = 0, causa = '', pasos = []
+        const mena = /_ore$/.test(o.bloque) || o.bloque === 'mineral'
+        for (let vuelta = 0; vuelta < 4 && total < o.n && !tarea.cancelada; vuelta++) {
+          const [r, d] = await paso('minar', [o.bloque, String(o.n - total), '8']); pasos.push(d)
+          total += (r.rotos || []).length; causa = r.causa
+          if (total >= o.n || !mena || !mundo.reglasLibres || tarea.cancelada) break
+          const [m, dm] = await paso('ir_a_mena', [o.bloque, '32', String(o.n - total)]); pasos.push(dm)
+          total += m.picadas || 0; causa = m.causa
+          if (!m.exito) break
+        }
+        const ES = { coal: 'carbón', iron: 'hierro', copper: 'cobre', gold: 'oro', diamond: 'diamante', redstone: 'redstone', lapis: 'lapislázuli', emerald: 'esmeralda', stone: 'piedra', dirt: 'tierra', sand: 'arena', gravel: 'grava' }
+        const nombre = ES[o.bloque.replace(/_ore$/, '')] || o.bloque.replace(/_ore$/, '').replace(/_/g, ' ')
+        return { exito: total > 0, hechos: total, texto: total ? `Miné ${total} de ${nombre}${total < o.n ? ` (quería ${o.n}: ${causa})` : ''}.` : `No miné nada: ${causa}.`, pasos }
       }
       case 'construye': {
         const aqui = o.aqui ? bot.entity.position.floored() : null
-        const [r, d] = await paso('construir', [o.plano, ...(aqui ? [String(aqui.x + 2), String(aqui.z + 2)] : [])])
+        const [r, d] = await paso('construir', o.retomar ? [`retomar=${o.retomar}`] : [o.plano, ...(aqui ? [String(aqui.x + 2), String(aqui.z + 2)] : [])])
+        o.obra = r.obra // para «continúa»
         const texto = r.exito ? `Construido: ${r.plano} en ${r.origen.join(', ')} (${r.puestos} bloques${r.fabricados ? `, ${r.fabricados} tablones fabricados` : ''}).`
           : `No terminé ${o.plano}: ${r.causa}${r.puestos ? ` (${r.puestos} puestos, ${r.pendientes} pendientes)` : ''}.`
         return { exito: !!r.exito, texto, pasos: [d] }
@@ -765,11 +833,14 @@ class Personaje {
         const [r, d] = await paso('salir_del_refugio', [])
         return { exito: !!r.exito, texto: r.exito ? (r.causa === 'ya fuera' ? 'Ya estoy fuera.' : 'Fuera.') : `No pude salir: ${r.causa}.`, pasos: [d] }
       }
-      case 'duerme': {
-        const [r, d] = await paso('dormir', [])
-        const texto = r.exito ? 'Ya es de día.' : r.causa === 'es de día' ? 'Es de día: no hace falta.' : r.causa === 'sin cama y sin refugio'
-          ? 'No tengo cama ni estoy refugiado: dime «refúgiate» primero.' : `No pude pasar la noche: ${r.causa}.`
-        return { exito: !!r.exito, texto, pasos: [d] }
+      case 'duerme': { // 2026-11-01: la cama más cercana (o pone o fabrica una); sin poder, como antes: el refugio de noche
+        const [r, d] = await paso('usar_cama', [])
+        if (r.exito) return { exito: true, texto: r.causa === 'spawn guardado' ? `Spawn guardado en esta cama${r.puesta ? ' (la he puesto yo)' : ''}.` : 'Ya es de día. Spawn guardado en la cama.', pasos: [d] }
+        if (!/no puedo hacer una|sin sitio|no pude poner/.test(r.causa)) return { exito: false, texto: `No pude usar la cama: ${r.causa}.`, pasos: [d] }
+        const [r2, d2] = await paso('dormir', [])
+        const texto = r2.exito ? 'Ya es de día (sin cama: en el refugio).' : r2.causa === 'es de día' ? `No hay cama: ${r.causa}.`
+          : r2.causa === 'sin cama y sin refugio' ? `No hay cama (${r.causa}) ni estoy refugiado: dime «refúgiate» o dame 3 de lana.` : `No pude pasar la noche: ${r2.causa}.`
+        return { exito: !!r2.exito, texto, pasos: [d, d2] }
       }
       case 'fabrica': {
         const [r, d] = await paso('fabricar', [o.objeto || '-'])
@@ -852,7 +923,7 @@ class Personaje {
     const cerca = bot.findBlocks({ matching: b => b.name.endsWith('_log'), maxDistance: 24, count: 200 })
     const protegidas = new Set()
     for (const v of cerca) { const z = zonas.protegidoPor(v.x, v.y, v.z); if (!z) break; protegidas.add(z) }
-    if (protegidas.size) this.decir(`No talo en ${[...protegidas].join(', ')}: es zona protegida. Voy a por troncos de fuera.`)
+    if (protegidas.size) this.decir(`${noTalo([...protegidas])} Voy a por otros troncos.`)
     const I = Object.fromEntries(observacion.NOMBRES.map((k, i) => [k, i]))
     while (this.troncos() - inicio < n) {
       if (tarea.cancelada) break
@@ -868,7 +939,7 @@ class Personaje {
         // (HOGAR) no ve los de fuera. Acercarse (sin romper nada ni pisar zonas) al tronco libre más cercano y volver a mirar.
         const libre = acercamientos < 2 && bot.findBlocks({ useExtraInfo: true, maxDistance: 48, count: 1,
           matching: b => b.name.endsWith('_log') && !zonas.talaProtegida(b.position.x, b.position.y, b.position.z) })[0]
-        if (!libre) { causa = 'no veo árboles fuera de las zonas protegidas'; break }
+        if (!libre) { causa = zonas.trabajo().length ? 'no veo árboles en la zona de trabajo' : 'no veo árboles fuera de las zonas protegidas'; break }
         acercamientos++
         const m = await moverHasta(bot, new goals.GoalNear(libre.x, libre.y, libre.z, 3), () => bot.entity.position.distanceTo(libre) <= 4,
           { ms: 30000, tarea })
@@ -890,8 +961,9 @@ class Personaje {
   }
 
   // Zonas protegidas. Desde el chat del juego (!zona ...) o por el puerto de control (zona ...).
-  //   inicio | fin NOMBRE [no_talar] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
-  //   rect NOMBRE x1 z1 x2 z2 [no_talar] | tronco NOMBRE x y z | lista | borrar NOMBRE   (puerto)
+  //   inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
+  //   rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo] | tronco NOMBRE x y z | lista | borrar NOMBRE   (puerto)
+  //   trabajo: si hay alguna, solo talan, pican y ponen dentro de ellas (bot/zonas.js)
   ordenZona(usuario, texto) {
     const [verbo, ...p] = (texto || 'lista').trim().split(/\s+/)
     const pos = () => {
@@ -899,14 +971,15 @@ class Personaje {
       if (!e) throw new Error('no te veo; acércate al personaje')
       return e.position.floored()
     }
-    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : 'vedada')
+    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : 'vedada')
+    const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro' }
     switch (verbo) {
       case 'inicio': { const q = pos(); ESQUINAS.set(usuario, q); return `esquina A en ${q.x}, ${q.z}; ve a la opuesta y di: !zona fin NOMBRE` }
       case 'fin': {
         const a = ESQUINAS.get(usuario); if (!a) return 'primero marca una esquina con: !zona inicio'
         if (!p[0]) return 'ponle nombre: !zona fin NOMBRE'
         const b = pos(); zonas.zonaNueva(p[0], a.x, a.z, b.x, b.z, modo(p[1])); ESQUINAS.delete(usuario)
-        return `zona ${p[0]} guardada (${modo(p[1]) === 'vedada' ? 'vedada' : 'sin talar'}): x ${Math.min(a.x, b.x)}..${Math.max(a.x, b.x)}, z ${Math.min(a.z, b.z)}..${Math.max(a.z, b.z)}`
+        return `zona ${p[0]} guardada (${TIPO[modo(p[1])]}): x ${Math.min(a.x, b.x)}..${Math.max(a.x, b.x)}, z ${Math.min(a.z, b.z)}..${Math.max(a.z, b.z)}`
       }
       case 'arbol': {
         if (!p[0]) return 'ponle nombre: !zona arbol NOMBRE'
@@ -918,11 +991,11 @@ class Personaje {
         col.forEach((v, i) => zonas.arbolNuevo(p[0] + (col.length > 1 ? '#' + i : ''), v.x, v.y, v.z))
         return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)`
       }
-      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return 'zona ' + n + ' guardada' }
+      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
       case 'tronco': { const [n, x, y, z] = p; zonas.arbolNuevo(n, +x, +y, +z); return 'tronco ' + n + ' protegido' }
       case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}` : 'di cuál: !zona borrar NOMBRE'
       case 'lista': { const l = zonas.lista(); return l.length ? l.join('\n') : 'no hay zonas protegidas' }
-      default: return 'zona: inicio | fin NOMBRE [no_talar] | arbol NOMBRE | lista | borrar NOMBRE'
+      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE'
     }
   }
 
@@ -1022,10 +1095,29 @@ class Personaje {
         }
         return `desde ${this.bot.entity.position.floored()} · prudentes: ${juzgar(prudentes(this.bot))} · por defecto: ${juzgar(zonas.aplicar(new Movements(this.bot)))}`
       },
+      // alrededor: los bloques de la columna de 3×3 desde debajo de los pies hasta encima de la cabeza, como los ve el bot
+      // (nombre y si es sólido para el navegador). Para cuando planea que no puede dar ni un paso (2026-10-31)
+      alrededor: async () => {
+        const p = this.bot.entity.position, b = p.floored()
+        const filas = [`pos ${p.x.toFixed(2)} ${p.y.toFixed(2)} ${p.z.toFixed(2)} · en el suelo: ${this.bot.entity.onGround}`]
+        for (let dy = 2; dy >= -1; dy--) {
+          const fila = []
+          for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+            const k = this.bot.blockAt(b.offset(dx, dy, dz))
+            fila.push(k ? `${k.name}${k.boundingBox === 'block' ? '#' : ''}` : '?')
+          }
+          filas.push(`y${dy >= 0 ? '+' : ''}${dy}: ${fila.join(' ')}`)
+        }
+        return filas.join('\n')
+      },
       ir: async (a) => {
         this.nuevaTarea()
         const [x, y, z] = a.split(/\s+/).map(Number)
-        await this.bot.pathfinder.goto(new goals.GoalNear(x, y, z, 1))
+        // mientras va, los reflejos de reposo no le cambian la meta («The goal was changed…» con make go, 2026-11-01)
+        this.enIr = (this.enIr || 0) + 1
+        if (this.tareaReflejo) this.tareaReflejo.cancelada = true // y el que ya iba (p. ej. apartarse junto a un borde) se para antes
+        if (this.reflejando) await this.reflejando.catch(() => {})
+        try { await this.bot.pathfinder.goto(new goals.GoalNear(x, y, z, 1)) } finally { this.enIr-- }
         return 'llegué'
       },
       talar: () => this.talar(),
@@ -1104,7 +1196,8 @@ async function despachar(desde, texto, origen, esperarFin = false) {
 // ---- Arranque: un Personaje por argumento (NOMBRE[:PUERTO[:PERFIL[:MODO[:DECISOR[@RUTA]]]]]); puertos por defecto 3001, 3002… ----
 // DECISOR (F8.0a): red, guion o capataz, y con @RUTA su política; sin él, IO_DECISOR e IO_POLITICA (bot/decisores.js).
 const MODOS = ['ordenes', 'libre']
-const lista = (process.argv.length > 2 ? process.argv.slice(2) : ['Soma']).map((s, k) => {
+// sin argumentos, Oqva (2026-11-01: Soma pasó a llamarse Oqva)
+const lista = (process.argv.length > 2 ? process.argv.slice(2) : ['Oqva']).map((s, k) => {
   const [nombre, puerto, perfil, modo, ...decisor] = s.split(':')
   return { nombre, puerto: parseInt(puerto) || 3001 + k, perfil: perfil || 'recolector', modo: modo || process.env.IO_MODO || 'ordenes',
     decisor: decisor.join(':') }

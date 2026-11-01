@@ -47,6 +47,7 @@ function quitarPuesto(id, [x, y, z]) {
   o.bloques = o.bloques.filter(b => !(b[0] === x && b[1] === y && b[2] === z))
   guardar(d)
 }
+function reabrir(id) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = 'en curso'; o.fin = null; guardar(d) } } // «continúa»
 function cerrar(id, estado) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = estado; o.fin = fecha(); guardar(d) } }
 function anotarMinado(personaje, [x, y, z], tipo, herramienta) {
   const d = leer()
@@ -55,10 +56,11 @@ function anotarMinado(personaje, [x, y, z], tipo, herramienta) {
   guardar(d)
 }
 // Una obra por nombre o id: la más reciente que no esté deshecha.
-const obra = (nombre) => [...leer().obras].reverse().find(o => (o.nombre === nombre || o.id === nombre) && o.estado !== 'deshecha') || null
+// la última con ese nombre o id; «cabana» también vale para cabana_techada, cabana_grande… (2026-11-01)
+const obra = (nombre) => [...leer().obras].reverse().find(o => (o.nombre === nombre || o.id === nombre || String(o.nombre).startsWith(nombre + '_')) && o.estado !== 'deshecha') || null
 const enCurso = () => leer().obras.find(o => o.estado === 'en curso') || null
 const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: o.plano, estado: o.estado, bloques: o.bloques.length, origen: o.origen }))
 // ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
 const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && o.bloques.some(b => b[0] === x && b[1] === y && b[2] === z))
 
-module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }
+module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

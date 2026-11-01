@@ -24,6 +24,8 @@ const HABILIDADES = {
   salir_del_refugio: require('./salir_del_refugio'),
   dormir: require('./dormir'),
   esperar_al_dia: require('./dormir').esperarAlDia,
+  dar: require('./dar'), // 2026-11-01: ir al jugador y tirarle lo pedido
+  usar_cama: require('./usar_cama'), // 2026-11-01: una cama ya puesta, para guardar el spawn (no la recoge)
   fabricar: require('./fabricar'),
   equipar: require('./equipar'),
   apartarse: require('./apartarse'),

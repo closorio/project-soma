@@ -1,6 +1,6 @@
 // deshacer OBRA (F6): quitar una obra del libro (obras.json) rompiendo solo los bloques que puso, en orden inverso al que se
 // pusieron, y solo si siguen siendo del mismo tipo (si el usuario cambió algo, se salta y se apunta). Acepta el nombre («cabana»:
-// la más reciente en pie) o el id. Al final recoge lo caído. Límite: 30 s + 5 s por bloque (máx. 10 min), 3 fallos seguidos.
+// la más reciente en pie) o el id. Al final recoge lo caído. Límite: 30 s + 5 s por bloque (máx. 20 min), 3 fallos seguidos.
 // Devuelve { exito, causa, obra, quitados, saltados, quedan }.
 const { goals } = require('mineflayer-pathfinder')
 const { Vec3 } = require('vec3')
@@ -9,7 +9,7 @@ const { picar } = require('./picar_tronco')
 const recoger = require('./recoger')
 const { moverHasta, lejania, esperar } = require('./comun')
 
-const ALCANCE = 4.5, MAX_MS = 600000
+const ALCANCE = 4.5, MAX_MS = 1200000 // 20 min: la cabaña grande con techo son 206 bloques (2026-11-01)
 
 module.exports = async function deshacer(bot, [nombre], tarea) {
   if (!nombre) return { exito: false, causa: 'di qué obra: ' + (obras.lista().filter(o => o.estado !== 'deshecha').map(o => o.nombre).join(', ') || 'no hay obras') }

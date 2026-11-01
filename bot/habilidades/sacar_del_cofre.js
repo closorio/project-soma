@@ -67,3 +67,4 @@ module.exports = async function sacarDelCofre(bot, [objeto, cantidad], tarea) {
   if (lleno) return { exito: false, causa: 'sin hueco', ...datos }
   return { exito: false, causa: total() ? 'no hay bastante en los cofres' : causa || `no hay ${objeto} en los cofres`, ...datos }
 }
+module.exports.patronDe = patronDe // 2026-11-01: también lo usa dar.js

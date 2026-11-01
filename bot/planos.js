@@ -28,10 +28,20 @@ const PLANOS = {
   // Una plataforma de 3×3 a ras de suelo.
   plataforma: (m) => ({ nombre: 'plataforma', dim: [3, 1, 3], bloques: relleno(3, 3).map(([dx, dz]) => ({ dx, dy: 0, dz, tipo: m })) }),
   // Cabaña de 5×5 y 3 de alto: solo las paredes (46 bloques), con un hueco de puerta de 1×2 en el centro del lado sur (dz = 4).
-  cabana: (m) => ({ nombre: 'cabana', dim: [5, 3, 5], bloques: [0, 1, 2].flatMap(dy => anillo(5, 5)
-    .filter(([dx, dz]) => !(dy < 2 && dx === 2 && dz === 4)).map(([dx, dz]) => ({ dx, dy, dz, tipo: m }))) }),
+  cabana: (m) => cabana('cabana', 5, false, m),
   // La misma cabaña con techo plano de 5×5 encima (71 bloques).
-  cabana_techada: (m) => { const c = PLANOS.cabana(m); return { nombre: 'cabana_techada', dim: [5, 4, 5], bloques: [...c.bloques, ...relleno(5, 5).map(([dx, dz]) => ({ dx, dy: 3, dz, tipo: m }))] } },
+  cabana_techada: (m) => cabana('cabana_techada', 5, true, m),
+  // 2026-11-01 (pedido del usuario): la cabaña grande, el doble de lado (10×10): 106 bloques de paredes, 206 con techo.
+  cabana_grande: (m) => cabana('cabana_grande', 10, false, m),
+  cabana_grande_techada: (m) => cabana('cabana_grande_techada', 10, true, m),
+}
+// Paredes de lado×lado y 3 de alto con la puerta (1×2) en el centro del lado sur y, con techo, un techo plano encima.
+function cabana(nombre, lado, techo, m) {
+  const puerta = Math.floor(lado / 2)
+  const paredes = [0, 1, 2].flatMap(dy => anillo(lado, lado)
+    .filter(([dx, dz]) => !(dy < 2 && dx === puerta && dz === lado - 1)).map(([dx, dz]) => ({ dx, dy, dz, tipo: m })))
+  const arriba = techo ? relleno(lado, lado).map(([dx, dz]) => ({ dx, dy: 3, dz, tipo: m })) : []
+  return { nombre, dim: [lado, techo ? 4 : 3, lado], bloques: [...paredes, ...arriba] }
 }
 
 // Comprobación de la regla de apoyo (para las pruebas): cada bloque toca al anterior, o a uno ya puesto, o está en la capa 0.

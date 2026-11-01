@@ -368,7 +368,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   // 6 · órdenes en lenguaje sencillo
   console.log('6 · órdenes')
   const esperado = { come: 'come', 'ataca al zombi': 'ataca', 'refúgiate': 'refugiate', 'sal del refugio': 'sal', duerme: 'duerme',
-    'espera al día': 'duerme', 'fabrica una espada': 'fabrica', 'equípate': 'equipate', 'apártate': 'apartate', caza: 'caza',
+    'espera al día': 'duerme', 'usa la cama': 'duerme', 'ven a la cama': 'duerme', 'guarda el spawn': 'duerme', 'dame 10 troncos': 'dame', 'dame todo': 'dame', 'fabrica una espada': 'fabrica', 'equípate': 'equipate', 'apártate': 'apartate', caza: 'caza',
     'consigue comida': 'caza', espera: 'quedate', 'tala 3 troncos': 'tala', 'haz un refugio': 'construye', 'huye del creeper': 'huye' }
   for (const [t, tipo] of Object.entries(esperado)) { const o = ordenes.interpretar(t); ok(o && o.tipo === tipo, `«${t}» → ${o && o.tipo} (esperaba ${tipo})`) }
 

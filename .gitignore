@@ -12,6 +12,8 @@ servidor/*
 !servidor/proxy/
 servidor/proxy/*
 !servidor/proxy/*.sh
+servidor-paper/*
+!servidor-paper/*.sh
 servidor-local/*
 !servidor-local/*.sh
 !servidor-local/*.py

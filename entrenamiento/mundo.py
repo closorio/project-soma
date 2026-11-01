@@ -15,12 +15,13 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 MUNDOS = {"usuario": {"puerto_mc": 25565, "centro": (303, 32)}, "supervivencia": {"puerto_mc": 25566, "centro": None},
           "companero": {"puerto_mc": None, "centro": None},
-          "local": {"puerto_mc": None, "centro": None}}  # F8: servidor-local/ (26.1.2)  # puerto_mc None: el de mundo.json: servidor.puerto
+          "local": {"puerto_mc": None, "centro": None},
+          "paper": {"puerto_mc": None, "centro": None}}  # F8: servidor-local/ (26.1.2)  # puerto_mc None: el de mundo.json: servidor.puerto
 HEREDADOS = {"zonas.json": RAIZ / "zonas.json", "cofres.json": RAIZ / "cofres.json", "obras.json": RAIZ / "obras.json",
              "diario.md": RAIZ / "mente" / "diario.md"}  # solo para el mundo del usuario
 NOMBRE = os.environ.get("IO_SERVIDOR") or "usuario"
 if NOMBRE not in MUNDOS:
-    raise SystemExit(f"IO_SERVIDOR desconocido: {NOMBRE!r} (usuario, supervivencia, companero o local)")
+    raise SystemExit(f"IO_SERVIDOR desconocido: {NOMBRE!r} (usuario, supervivencia, companero, local o paper)")
 CARPETA = RAIZ / "mundos" / NOMBRE
 SUFIJO = "" if NOMBRE == "usuario" else "-" + NOMBRE  # el del usuario conserva los nombres de siempre (modos-AAAAMMDD.jsonl)
 

@@ -21,13 +21,14 @@ const MUNDOS = {
   supervivencia: { host: 'localhost', puertoMc: 25566, version: '1.21.11' },
   companero: { desdeMundoJson: true }, // host, puerto y versión en mundos/companero/mundo.json
   local: { desdeMundoJson: true }, // F8: servidor-local/ (26.1.2, 25567; RCON 25577), en mundos/local/mundo.json
+  paper: { desdeMundoJson: true }, // 2026-11-01: servidor-paper/ (Paper 26.3 local, 25570; RCON 25580), por ViaProxy en 25571
 }
 const HEREDADOS = { // solo para el mundo del usuario
   'zonas.json': path.join(RAIZ, 'zonas.json'), 'cofres.json': path.join(RAIZ, 'cofres.json'),
   'obras.json': path.join(RAIZ, 'obras.json'), 'diario.md': path.join(RAIZ, 'mente', 'diario.md'),
 }
 const nombre = process.env.IO_SERVIDOR || 'usuario'
-if (!MUNDOS[nombre]) throw new Error(`IO_SERVIDOR desconocido: ${nombre} (usuario, supervivencia, companero o local)`)
+if (!MUNDOS[nombre]) throw new Error(`IO_SERVIDOR desconocido: ${nombre} (usuario, supervivencia, companero, local o paper)`)
 const carpetaDatos = path.join(RAIZ, 'mundos', nombre)
 
 // Servidor de Minecraft de este mundo: fijo en MUNDOS o, en el del compañero, el `servidor` de su mundo.json.

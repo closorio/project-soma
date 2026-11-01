@@ -13,10 +13,14 @@ export PATH := $(RAIZ)/entrenamiento/.venv/bin:$(NVM_BIN):$(PATH)
 
 WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (su server 26.1 por wifi) · usuario (26.3 por ViaProxy) · supervivencia
 ROLE    ?= casual       # rol v2 del capataz (perfiles/v2/): casual · speedrunner
-BOTS    ?= Soma         # uno o varios nombres: "Soma Eco Iris"
-PORT    ?= 3001         # puerto de control del primero; los demás, consecutivos (Soma 3001, Eco 3002…)
+BOTS    ?= Oqva         # uno o varios nombres: "Oqva Eco Iris" (2026-11-01: Soma pasó a llamarse Oqva)
+PORT    ?= 3001         # puerto de control del primero; los demás, consecutivos (Oqva 3001, Eco 3002…)
 STYLE   ?= recolector   # perfil v1 (estilo): recolector · cooperativo · supervivencia · constructor · explorador
 DECIDER ?= capataz      # quién decide en libre: red · guion · capataz
+NAME    ?=              # zone: nombre de la zona
+AREA    ?=              # zone: "x1 z1 x2 z2", dos esquinas opuestas (F3 en el juego)
+TYPE    ?=              # zone: vacío (prohibida) · no_talar · trabajo
+POS     ?=              # go: coordenadas "x y z" (F3 en el juego)
 TEXT    ?= estado       # una orden en lenguaje sencillo: "tala 5 troncos", "ven", "caza 3 ovejas"
 CMD     ?= list         # una orden de RCON para el server local
 BASE    ?=              # banco K: JSON de una medida anterior para comparar punto a punto
@@ -40,9 +44,9 @@ BOT_DECIDER ?= capataz@$(ROLE_)
 pedir = curl -s --max-time 30 "127.0.0.1:$(strip $(1))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$(2)")"; echo
 
 .PHONY: help install install-bot install-python server-download server-start server-stop server-save server-status \
-        rcon partner-ping user-server-download user-server-start user-server-stop user-server-save user-server-status \
-        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order test validate-profiles bench-smoke bench-k bench-prepare
+        rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
+        proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
+        order go move-log zone zones zone-delete test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -54,14 +58,18 @@ help:
 	@echo "  server-start        en segundo plano; se niega con menos de 3 GB libres"
 	@echo "  server-stop         guarda y cierra · server-save · server-status (jugadores y hora)"
 	@echo "  rcon CMD=\"time set day\"   cualquier orden de consola"
-	@echo "Server del compañero (26.1.x, online-mode=false; host en mundos/companero/mundo.json):"
-	@echo "  partner-ping        ¿responde y habla 26.1 (protocolo 775)?"
+	@echo "Server del compañero (online-mode=false; su IP en mundos/companero/mundo.json: «destino» si es 26.3, «host» si es 26.1):"
+	@echo "  partner-ping        ¿responde? ¿qué versión? (26.3 = por el proxy · 26.1 = directo)"
+	@echo "  partner [BOTS=…]    en un paso: el proxy hacia el server 26.3 y los bots (Oqva) quietos en modo órdenes"
+	@echo "  partner-stop        para los bots y el proxy · partner-proxy-start · partner-proxy-stop por separado"
+	@echo "Paper 26.3 local (servidor-paper/, 25570, RCON 25580; bots por el proxy 25571): reproduce el server del compañero"
+	@echo "  paper-server-download · paper-server-start · paper-server-stop · paper-proxy-start · paper-proxy-stop"
 	@echo "Mundo del usuario (servidor/, Minecraft 26.3, 127.0.0.1:25565, RCON 25575) y su proxy (ViaProxy, 25568):"
 	@echo "  user-server-download · proxy-download   la primera vez: jars con su suma comprobada y la configuración"
 	@echo "  user-server-start · proxy-start         en segundo plano (primero el servidor, luego el proxy)"
 	@echo "  user-server-stop · proxy-stop · user-server-save · user-server-status"
 	@echo "  proxy-ping          ¿el proxy responde y tiene detrás el servidor 26.3 (protocolo 777)?"
-	@echo "  assistant           Soma en el mundo del usuario, en modo órdenes (bots-stop WORLD=usuario lo para)"
+	@echo "  assistant           Oqva en el mundo del usuario, en modo órdenes (bots-stop WORLD=usuario lo para)"
 	@echo "  smoke-26-3          puerta A0: conexión, caminar, picar, poner, cofre, mesa y cama (≈ 15 min)"
 	@echo "Bots (en segundo plano; registro en servidor-supervivencia/logs/bots-WORLD.log):"
 	@echo "  casual              BOTS en modo libre con el rol casual      (= bots ROLE=casual)"
@@ -73,6 +81,9 @@ help:
 	@echo "  style STYLE=…       perfil v1 (recolector, cooperativo, supervivencia, constructor, explorador)"
 	@echo "  decider DECIDER=…   red · guion · capataz        free · idle: modo libre o modo órdenes"
 	@echo "  order TEXT=\"…\"      \"tala 5 troncos\", \"ven\", \"caza 3 ovejas\", \"vuelve al campamento\"…"
+	@echo "  go POS=\"x y z\"      que vaya a esas coordenadas (las de F3): cuando está lejos y «ven» no te ve"
+	@echo "  zone NAME=… AREA=\"x1 z1 x2 z2\" [TYPE=trabajo|no_talar]   zona por coordenadas · zones (lista) · zone-delete NAME=…"
+	@echo "  move-log [WORLD=…]  ¿el server lo recoloca? ¿por qué rehace la ruta? (cuando no avanza)"
 	@echo "Pruebas y bancos:"
 	@echo "  test                todas las pruebas en seco (bot/probar_*_seco.js) · validate-profiles"
 	@echo "  bench-smoke         8 bots, 0,1 días, en los puntos fijos (3-4 min)"
@@ -83,6 +94,7 @@ help:
 	@echo "  nightly [BENCHES=\"smoke-26-3 bench-k\"]   bancos en serie en segundo plano; luego make report"
 	@echo "  verify              todo lo que se comprueba sin servidor: pruebas en seco, perfiles, herramientas del vault, Python"
 	@echo "  bench-assistant PHASE=A2 [WORLD=local]   la puerta de una fase del asistente (entrenamiento/banco_asistente.py)"
+	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
 	@echo "Examples:  make server-start && make casual BOTS=\"Soma Eco\"   ·   make progress PORT=3002"
@@ -127,6 +139,47 @@ rcon:
 partner-ping:
 	@cd bot && node -e "$$PARTNER_PING"
 
+# server 26.3 del compañero (2026-10-31): un segundo ViaProxy en 25569 hacia el «destino» de mundos/companero/mundo.json
+# un segundo ViaProxy hacia el «destino» de mundos/$(1)/mundo.json, escuchando en 127.0.0.1:$(2) (companero 25569, paper 25571)
+define proxy_hacia
+	@d=$$(python3 -c 'import json; print(json.load(open("mundos/$(1)/mundo.json"))["servidor"].get("destino", ""))'); \
+	  test -n "$$d" || { echo "mundos/$(1)/mundo.json no tiene «destino» (IP:puerto): el server es 26.1, no hace falta proxy"; exit 1; }; \
+	  test -f servidor/proxy/viaproxy.yml || { echo "falta servidor/proxy/viaproxy.yml: make proxy-download"; exit 1; }; \
+	  sed -e "s/^bind-address: .*/bind-address: 127.0.0.1:$(2)/" -e "s/^target-address: .*/target-address: $$d/" \
+	    servidor/proxy/viaproxy.yml > servidor/proxy/viaproxy-$(1).yml
+	servidor/proxy/arrancar.sh $(1)
+endef
+
+partner-proxy-start:
+	$(call proxy_hacia,companero,25569)
+
+partner-proxy-stop:
+	servidor/proxy/parar.sh companero
+
+# un paso: proxy y bots (por defecto Oqva) en modo órdenes, quietos hasta que se les hable
+partner: partner-proxy-start
+	@$(MAKE) --no-print-directory bots WORLD=companero MODE=ordenes BOT_DECIDER=guion
+
+partner-stop:
+	-@$(MAKE) --no-print-directory bots-stop WORLD=companero
+	@$(MAKE) --no-print-directory partner-proxy-stop
+
+# --- Paper 26.3 local (servidor-paper/, 2026-11-01): para reproducir el server del compañero y leer la consola ----------------------
+paper-server-download:
+	servidor-paper/descargar.sh
+
+paper-server-start:
+	servidor-paper/arrancar.sh
+
+paper-server-stop:
+	servidor-paper/parar.sh
+
+paper-proxy-start:
+	$(call proxy_hacia,paper,25571)
+
+paper-proxy-stop:
+	servidor/proxy/parar.sh paper
+
 # --- mundo del usuario en 26.3 y su proxy (A0 del asistente, PLAN_asistente.md) -------------------------------------------------
 user-server-download:
 	servidor/descargar.sh
@@ -157,7 +210,7 @@ proxy-ping:
 	@cd bot && node -e "$$PROXY_PING"
 
 assistant:
-	@$(MAKE) --no-print-directory bots WORLD=usuario BOTS=Soma PORT=3001 MODE=ordenes BOT_DECIDER=guion
+	@$(MAKE) --no-print-directory bots WORLD=usuario BOTS=Oqva PORT=3001 MODE=ordenes BOT_DECIDER=guion
 
 smoke-26-3:
 	python entrenamiento/humo_26_3.py
@@ -175,6 +228,10 @@ verify: test validate-profiles
 	@cd conocimiento/herramientas && python -m unittest -q test_herramientas
 	@python -m py_compile entrenamiento/*.py && echo "entrenamiento/*.py: compila"
 	@echo "verify: todo bien"
+
+# ¿anda por algo que no sea llano? llano, escalón y muro, con las recolocaciones del server (entrenamiento/prueba_rodeo.py)
+bench-detour:
+	python entrenamiento/prueba_rodeo.py --mundo $(WORLD_) --puerto $(strip $(PORT))
 
 bench-assistant:
 	python entrenamiento/banco_asistente.py --fase $(strip $(PHASE)) --mundo $(if $(filter usuario,$(WORLD_)),usuario,local)
@@ -236,10 +293,16 @@ export PROGRESO
 
 define PARTNER_PING
 const m = require("../mundos/companero/mundo.json").servidor
-const host = process.env.IO_HOST || m.host, port = +(process.env.IO_PORT_SERVIDOR || m.puerto)
+// con «destino» (server 26.3 por el proxy): se pregunta directamente al server de destino
+const [dh, dp] = (m.destino || "").split(":")
+const host = process.env.IO_HOST || dh || m.host, port = +(process.env.IO_PORT_SERVIDOR || dp || m.puerto)
 require("minecraft-protocol").ping({ host, port }, (e, r) => {
   if (e) return console.log(`$${host}:$${port} no responde ($${e.code || e.message}): IP, firewall o server apagado`)
-  console.log(`$${host}:$${port} → $${r.version.name} (protocolo $${r.version.protocol})` + (r.version.protocol === 775 ? ": vale" : ": no es 26.1, los bots no entrarán"))
+  const p = r.version.protocol
+  const juicio = p === 775 ? (m.destino ? ": es 26.1, quita «destino» de mundo.json y entra directo" : ": vale")
+    : p === 777 ? (m.destino ? ": vale, por el proxy (make partner)" : ": es 26.3, hace falta el proxy (pon «destino» en mundo.json)")
+    : ": ni 26.1 ni 26.3, los bots no entrarán"
+  console.log(`$${host}:$${port} → $${r.version.name} (protocolo $${p})` + juicio)
 })
 endef
 export PARTNER_PING
@@ -270,6 +333,28 @@ idle:
 
 order:
 	@$(call pedir,$(PORT),orden $(strip $(TEXT)))
+
+# lo que el server y el navegador dicen del movimiento (bot/io.js, «[mov]»): recolocaciones y rutas rehechas
+move-log:
+	@test -f $(LOG) || { echo "no hay registro de $(WORLD_): $(LOG)"; exit 0; }; \
+	  echo "recolocado por el server: $$(grep -c 'el server me recolocó' $(LOG)) · rutas rehechas: $$(grep -c 'ruta rehecha' $(LOG))"; \
+	  grep '\[mov\]' $(LOG) | tail -n 10
+
+# zonas por coordenadas (las de F3), sin que el bot tenga que verte: TYPE vacío = prohibida, no_talar o trabajo
+zone:
+	@test -n "$(strip $(NAME))" -a -n "$(strip $(AREA))" || { echo 'uso: make zone NAME=CANTERA AREA="x1 z1 x2 z2" [TYPE=trabajo|no_talar]'; exit 1; }
+	@$(call pedir,$(PORT),zona rect $(strip $(NAME)) $(strip $(AREA)) $(strip $(TYPE)))
+
+zones:
+	@$(call pedir,$(PORT),zona lista)
+
+zone-delete:
+	@$(call pedir,$(PORT),zona borrar $(strip $(NAME)))
+
+# ir a unas coordenadas (las de F3 en el juego): para traerlo cuando está lejos y «ven» no te ve. Tarda; no cancela con Ctrl+C
+go:
+	@test -n "$(strip $(POS))" || { echo 'uso: make go POS="x y z" [PORT=3001]'; exit 1; }
+	@curl -s --max-time 600 "127.0.0.1:$(strip $(PORT))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "ir $(strip $(POS))")"; echo
 
 # --- pruebas y bancos -----------------------------------------------------------------------------------------------------------
 # la parte A de probar_libre_seco pide entrenamiento/ejecuciones/ (datos sin versionar): su fallo no cuenta si es solo ese

@@ -31,6 +31,19 @@ const ok = (t) => { n++; console.log('ok', t) }
   assert.deepStrictEqual(f.enviados, ['position', 'tick_end'])
   ok('instalar dos veces no duplica')
 }
+{ // holgura (Paper): el borde del cuerpo justo en la cara de un bloque se mete 1e-4; lo demás no se toca
+  const { separar } = require('./tick_end')
+  assert.ok(Math.abs(separar(402.7) - 402.6999) < 1e-9, 'borde +z en la cara: hacia dentro')
+  assert.ok(Math.abs(separar(450.3) - 450.3001) < 1e-9, 'borde -x en la cara: hacia dentro')
+  assert.strictEqual(separar(450.5), 450.5)
+  assert.strictEqual(separar(402.315), 402.315)
+  const f = { datos: [], bot: { _client: { write: (n, d) => { f.datos.push([n, d]); return 'ok' } } } }
+  instalar(f.bot)
+  f.bot._client.write('position', { x: 450.5, y: 200.42, z: 402.7, onGround: false })
+  const [n0, d0] = f.datos[0]
+  assert.ok(n0 === 'position' && d0.x === 450.5 && d0.y === 200.42 && d0.z < 402.7, 'el paquete sale con la holgura')
+  ok('holgura en la cara de un bloque')
+}
 { // sin cliente no hace nada
   assert.strictEqual(instalar({}), false)
   assert.strictEqual(instalar(null), false)

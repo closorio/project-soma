@@ -54,9 +54,9 @@ async function esperarAlDia(bot, segundos, tarea) {
   }
 }
 
-// Dos casillas libres en línea (pies de la cama a mi lado, cabecera detrás) con suelo firme, que se puedan tocar.
-function sitioCama(bot) {
-  const b = nodo(bot)
+// Dos casillas libres en línea (pies de la cama a mi lado, cabecera detrás) con suelo firme, que se puedan tocar. Con `b`, mirando
+// desde esa casilla en vez de la mía (usar_cama busca así un sitio cerca cuando aquí no hay).
+function sitioCama(bot, b = nodo(bot)) {
   const libre = (v) => { const k = bot.blockAt(v); return !!k && k.boundingBox === 'empty' && !sv.esLiquido(k) }
   for (const [dx, dz] of LADOS) {
     const pie = b.offset(dx, 0, dz), cab = b.offset(2 * dx, 0, 2 * dz)
@@ -118,3 +118,4 @@ module.exports = async function dormir(bot, [segundos], tarea) {
   return { exito: false, causa: 'sin cama y sin refugio', modo: null, hora: [sv.hora(bot), sv.hora(bot)], comido: 0, s: 0 }
 }
 module.exports.esperarAlDia = async (bot, [segundos], tarea) => esperarAlDia(bot, segundos, tarea)
+module.exports.sitioCama = sitioCama // 2026-11-01: también lo usa usar_cama.js (poner una cama nueva)

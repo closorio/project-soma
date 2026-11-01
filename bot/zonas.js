@@ -3,8 +3,11 @@
 // archivo cambia (sin reiniciar los bots).
 // Además, el navegador nunca rompe troncos (solo los pica quien decide picar: picar_tronco, la orden cerebro, talar) ni cofres
 // (los de cofres.json por su sitio, y cualquier cofre o barril por su tipo).
-//   zona:  { nombre, x1, z1, x2, z2, y1?, y2?, modo: 'vedada' | 'no_talar' }   (rectángulo en x/z; y opcional)
+//   zona:  { nombre, x1, z1, x2, z2, y1?, y2?, modo: 'vedada' | 'no_talar' | 'trabajo' }   (rectángulo en x/z; y opcional)
 //   árbol: { nombre, x, y, z }  (un tronco concreto; no se tala)
+// Zonas de trabajo (pedido del usuario, 2026-10-31): lo contrario de las vedadas. Si hay alguna, talar, picar y poner solo se
+// hacen dentro de alguna de ellas (fuera, todo cuenta como protegido); andar sigue libre. Las vedadas y no_talar mandan también
+// dentro. Sin zonas de trabajo, todo como antes.
 const fs = require('fs')
 const cofres = require('./cofres')
 const mundo = require('./mundo')
@@ -22,22 +25,29 @@ function leer() {
 function guardar(d) { fs.writeFileSync(RUTA, JSON.stringify(d, null, 1) + '\n'); cache.mtime = -2 }
 
 const dentro = (zn, x, y, z) => x >= zn.x1 && x <= zn.x2 && z >= zn.z1 && z <= zn.z2 && (zn.y1 == null || (y >= zn.y1 && y <= zn.y2))
-// ¿Qué protege este bloque de la tala? El nombre de la zona (de cualquier modo) o del árbol marcado; null si nada.
+const esTrabajo = (zn) => zn.modo === 'trabajo'
+const esVedada = (zn) => (zn.modo || 'vedada') === 'vedada'
+const FUERA_DE_TRABAJO = 'fuera de la zona de trabajo'
+const trabajo = () => leer().zonas.filter(esTrabajo)
+// ¿Hay zonas de trabajo y (x, y, z) no cae en ninguna?
+function fueraDeTrabajo(x, y, z) { const t = trabajo(); return t.length > 0 && !t.some(zn => dentro(zn, x, y, z)) }
+// ¿Qué protege este bloque de la tala? El nombre de la zona (vedada o no_talar), del árbol marcado o FUERA_DE_TRABAJO; null si nada.
 function protegidoPor(x, y, z) {
   const d = leer()
-  const zn = d.zonas.find(zn => dentro(zn, x, y, z))
+  const zn = d.zonas.find(zn => !esTrabajo(zn) && dentro(zn, x, y, z))
   if (zn) return zn.nombre
   const a = d.arboles.find(a => a.x === x && a.y === y && a.z === z)
-  return a ? a.nombre : null
+  if (a) return a.nombre
+  return fueraDeTrabajo(x, y, z) ? FUERA_DE_TRABAJO : null
 }
 const talaProtegida = (x, y, z) => protegidoPor(x, y, z) !== null
 // ¿Se puede pisar esta casilla? Solo las zonas vedadas lo impiden.
-function pasoVedado(x, y, z) { return leer().zonas.some(zn => zn.modo !== 'no_talar' && dentro(zn, x, y, z)) }
+function pasoVedado(x, y, z) { return leer().zonas.some(zn => esVedada(zn) && dentro(zn, x, y, z)) }
 
 // Si (x, z) cae en una zona vedada, la casilla de fuera más cercana (a 1 bloque del borde, que no caiga en otra zona vedada) y el
 // nombre de la zona; si no, la misma casilla. Para ir hacia alguien que está dentro sin entrar (ir_a_jugador, «ven», «sígueme»).
 function puntoFuera(x, z) {
-  const vedadas = leer().zonas.filter(zn => zn.modo !== 'no_talar' && zn.y1 == null)
+  const vedadas = leer().zonas.filter(zn => esVedada(zn) && zn.y1 == null)
   const zn = vedadas.find(zn => dentro(zn, x, 0, z))
   if (!zn) return { x, z, zona: null }
   const libre = (p) => !vedadas.some(o => dentro(o, p.x, 0, p.z))
@@ -54,7 +64,7 @@ function aplicar(mov) {
   // F8.1: el navegador a veces pasa un bloque sin posición (chunk sin cargar) y la excepción tumbaba el proceso de los cuatro bots
   mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
   mov.exclusionAreasBreak.push(b => (b && b.position && (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z)) ? 1000 : 0))
-  return mov
+  return require('./puertas').aplicar(mov) // 2026-11-01: las puertas de madera son paso (las abre puertas.vigilar)
 }
 
 function zonaNueva(nombre, ax, az, bx, bz, modo = 'vedada') {
@@ -76,7 +86,9 @@ function borrar(nombre) {
 }
 function lista() {
   const d = leer()
-  return [...d.zonas.map(z => `${z.nombre}: zona ${z.modo === 'no_talar' ? 'sin talar' : 'vedada'} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}`),
+  const tipo = (z) => (z.modo === 'no_talar' ? 'sin talar' : esTrabajo(z) ? 'de trabajo' : 'vedada')
+  return [...d.zonas.map(z => `${z.nombre}: zona ${tipo(z)} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}`),
     ...d.arboles.map(a => `${a.nombre}: árbol en ${a.x},${a.y},${a.z}`)]
 }
-module.exports = { leer, talaProtegida, protegidoPor, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER }
+module.exports = { leer, talaProtegida, protegidoPor, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
+  trabajo, fueraDeTrabajo, esTrabajo, FUERA_DE_TRABAJO }

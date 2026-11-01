@@ -37,6 +37,7 @@ MUNDOS = {
                       "clave": [RAIZ / "servidor-supervivencia" / "server.properties"]},
     "local": {"carpeta": RAIZ / "servidor-local", "puerto": 25577, "clave": [RAIZ / "servidor-local" / "server.properties"],
               "mundo_json": RAIZ / "mundos" / "local" / "mundo.json"},
+    "paper": {"carpeta": RAIZ / "servidor-paper", "puerto": 25580, "clave": [RAIZ / "servidor-paper" / "server.properties"]},
     "companero": {"carpeta": None, "puerto": 25575, "clave": [], "mundo_json": RAIZ / "mundos" / "companero" / "mundo.json"},
 }
 LOGIN, ORDEN, RESPUESTA = 3, 2, 0

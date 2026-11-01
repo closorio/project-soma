@@ -12,11 +12,11 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
   aranas: 'spider', creeper: 'creeper', creepers: 'creeper', bruja: 'witch', aldeano: 'villager', oveja: 'sheep', vaca: 'cow' }
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
-  'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando] y, dentro del rectángulo de obras: mina N piedras, ' +
+  'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, refúgiate, ' +
-  'sal del refugio, duerme, fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
-  'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, ilumina, baja N (una escalera), sube, ' +
-  'desatáscate, caza N ovejas, recoge agua, vierte el agua.'
+  'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
+  'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
+  'desatáscate, caza N ovejas, recoge agua, vierte el agua; y continúa (sigue con lo que dejaste a medias).'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
 const BLOQUES = { piedra: 'stone', piedras: 'stone', roca: 'stone', tierra: 'dirt', arena: 'sand', grava: 'gravel', mineral: 'mineral', minerales: 'mineral',
   carbon: 'coal_ore', hierro: 'iron_ore', cobre: 'copper_ore', andesita: 'andesite', granito: 'granite', diorita: 'diorite', arenisca: 'sandstone' }
@@ -52,7 +52,7 @@ function numero(t) {
 
 // Nombres antiguos de los personajes (2026-10-15: Io pasó a llamarse Soma, y Claude, Alma): se aceptan aún como alias al dar
 // órdenes («Io, ven» va a Soma si Soma está en este proceso y no hay ningún personaje que se llame de verdad Io).
-const ALIAS = { io: 'Soma', claude: 'Alma' }
+const ALIAS = { io: 'Soma', claude: 'Alma', soma: 'Oqva' } // 2026-11-01: Soma pasó a llamarse Oqva (su skin va con ese nombre)
 
 // Quién recibe la orden: { a: 'todos' | nombre (como en `nombres`) | null, resto: el texto original sin el nombre }
 function destinatario(texto, nombres) {
@@ -95,6 +95,14 @@ function interpretar(texto) {
     return { tipo: 'funde', entrada: palabra(t, FUNDIBLES) || (/\b(?:cocina|cocinad|cocinar|asa|asad)\b/.test(t) ? 'carne' : 'hierro'), n: numero(t) || 1 }
   if (/\b(?:ilumina|iluminad|iluminar|alumbra|alumbrad|pon antorchas|poned antorchas)\b/.test(t)) return { tipo: 'ilumina' }
   if (/^(?:pon|poned|coloca|colocad)\b/.test(t) && palabra(t, PONIBLES)) return { tipo: 'pon', objeto: palabra(t, PONIBLES) }
+  // 2026-11-01: «continúa»: retomar la última orden de trabajo interrumpida (antes que «sigue», que no es «sígueme»)
+  if (/^(?:continua|continuad|continue|retoma|retomalo|reanuda|sigue|seguid)(?: (?:con )?(?:lo que (?:hacias|estabas haciendo)|(?:lo )?tuyo|trabajando|con eso))?$/.test(t))
+    return { tipo: 'continua' }
+  // 2026-11-01: dar al jugador lo que lleva («dame 10 troncos», «dame todo»); antes que «saca» y que «tala» (que se come «trae»)
+  if (/^(?:dame|damelo|damelos|dadme|traeme|entregame|pasame|tirame|suelta|sueltame)\b/.test(t)) {
+    const objeto = palabra(t, SACABLES)
+    return { tipo: 'dame', objeto: objeto || 'todo', n: objeto ? numero(t) : null }
+  }
   if (/\b(?:saca|sacad|sacar)\b|\b(?:coge|trae) del cofre\b/.test(t)) return { tipo: 'saca', objeto: palabra(t, SACABLES), n: numero(t) || 8 }
   if (/\b(?:desatascate|desatascaos|desatascarte|estas atascad[oa]s?|sal de aqui como puedas)\b/.test(t)) return { tipo: 'desatascate' }
   if (/^(?:sube|subid)\b|\b(?:sube|subid|sal) a la superficie\b/.test(t)) return { tipo: 'sube' }
@@ -105,7 +113,10 @@ function interpretar(texto) {
   }
   // F7.2: supervivencia (antes que «quédate», porque «espera al día» no es quedarse quieto, y que «tala», porque «consigue comida»
   // no es talar)
-  if (/^(?:espera|esperad)\b.*\b(?:dia|amanezca|amanecer|se haga de dia)\b|\b(?:duerme|dormid|dormir|a dormir|vete a dormir|acuestate)\b/.test(t))
+  // 2026-11-01 (pedido del usuario): «duerme», «usa la cama», «ven a la cama» y «guarda el spawn» son la misma orden: la cama
+  // más cercana, o pone/fabrica una, y duerme (de día solo guarda el spawn). Antes que «ven», que se comería «ven a la cama»
+  if (/^(?:espera|esperad)\b.*\b(?:dia|amanezca|amanecer|se haga de dia)\b|\b(?:duerme|dormid|dormir|a dormir|vete a dormir|acuestate)\b/.test(t) ||
+      /\b(?:usa|usad|usar|utiliza) (?:la|esa|esta|tu) cama\b|\b(?:ven|ve|vete|id|anda) a (?:la|tu) cama\b|^a la cama\b|\bguarda (?:el|tu) (?:spawn|punto de reaparicion)\b/.test(t))
     return { tipo: 'duerme' }
   if (/^(?:come|comed|comer|comete|cena|desayuna|almuerza)\b|\b(?:come|comete) algo\b/.test(t)) return { tipo: 'come' }
   if ((m = t.match(/\b(?:ataca|atacad|atacar|mata|matad|matar|pelea|pelead|lucha|luchad|defiendete|defendeos|acaba con)\b(?: (?:a la |a los |a las |al |a |el |la |los |las |ese |esa |este |esta )?(\w+))?/)))
@@ -140,11 +151,13 @@ function interpretar(texto) {
   }
   if (/\b(?:construye|construir|construid|levanta|levantar|edifica|monta|haz(?:me)?|hacer)\b/.test(t) && t.split(' ').some(w => PLANOS[w])) {
     const p = PLANOS[t.split(' ').find(w => PLANOS[w])]
-    return { tipo: 'construye', plano: p === 'cabana' && /\b(?:con )?tech(?:o|ada)\b/.test(t) ? 'cabana_techada' : p, aqui: /\baqui\b/.test(t) }
+    // 2026-11-01: la cabaña lleva techo salvo «sin techo»; «grande» es la de 10×10
+    const cab = p === 'cabana' ? `cabana${/\bgrande\b/.test(t) ? '_grande' : ''}${/\bsin techo\b/.test(t) ? '' : '_techada'}` : p
+    return { tipo: 'construye', plano: cab, aqui: /\baqui\b/.test(t) }
   }
   if ((m = t.match(/\b(?:deshaz|deshacer|deshaced|desmonta|desmontar|derriba|derribar|quita|quitar)\b(?: (?:la |el |esa |ese |esta |este )?(\w+))?/))) {
     const p = (m[1] && PLANOS[m[1]]) || null
-    return { tipo: 'deshaz', obra: p || m[1] || null }
+    return { tipo: 'deshaz', obra: p === 'cabana' && /\bgrande\b/.test(t) ? 'cabana_grande' : p || m[1] || null }
   }
   if (/\b(?:tala|talar|talad|tal[ae]n?|corta|cortar|cortad|pica|picar|picad|consigue|trae)\b/.test(t)) {
     const n = numero(t) || 1

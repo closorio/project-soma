@@ -67,7 +67,7 @@ const caeEncima = (bot, pos) => { const b = bot.blockAt(pos.offset(0, 1, 0)); re
 const distRect = (x, z, r) => Math.hypot(Math.max(Math.min(r.x1, r.x2) - x, 0, x - Math.max(r.x1, r.x2)), Math.max(Math.min(r.z1, r.z2) - z, 0, z - Math.max(r.z1, r.z2)))
 // ¿Queda (x, z) a ≥ margen bloques de todas las zonas protegidas (de cualquier modo) y de todos los cofres?
 function lejosDeProtegido(x, z, margen = 10) {
-  if (zonas.leer().zonas.some(zn => distRect(x, z, zn) < margen)) return false
+  if (zonas.leer().zonas.some(zn => !zonas.esTrabajo(zn) && distRect(x, z, zn) < margen)) return false // las de trabajo no protegen
   if (zonas.leer().arboles.some(a => Math.hypot(a.x - x, a.z - z) < margen)) return false
   return !cofres.lista().some(c => c.bloques.some(([cx, , cz]) => Math.hypot(cx - x, cz - z) < margen))
 }
@@ -79,6 +79,7 @@ function lejosDeProtegido(x, z, margen = 10) {
 function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax = 1, yRef = null, mov = null, camino = true } = {}) {
   const esquinas = [[x0, z0], [x0 + ancho - 1, z0], [x0, z0 + largo - 1], [x0 + ancho - 1, z0 + largo - 1]]
   if (!require('./mundo').reglasLibres && !esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' } // F8.1: solo en el del usuario
+  if (esquinas.some(([x, z]) => zonas.fueraDeTrabajo(x, null, z))) return { mal: 'fuera de la zona de trabajo' }
   if (!esquinas.every(([x, z]) => lejosDeProtegido(x, z, margen))) return { mal: `a menos de ${margen} de una zona protegida o un cofre` }
   const y0 = yRef ?? bot.entity.position.y
   const suelos = new Map()

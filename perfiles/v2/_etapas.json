@@ -64,6 +64,8 @@
   "salir_del_refugio",
   "dormir",
   "esperar_al_dia",
+  "usar_cama",
+  "dar",
   "fabricar",
   "equipar",
   "apartarse",

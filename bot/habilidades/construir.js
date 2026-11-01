@@ -4,7 +4,7 @@
 // Antes de poner nada hace el presupuesto: si faltan tablones y lleva troncos, los fabrica (receta sin mesa, 1 tronco → 4); si aun
 // así falta, no empieza («falta material: N»). Nivela solo rellenando (nunca cava). Trabaja desde fuera de la huella (no se encierra
 // ni se sube a lo que pone), capa a capa, apoyando cada bloque en un vecino sólido; comprueba que el bloque aparece de verdad.
-// Cada bloque puesto queda en obras.json en el acto (habilidad deshacer). Límite: 60 s + 10 s por bloque (máx. 10 min), 2 fallos
+// Cada bloque puesto queda en obras.json en el acto (habilidad deshacer). Límite: 60 s + 10 s por bloque (máx. 20 min), 2 fallos
 // seguidos en el mismo bloque. Devuelve { exito, causa, obra, plano, origen, puestos, pendientes, relleno, materia, pos }.
 const { goals } = require('mineflayer-pathfinder')
 const { Vec3 } = require('vec3')
@@ -16,7 +16,7 @@ const parcela = require('../parcela')
 const planos = require('../planos')
 const { moverHasta, prudentes, conLimite, esperar, nodo } = require('./comun')
 
-const ALCANCE = 4, MAX_MS = 600000
+const ALCANCE = 4, MAX_MS = 1200000 // 20 min: la cabaña grande con techo son 206 bloques (2026-11-01)
 const CARAS = [[0, -1, 0], [0, 0, 1], [0, 0, -1], [1, 0, 0], [-1, 0, 0], [0, 1, 0]] // de dónde apoyarse: abajo, sur, norte, este, oeste, arriba
 
 // Los objetos del inventario que sirven de materia: «tablones» = cualquier *_planks; si no, el nombre exacto del bloque.
@@ -61,6 +61,9 @@ async function fabricarTablones(bot, necesarios) {
 
 module.exports = async function construir(bot, args, tarea) {
   const palabras = (args || []).filter(Boolean)
+  // 2026-11-01 («continúa»): retomar=ID sigue una obra a medias en su sitio, con lo que falte, apuntando en la misma obra
+  const retomar = (palabras.find(a => a.startsWith('retomar=')) || '').slice(8)
+  if (retomar) return retomarObra(bot, retomar, tarea)
   const nombrePlano = palabras[0] || 'cabana'
   const nums = palabras.slice(1).filter(a => /^-?\d+$/.test(a)).map(Number)
   const materia = palabras.slice(1).find(a => /_planks$|^tablones$|^cobblestone$|^stone$|^dirt$|_log$/.test(a)) || 'tablones'
@@ -83,12 +86,34 @@ module.exports = async function construir(bot, args, tarea) {
     return { exito: false, causa: `falta material: ${necesarios - tengo} ${materia} (tengo ${tengo}, troncos ${troncos}; hacen falta ${necesarios})`, plano: plano.nombre, origen: [x0, y + 1, z0], fabricados }
   }
   const id = obras.nueva(bot.username, nombre, plano.nombre, [x0, y + 1, z0], materia)
+  return levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricados, e }, tarea)
+}
+
+async function retomarObra(bot, idObra, tarea) {
+  const ob = obras.leer().obras.find(o => o.id === idObra)
+  if (!ob || ob.estado === 'deshecha' || ob.estado === 'terminada') return { exito: false, causa: `no hay obra a medias ${idObra}` }
+  if (obras.enCurso() && obras.enCurso().id !== ob.id) return { exito: false, causa: `hay otra obra en curso (${obras.enCurso().id})` }
+  const plano = planos.PLANOS[ob.plano](ob.materia)
+  const [x0, y1, z0] = ob.origen, y = y1 - 1, materia = ob.materia
+  const faltan = plano.bloques.filter(b => { const k = bot.blockAt(new Vec3(x0 + b.dx, y1 + b.dy, z0 + b.dz)); return !(k && deMateriaNombre(k.name, materia)) }).length
+  let tengo = cuantos(bot, materia), fabricados = 0
+  if (tengo < faltan && materia === 'tablones') { fabricados = await fabricarTablones(bot, faltan); tengo = cuantos(bot, materia) }
+  if (tengo < faltan) return { exito: false, causa: `falta material: ${faltan - tengo} ${materia} (tengo ${tengo}; faltan ${faltan} bloques)`, plano: plano.nombre, origen: ob.origen, fabricados }
+  obras.reabrir(ob.id)
+  return levantar(bot, { id: ob.id, plano, materia, x0, z0, y, relleno: [], fabricados, e: { desnivel: 0, distancia: 0 } }, tarea)
+}
+
+// Poner los bloques de una obra ya apuntada (nueva o retomada), en orden, apoyando cada uno en un vecino sólido
+async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricados, e }, tarea) {
   // movimientos: prudentes y sin pisar la huella de la obra (no se encierra ni se sube a lo recién puesto)
   const mov = prudentes(bot)
   const enHuella = (x, z) => x >= x0 && x < x0 + plano.dim[0] && z >= z0 && z < z0 + plano.dim[2]
   mov.exclusionAreasStep.push(b => (b && b.position && enHuella(b.position.x, b.position.z) ? 200 : 0))
   const lista = [...relleno.map(([x, yy, z]) => ({ dest: new Vec3(x, yy, z), relleno: true })),
-    ...plano.bloques.map(b => ({ dest: new Vec3(x0 + b.dx, y + 1 + b.dy, z0 + b.dz) }))]
+    // por capas y, en cada capa, del borde hacia dentro (2026-11-01: el techo empezaba por el centro, sin nada en que apoyarse)
+    ...plano.bloques.map((b, i) => ({ b, i, borde: Math.min(b.dx, plano.dim[0] - 1 - b.dx, b.dz, plano.dim[2] - 1 - b.dz) }))
+      .sort((a, c) => a.b.dy - c.b.dy || a.borde - c.borde || a.i - c.i)
+      .map(({ b }) => ({ dest: new Vec3(x0 + b.dx, y + 1 + b.dy, z0 + b.dz) }))]
   const ms = Math.min(MAX_MS, (60 + 10 * lista.length) * 1000), t0 = Date.now()
   let puestos = 0, causa = null, ultimo = null
   for (const { dest } of lista) {
@@ -101,7 +126,13 @@ module.exports = async function construir(bot, args, tarea) {
     const item = deMateria(bot, materia)[0]
     if (!item) { causa = `falta material: ${lista.length - puestos} ${materia}`; break }
     let bien = false, error = null
-    for (const [dx, dy, dz] of CARAS) { // dos apoyos distintos como mucho
+    const alto = dest.y >= y + 3 // por encima de los ojos desde el suelo (3.ª capa, techo): saltando primero, sin buscar desde dónde verlo
+    if (alto) {
+      const r = await ponerSaltando(bot, dest, item, mov, tarea)
+      if (r.nombre && deMateriaNombre(r.nombre, materia)) { bien = true; ultimo = r.nombre; obras.anotarPuesto(id, [dest.x, dest.y, dest.z, r.nombre]) }
+      else error = `saltando: ${r.error}`
+    }
+    for (const [dx, dy, dz] of bien ? [] : CARAS) { // dos apoyos distintos como mucho
       const ref = bot.blockAt(dest.offset(dx, dy, dz))
       if (!parcela.solido(ref)) continue
       const cara = new Vec3(-dx, -dy, -dz)
@@ -118,6 +149,13 @@ module.exports = async function construir(bot, args, tarea) {
       if (b && deMateriaNombre(b.name, materia)) { bien = true; ultimo = b.name; obras.anotarPuesto(id, [dest.x, dest.y, dest.z, b.name]); break }
       if (error && error.length > 100) error = error.slice(0, 100)
     }
+    if (!bien && !alto && !(tarea && tarea.cancelada) && CARAS.some(([dx, dy, dz]) => parcela.solido(bot.blockAt(dest.offset(dx, dy, dz))))) {
+      // 2026-11-01: la capa alta (3.ª de la cabaña) solo se apoya encima de la de debajo, y desde el suelo esa cara queda por
+      // encima de los ojos: ningún sitio la ve («no llego»). Como un jugador: al lado, saltar y ponerla en lo alto del salto
+      const r = await ponerSaltando(bot, dest, item, mov, tarea)
+      if (r.nombre && deMateriaNombre(r.nombre, materia)) { bien = true; ultimo = r.nombre; obras.anotarPuesto(id, [dest.x, dest.y, dest.z, r.nombre]) }
+      else error = `${error || 'sin apoyo visible'}; saltando: ${r.error}`
+    }
     if (!bien) { causa = `no pude colocar en ${dest.x},${dest.y},${dest.z}: ${error || 'sin apoyo'}`; break }
     puestos++
   }
@@ -128,6 +166,41 @@ module.exports = async function construir(bot, args, tarea) {
     pos: bot.entity.position.floored().toArray(), parcela: { desnivel: e.desnivel, distancia: e.distancia } }
   if (pendientes === 0) return { exito: true, causa: 'construido', ...datos }
   return { exito: false, causa: causa || 'a medias', ...datos }
+}
+// Poner `item` en `dest` apoyado en su primer vecino sólido (el de debajo si lo hay), saltando a su lado (hasta 3 veces): el
+// servidor no pide ver la cara, solo alcanzarla. Devuelve { nombre } del bloque puesto o { error }.
+async function ponerSaltando(bot, dest, item, mov, tarea) {
+  const apoyo = CARAS.map(([dx, dy, dz]) => ({ ref: bot.blockAt(dest.offset(dx, dy, dz)), cara: new Vec3(-dx, -dy, -dz) })).find(a => parcela.solido(a.ref))
+  if (!apoyo) return { error: 'sin apoyo' }
+  const { ref, cara } = apoyo
+  // pies 2 (3.ª capa) o 3 (techo) por debajo; la meta del navegador, solo horizontal y a ≤ 2, siempre cumple esto
+  const cerca = () => { const p = bot.entity.position; return Math.hypot(p.x - dest.x - 0.5, p.z - dest.z - 0.5) <= 3.2 && p.y >= dest.y - 3.6 && p.y <= dest.y - 1.4 }
+  if (!cerca()) {
+    // sin la exclusión de la huella: el centro del techo de la grande (10×10) solo se alcanza desde dentro, entrando por la puerta
+    const r = await moverHasta(bot, new goals.GoalNearXZ(dest.x, dest.z, 2), cerca, { ms: 30000, tarea, mov: prudentes(bot) })
+    if (!cerca()) return { error: `no llego al lado (${r})` }
+  }
+  try { bot.pathfinder.setGoal(null) } catch (_) {}
+  let error = 'no se puso'
+  for (let i = 0; i < 3; i++) {
+    if (tarea && tarea.cancelada) return { error: 'cancelado' }
+    try {
+      if (!bot.heldItem || bot.heldItem.type !== item.type) { await bot.equip(item, 'hand'); await esperar(100) }
+      await bot.lookAt(dest.offset(0.5, 0, 0.5), true)
+      const y0 = bot.entity.position.y
+      bot.setControlState('jump', true)
+      for (let t = 0; t < 10; t++) { // hasta lo alto del salto (≈ 0,3 s)
+        await esperar(50)
+        if (bot.entity.position.y > y0 + 0.9 && bot.entity.velocity.y < 0.15) break
+      }
+      bot.setControlState('jump', false)
+      await conLimite(bot.placeBlock(ref, cara), 3000)
+    } catch (e) { error = e.message.slice(0, 80) } finally { bot.setControlState('jump', false) }
+    await esperar(400)
+    const b = bot.blockAt(dest)
+    if (b && b.boundingBox === 'block') return { nombre: b.name }
+  }
+  return { error }
 }
 const deMateriaNombre = (nombre, materia) => (materia === 'tablones' ? nombre.endsWith('_planks') : nombre === materia)
 module.exports.fabricarTablones = fabricarTablones // F7.2: la reutiliza fabricar (1 tronco → 4 tablones, sin mesa)

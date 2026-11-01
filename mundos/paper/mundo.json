@@ -1,0 +1,13 @@
+{
+ "servidor": {
+  "host": "localhost",
+  "puerto": 25571,
+  "version": "26.1",
+  "tick_end": true,
+  "destino": "127.0.0.1:25570",
+  "nota": "Paper 26.3 local (servidor-paper/, 2026-11-01): reproduce el server Paper del compañero para leer su consola. El bot entra por ViaProxy (make paper-proxy-start: 25571 → destino) hablando 26.1, con tick_end."
+ },
+ "aparicion": null,
+ "campamento": null,
+ "puntos": []
+}

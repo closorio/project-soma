@@ -1,9 +1,10 @@
 #!/bin/bash
 # Para el proxy del mundo del usuario: solo el PID de proxy.pid y solo si es ViaProxy con la carpeta de trabajo esta.
+# Con «companero», el del server del compañero (proxy-companero.pid).
 set -u
 cd "$(dirname "$0")"
-PIDF=proxy.pid
-[ -f "$PIDF" ] || { echo "no hay proxy.pid: no está en marcha"; exit 0; }
+PIDF=proxy.pid; case "${1:-}" in companero|paper) PIDF=proxy-$1.pid ;; esac
+[ -f "$PIDF" ] || { echo "no hay $PIDF: no está en marcha"; exit 0; }
 PID=$(cat "$PIDF")
 kill -0 "$PID" 2>/dev/null || { echo "no está en marcha (PID $PID ya no existe)"; rm -f "$PIDF"; exit 0; }
 if [ "$(readlink /proc/"$PID"/cwd)" != "$PWD" ] || ! tr '\0' ' ' < /proc/"$PID"/cmdline | grep -q 'ViaProxy.jar'; then
