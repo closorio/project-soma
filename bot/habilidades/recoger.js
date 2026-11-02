@@ -63,16 +63,17 @@ const CERCA_H = 2, CERCA_V = 2
 module.exports = async function recoger(bot, args, tarea) {
   const palabras = (args || []).filter(Boolean)
   // «otra_vez» (la orden «recoge»): vuelve a intentar lo que dio por inalcanzable; max:N, cuántos objetos como mucho (8 por defecto)
+  // «vedadas» (2026-11-02, recuperar lo de la muerte): recoge también lo caído en zonas vedadas
   const otraVez = palabras.includes('otra_vez')
   const MAX = Math.min(64, parseInt((palabras.find(a => /^max:\d+$/.test(a)) || 'max:8').slice(4)) || 8)
-  const [radio, f] = palabras.filter(a => a !== 'otra_vez' && !/^max:\d+$/.test(a)), filtro = f === '-' ? null : f
+  const [radio, f] = palabras.filter(a => a !== 'otra_vez' && a !== 'vedadas' && !/^max:\d+$/.test(a)), filtro = f === '-' ? null : f
   const R = parseFloat(radio) || 8
   const vale = (e) => !filtro || [filtro, 'objeto'].some(f => nombreObjeto(e).includes(f)) // sin metadatos aún: probar
   const total = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
   const enRadio = () => Object.values(bot.entities).filter(e => e.name === 'item' && dist(bot, e) <= R && vale(e))
   for (const [id, t] of inalcanzados(bot)) if (Date.now() - t > RECUERDO || otraVez) inalcanzados(bot).delete(id)
   // lo caído dentro de una zona vedada (../zonas.json) no se recoge: se da por inalcanzable (tampoco lo cuenta la orden obs)
-  for (const e of enRadio()) if (zonas.pasoVedado(Math.floor(e.position.x), Math.floor(e.position.y), Math.floor(e.position.z))) inalcanzados(bot).set(e.id, Date.now())
+  if (!palabras.includes('vedadas')) for (const e of enRadio()) if (zonas.pasoVedado(Math.floor(e.position.x), Math.floor(e.position.y), Math.floor(e.position.z))) inalcanzados(bot).set(e.id, Date.now())
   const siguiente = () => enRadio().filter(e => !inalcanzado(bot, e)).sort((a, b) => dist(bot, a) - dist(bot, b))[0]
   if (!enRadio().length) return { exito: false, causa: 'nada que recoger' }
   // lleno solo si nada de lo que hay cerca cabe tampoco en una pila a medias

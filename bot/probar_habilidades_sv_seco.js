@@ -157,13 +157,13 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   ;({ r } = decide({ entidades: [z(3.5), z(0.5, 6.5, 'skeleton')], inventario: espada }, 2))
   ok(r && r.habilidad === 'atacar' && r.args[0] === 'id:2', `2 hostiles y le golpea el esqueleto: defenderse de él (${JSON.stringify(r)})`)
   ;({ r } = decide({ entidades: [z(3.5), z(0.5, 6.5, 'skeleton'), z(-5.5)], inventario: espada }, 1))
-  ok(r && r.habilidad === 'huir' && !r.luego, `3 hostiles de día: huir sin refugiarse (${JSON.stringify(r)})`)
+  ok(r && r.habilidad === 'atacar' && r.args.includes('acorralado'), `3 hostiles de día: siempre se defiende, sin negarse (${JSON.stringify(r)})`)
   ;({ r } = decide({ hora: 18000, entidades: [z(3.5), z(0.5, 6.5, 'skeleton'), z(-5.5)], inventario: espada }, 1))
-  ok(r && r.habilidad === 'huir' && r.luego && r.luego.habilidad === 'refugiarse', `3 hostiles de noche: huir y refugiarse (${JSON.stringify(r)})`)
+  ok(r && r.habilidad === 'atacar' && r.args.includes('acorralado'), `3 hostiles de noche: siempre se defiende (${JSON.stringify(r)})`)
   ;({ r } = decide({ salud: 7, entidades: [z(3.5)], inventario: espada }, 1))
-  ok(r && r.habilidad === 'huir', `golpe con salud 7: huir (${JSON.stringify(r)})`)
+  ok(r && r.habilidad === 'atacar' && r.args.includes('acorralado'), `golpe con salud 7: se defiende igual (${JSON.stringify(r)})`)
   ;({ r } = decide({ entidades: [z(3.5)], inventario: [['bread', 2]] }, 1))
-  ok(r && r.habilidad === 'huir', `golpe sin arma: huir (${JSON.stringify(r)})`)
+  ok(r && r.habilidad === 'atacar' && r.args.includes('puno'), `golpe sin arma: a puñetazos (${JSON.stringify(r)})`)
   ;({ r } = decide({ entidades: [z(9.5, 0.5, 'creeper')], inventario: espada }, 1))
   ok(r && r.habilidad === 'huir' && r.args[0] === 'creeper', `golpe de creeper: apartarse de él (${JSON.stringify(r)})`)
   ;({ r } = decide({ entidades: [z(4.5, 0.5, 'creeper')], inventario: espada }))
@@ -175,7 +175,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   x = decide({ inventario: espada }, 'nadie')
   ok(!x.r && !sv.estado(x.bb).golpe, `daño sin atacante (caída, fuego, hambre): no cuenta (${JSON.stringify(x.r)})`)
   x = decide({ entidades: [{ name: 'player', username: 'Seppuq', type: 'player', pos: [2.5, 64, 0.5] }], inventario: espada }, 1)
-  ok(!x.r, 'golpe de un jugador: no cuenta')
+  ok(x.r && x.r.habilidad === 'atacar', `golpe de un jugador que no es aliado: se defiende (${JSON.stringify(x.r)})`)
   ;({ r } = decide({ salud: 7, entidades: [z(6.5)], inventario: espada }))
   ok(r && r.habilidad === 'huir', `salud 7 con un zombi a 6 sin golpe: huir (${JSON.stringify(r)})`)
   x = decide({ entidades: [z(2.5), z(0.5, 2.5), z(-1.5)], inventario: espada })
@@ -418,10 +418,10 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const zombi = { id: 3, type: 'hostile', name: 'zombie' }, ender = { id: 4, type: 'hostile', name: 'enderman' }
     const creeper = { id: 5, type: 'hostile', name: 'creeper' }, vaca = { id: 6, type: 'animal', name: 'cow' }
     const casos = [[amigo, zombi, true, 'un zombi pega al protegido'], [yo, zombi, true, 'un zombi pega al bot'],
-      [amigo, ender, true, 'un enderman pega al protegido'], [amigo, otro, false, 'otro jugador le pega'],
+      [amigo, ender, true, 'un enderman pega al protegido'], [amigo, otro, true, 'un jugador cualquiera le pega'], [amigo, otro, false, 'otro jugador aliado le pega', (n) => n === 'Ana'], [yo, amigo, false, 'el propio protegido pega al bot'],
       [amigo, creeper, false, 'un creeper (nunca se pelea)'], [vaca, zombi, false, 'el zombi pega a una vaca'],
       [amigo, undefined, false, 'daño sin atacante (caída, fuego)']]
-    for (const [v, f, quiero, txt] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
+    for (const [v, f, quiero, txt, al] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo, al) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
     // agresivo: el hostil más cercano al protegido (a ≤ 10), sin creepers ni los ignorados
     const P = (x, z) => new Vec3(x, 64, z), amigoP = { ...amigo, position: P(0, 0) }
     const ents = { 0: { ...yo, position: P(-3, 0) }, 1: amigoP, 3: { ...zombi, position: P(4, 0) }, 7: { id: 7, type: 'hostile', name: 'skeleton', position: P(0, 6) },
@@ -439,6 +439,33 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
       ok(!SVm.debeComerPorSalud(cb(18, 10, ['bread'])), 'curarse: con vida de sobra → no (eso es hambre, no curarse)')
     }
     ok(cerca(new Set([3])) === 7, `agresivo: ignorando el zombi, el esqueleto: ${cerca(new Set([3]))}`)
+  }
+
+  { // «modo centinela»: quién cuenta como intruso en la zona
+    const { Vec3 } = require('vec3'), sv = require('./habilidades/sv')
+    const mk = (id, type, name, x, extra = {}) => ({ id, type, name, position: new Vec3(x, 64, 5), isValid: true, ...extra })
+    const bx = { entity: mk(0, 'player', 'player', 0, { username: 'Trivino' }), entities: {} }
+    for (const e of [mk(1, 'hostile', 'zombie', 5), mk(2, 'player', 'player', 6, { username: 'Ana' }), mk(3, 'player', 'player', 7, { username: '__Count' }),
+      mk(4, 'player', 'player', 8, { username: 'Oqva' }), mk(5, 'hostile', 'zombie', 50), mk(6, 'hostile', 'creeper', 9), mk(7, 'animal', 'cow', 9)]) bx.entities[e.id] = e
+    const zona = { x1: 10, z1: 0, x2: 0, z2: 10 } // esquinas al revés a propósito
+    const quien = sv.intrusos(bx, zona, (n) => n === '__Count' || n === 'Oqva').map(e => e.id)
+    ok(JSON.stringify(quien) === '[1,2]', `centinela: zombi y jugador desconocido sí; dueño, bot, zombi fuera, creeper y vaca no (${JSON.stringify(quien)})`)
+    bx.entities[8] = { ...mk(8, 'hostile', 'zombie', 5), position: new Vec3(5, 40, 5) } // en una cueva, 24 bloques más abajo
+    const alto = sv.intrusos(bx, zona, () => false, new Map(), { y: 64, dy: 8 }).map(e => e.id)
+    ok(!alto.includes(8) && alto.includes(1), `centinela: el zombi de la cueva (y 40) no cuenta con ±8 sobre y 64 (${JSON.stringify(alto)})`)
+    { // «modo guardaespaldas»: jugadores no aliados a rango de golpe del protegido
+      const prot = mk(20, 'player', 'player', 0, { username: 'Count' }); prot.position = new Vec3(100, 64, 100)
+      const cerca = mk(21, 'player', 'player', 0, { username: 'Ana' }); cerca.position = new Vec3(103, 64, 100)
+      const lejos = mk(22, 'player', 'player', 0, { username: 'Beto' }); lejos.position = new Vec3(110, 64, 100)
+      const amigo = mk(23, 'player', 'player', 0, { username: 'Oqva' }); amigo.position = new Vec3(101, 64, 100)
+      bx.entities = { 20: prot, 21: cerca, 22: lejos, 23: amigo }
+      const q = sv.jugadoresCerca(bx, prot, 5, (n) => n === 'Oqva').map(e => e.username)
+      ok(JSON.stringify(q) === '["Ana"]', `guardaespaldas: solo el jugador no aliado a ≤ 5 del protegido (${JSON.stringify(q)})`)
+      const o2 = require('./ordenes').interpretar('modo guardaespaldas')
+      ok(o2.tipo === 'guardaespaldas', `«modo guardaespaldas» → ${JSON.stringify(o2)}`)
+    }
+    const o = require('./ordenes').interpretar('modo centinela')
+    ok(o.tipo === 'centinela' && o.zona === 'HOGAR', `«modo centinela» → ${JSON.stringify(o)}`)
   }
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

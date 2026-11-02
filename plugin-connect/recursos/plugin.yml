@@ -1,0 +1,18 @@
+name: SomaConnect
+version: 1.0
+main: soma.connect.SomaConnect
+api-version: "26.3"
+description: /connect y /disconnect (bots | NOMBRE) conectan y desconectan los personajes de project-soma desde el juego.
+commands:
+  connect:
+    description: Conecta todos los bots (/connect bots) o uno solo (/connect trivino).
+    usage: /connect <bots|nombre>
+    permission: somaconnect.use
+  disconnect:
+    description: Desconecta todos los bots (/disconnect bots) o uno solo (/disconnect trivino).
+    usage: /disconnect <bots|nombre>
+    permission: somaconnect.use
+permissions:
+  somaconnect.use:
+    description: Puede conectar los bots de project-soma.
+    default: op

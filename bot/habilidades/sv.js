@@ -48,15 +48,25 @@ const comidaComible = (n) => !COMIDA_MALA.has(n)
 
 // ---- armas y armadura ----
 const MATERIAL = ['wooden', 'golden', 'stone', 'copper', 'iron', 'diamond', 'netherite']
-// Puntuación de un arma: la de los sentidos (valorArma: 0, 0,5 madera u oro, 1 piedra o mejor) y, a igualdad, espada antes que
-// hacha (golpea cada 0,65 s; el hacha, cada 1,1) y el mejor material.
-function puntosArma(n) {
-  const v = valorArma(n)
-  if (!v) return 0
-  const m = /^([a-z]+)_(sword|axe)$/.exec(n)
-  return v * 100 + (m && m[2] === 'sword' ? 10 : 0) + (m ? MATERIAL.indexOf(m[1]) : 0)
+// Puntuación de un arma (2026-11-01): daño por segundo con la barra llena (daño × golpes/s, los del juego en Java 1.21), más
+// Afilado (+0,5 por nivel +0,5). Así un hacha de netherite gana a una espada de piedra y el tridente a un hacha de piedra.
+const DANO_ARMA = {
+  sword: { wooden: [4, 1.6], golden: [4, 1.6], stone: [5, 1.6], copper: [5, 1.6], iron: [6, 1.6], diamond: [7, 1.6], netherite: [8, 1.6] },
+  axe: { wooden: [7, 0.8], golden: [7, 1], stone: [9, 0.8], copper: [9, 0.8], iron: [9, 0.9], diamond: [9, 1], netherite: [10, 1] }
 }
-const mejorArma = (bot) => bot.inventory.items().filter(i => puntosArma(i.name) > 0).sort((a, b) => puntosArma(b.name) - puntosArma(a.name))[0] || null
+const DANO_OTRAS = { trident: [9, 1.1], mace: [6, 0.6] }
+// Nivel de un encantamiento en un objeto (0 si no lo tiene o no se puede leer)
+function nivelEncantamiento(item, nombre) {
+  try { return ((item && item.enchants) || []).find(e => e.name === nombre)?.lvl || 0 } catch (e) { return 0 }
+}
+function puntosArma(n, item) {
+  if (!valorArma(n)) return 0
+  const m = /^([a-z]+)_(sword|axe)$/.exec(n)
+  const [dano, ritmo] = (m ? DANO_ARMA[m[2]][m[1]] : DANO_OTRAS[n]) || [1, 1]
+  const afilado = nivelEncantamiento(item, 'sharpness')
+  return (dano + (afilado ? 0.5 * afilado + 0.5 : 0)) * ritmo
+}
+const mejorArma = (bot) => bot.inventory.items().filter(i => puntosArma(i.name, i) > 0).sort((a, b) => puntosArma(b.name, b) - puntosArma(a.name, a))[0] || null
 // Cada cuánto golpear con el arma en la mano (ms): con la barra de ataque llena (espada 1,6 golpes/s; hacha de piedra 0,8; puño 4).
 function cadencia(n) {
   if (!n) return 300
@@ -69,6 +79,13 @@ const DESTINO_PIEZA = { helmet: 'head', chestplate: 'torso', leggings: 'legs', b
 function puntosPieza(n) {
   const m = /^([a-z]+)_(helmet|chestplate|leggings|boots)$/.exec(n || '')
   return m ? (PUNTOS_ARMADURA[m[1]] || [0, 0, 0, 0])[PIEZAS.indexOf(m[2])] : 0
+}
+// Para elegir entre dos piezas: los puntos, luego la dureza (diamante 2, netherite 3) y luego Protección.
+const DUREZA = { diamond: 2, netherite: 3 }
+function valorPieza(item) {
+  if (!item) return 0
+  const m = /^([a-z]+)_/.exec(item.name)
+  return puntosPieza(item.name) * 100 + ((m && DUREZA[m[1]]) || 0) * 10 + nivelEncantamiento(item, 'protection')
 }
 
 // ---- bloques para tapiarse ----
@@ -118,25 +135,29 @@ function golpeReciente(bot, ms = 3000, desde = 0) {
   return !!(e.activo && g && g.t > e.atendido && g.t >= desde && Date.now() - g.t < ms) ? g : null
 }
 const atendido = (bot) => { estado(bot).atendido = Date.now() }
-// Apunta los golpes de monstruos (el daño sin atacante o de un no-monstruo —caída, fuego, lava, hambre, un jugador— no cuenta).
+// Apunta los golpes de monstruos y de jugadores no aliados (el daño sin atacante —caída, fuego, lava, hambre— no cuenta).
 // io.js lo llama con cada bot nuevo. `alGolpe(golpe)`: para reaccionar enseguida en reposo.
-function vigilarGolpes(bot, alGolpe = () => {}) {
+function vigilarGolpes(bot, alGolpe = () => {}, aliado = () => false) {
   bot.on('entityDead', (e) => { if (e) muertos(bot).set(e.id, Date.now()) })
   bot.on('entityHurt', (e, fuente) => {
     if (!bot.entity || e !== bot.entity) return
     anotarAgresor(bot, fuente) // un neutral que golpea pasa a ser amenaza un rato (taxonomia.AGRESOR_MS)
-    if (!esMonstruo(bot, fuente)) return
-    const g = estado(bot).golpe = { t: Date.now(), id: fuente.id, nombre: fuente.name, tipo: tipoHostil(fuente) }
+    // 2026-11-01: un jugador que le pega también cuenta, salvo los aliados (`aliado(nombre)`: sus dueños y los demás personajes)
+    const jugador = !!fuente && fuente.type === 'player' && fuente !== bot.entity && !aliado(fuente.username)
+    if (!jugador && !esMonstruo(bot, fuente)) return
+    const g = estado(bot).golpe = { t: Date.now(), id: fuente.id, nombre: jugador ? fuente.username : fuente.name, tipo: jugador ? 'jugador' : tipoHostil(fuente) }
     alGolpe(g)
   })
 }
 
-// «defiéndeme» (2026-11-01): ¿el golpe a `victima` lo da alguien con quien el guardaespaldas pelea? Solo cuentan los golpes al
-// protegido o al propio bot, de una entidad que no sea un jugador ni de NUNCA_ATACAR (el creeper, el warden…). Es defensivo:
-// un mob que no ha pegado no cuenta, por hostil o cerca que esté.
-function esAgresor(bot, victima, fuente, protegido) {
-  if (!victima || !fuente || fuente === bot.entity || fuente.type === 'player') return false
+// «protégeme» (2026-11-01): ¿el golpe a `victima` lo da alguien con quien el guardaespaldas pelea? Solo cuentan los golpes al
+// protegido o al propio bot, de una entidad que no sea de NUNCA_ATACAR (el creeper, el warden…). Un jugador cuenta si no es
+// aliado (`aliado(nombre)`: el propio protegido, los dueños y los demás personajes no). Es defensivo: un mob que no ha pegado
+// no cuenta aquí (para eso, amenazaCerca).
+function esAgresor(bot, victima, fuente, protegido, aliado = () => false) {
+  if (!victima || !fuente || fuente === bot.entity) return false
   if (victima !== bot.entity && victima !== protegido) return false
+  if (fuente.type === 'player') return fuente !== protegido && !aliado(fuente.username)
   return !NUNCA_ATACAR.has(fuente.name)
 }
 
@@ -148,11 +169,37 @@ const debeComerPorSalud = (bot) => !!bot.entity && bot.health > 0 && bot.health 
 
 // «defiéndeme agresivo»: el hostil vivo más cercano al protegido (a ≤ radio de él y a ≤ 16 del bot), sin los de NUNCA_ATACAR ni
 // los de `ignorar` (ids con los que atacar acaba de negarse). null si no hay.
+// `ignorar`: un Set de ids o un Map id → hasta cuándo (el de «protégeme», el centinela y el guardaespaldas)
+const ignorado = (ignorar, id) => (ignorar instanceof Map ? (ignorar.get(id) || 0) > Date.now() : ignorar.has(id))
 function amenazaCerca(bot, protegido, radio = 10, ignorar = new Set()) {
   if (!protegido || !bot.entity) return null
   const d = (x) => x.position.distanceTo(protegido.position)
   return Object.values(bot.entities).filter(x => x !== bot.entity && x !== protegido && esAmenaza(bot, x) && vivo(bot, x) && !NUNCA_ATACAR.has(x.name) &&
-    !ignorar.has(x.id) && d(x) <= radio && x.position.distanceTo(bot.entity.position) <= 16).sort((a, b) => d(a) - d(b))[0] || null
+    !ignorado(ignorar, x.id) && d(x) <= radio && x.position.distanceTo(bot.entity.position) <= 16).sort((a, b) => d(a) - d(b))[0] || null
+}
+
+// «modo centinela»: los que han entrado en la zona (rectángulo x/z de zonas.json) y hay que echar: monstruos hostiles (o neutrales que ya han
+// pegado) y jugadores que no sean aliados (`aliado(nombre)`: dueños y otros personajes). Sin los de NUNCA_ATACAR (creeper…) ni los de
+// `ignorar` (id → hasta cuándo). Los más cercanos al bot primero.
+function intrusos(bot, zona, aliado = () => false, ignorar = new Map(), altura = null) {
+  const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
+  // altura: { y, dy } (el puesto del centinela ± dy); si la zona trae y1/y2, esos mandan. Sin nada, toda la altura.
+  const dentro = (p) => {
+    const x = Math.floor(p.x), z = Math.floor(p.z)
+    if (!(x >= x1 && x <= x2 && z >= z1 && z <= z2)) return false
+    if (zona.y1 != null && zona.y2 != null) return p.y >= Math.min(zona.y1, zona.y2) && p.y <= Math.max(zona.y1, zona.y2) + 1
+    return !altura || Math.abs(p.y - altura.y) <= altura.dy
+  }
+  return Object.values(bot.entities).filter(e => e !== bot.entity && vivo(bot, e) && !((ignorar.get(e.id) || 0) > Date.now()) && dentro(e.position)
+    && (e.type === 'player' ? !!e.username && !aliado(e.username) : esAmenaza(bot, e) && !NUNCA_ATACAR.has(e.name)))
+    .sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))
+}
+
+// «modo guardaespaldas»: los jugadores no aliados (`aliado(nombre)`) a ≤ `radio` del protegido, el más cercano a él primero, sin los de `ignorar`.
+function jugadoresCerca(bot, protegido, radio = 5, aliado = () => false, ignorar = new Map()) {
+  return Object.values(bot.entities).filter(e => e.type === 'player' && e !== bot.entity && e !== protegido && !!e.username && !aliado(e.username) && vivo(bot, e)
+    && !((ignorar.get(e.id) || 0) > Date.now()) && e.position.distanceTo(protegido.position) <= radio)
+    .sort((a, b) => a.position.distanceTo(protegido.position) - b.position.distanceTo(protegido.position))
 }
 
 // ---- el refugio en la memoria del personaje ----
@@ -183,6 +230,6 @@ async function centrar(bot, ms = 1500) {
 }
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
-  puntosArma, mejorArma, cadencia, puntosPieza, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
+  puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

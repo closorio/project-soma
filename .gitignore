@@ -52,5 +52,10 @@ conocimiento/.trash/
 # memoria persistente de cada personaje (F8.0a, bot/memoria_persistente.js): estado de partida, de cada máquina
 mundos/*/memoria_*.json
 mundos/*/memoria_*.json.*
+
+# estado en marcha de los personajes (modos centinela y guardaespaldas, aliados): por PC, no se comparte
+mundos/*/centinela_*.json
+mundos/*/guardaespaldas_*.json
+mundos/*/aliados.json
 # ajustes de cada máquina (Makefile: -include local.mk)
 local.mk

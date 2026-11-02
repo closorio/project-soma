@@ -1,7 +1,7 @@
-// equipar [arma|armadura|todo=todo] (F7.2): la mejor arma en la mano (sv.mejorArma: espada antes que hacha, el mejor material) y
-// la mejor armadura que lleve en cada pieza. Éxito si queda equipado lo mejor que tiene («equipado» si cambió algo, «ya equipado»
-// si no); fallo «nada que equipar» si no lleva arma ni armadura. Es un reflejo de io.js (al aparecer un hostil) y la usan atacar
-// y recoger_comida antes de pelear.
+// equipar [arma|armadura|todo=todo] (F7.2): la mejor arma en la mano (sv.mejorArma: la de más daño por segundo, con Afilado), la
+// mejor armadura que lleve en cada pieza (sv.valorPieza: puntos, dureza, Protección) y el escudo en la otra mano si está libre.
+// Éxito si queda equipado lo mejor que tiene («equipado» si cambió algo, «ya equipado» si no); fallo «nada que equipar» si no
+// lleva arma ni armadura. Es un reflejo de io.js (al aparecer un hostil) y la usan atacar y recoger_comida antes de pelear.
 const { conLimite, esperar } = require('./comun')
 const sv = require('./sv')
 
@@ -19,9 +19,9 @@ async function ponerArmadura(bot) {
   let alguna = false
   for (const [pieza, destino] of Object.entries(sv.DESTINO_PIEZA)) {
     const llevo = bot.inventory.slots[ranura[pieza]]
-    const mejor = bot.inventory.items().filter(i => i.name.endsWith('_' + pieza)).sort((a, b) => sv.puntosPieza(b.name) - sv.puntosPieza(a.name))[0]
+    const mejor = bot.inventory.items().filter(i => i.name.endsWith('_' + pieza)).sort((a, b) => sv.valorPieza(b) - sv.valorPieza(a))[0]
     if (llevo) alguna = true
-    if (!mejor || sv.puntosPieza(mejor.name) <= sv.puntosPieza(llevo && llevo.name)) continue
+    if (!mejor || sv.valorPieza(mejor) <= sv.valorPieza(llevo)) continue
     alguna = true
     await conLimite(bot.equip(mejor, destino), 3000)
     await esperar(100)
@@ -30,12 +30,22 @@ async function ponerArmadura(bot) {
   return { puestas, alguna }
 }
 
+// El escudo en la mano izquierda, si la tiene libre (no quita un tótem ni otra cosa que haya puesto alguien)
+async function ponerEscudo(bot) {
+  const escudo = bot.inventory.items().find(i => i.name === 'shield')
+  if (!escudo || bot.inventory.slots[45]) return null
+  await conLimite(bot.equip(escudo, 'off-hand'), 3000)
+  await esperar(100)
+  return 'shield'
+}
+
 module.exports = async function equipar(bot, [que]) {
   const q = que || 'todo'
   let arma = null, armadura = { puestas: [], alguna: false }
   try {
     if (q !== 'armadura') arma = await ponerArma(bot)
     if (q !== 'arma') armadura = await ponerArmadura(bot)
+    if (q !== 'arma') { const e = await ponerEscudo(bot); if (e) { armadura.puestas.push(e); armadura.alguna = true } }
   } catch (e) { return { exito: false, causa: 'no pude equipar: ' + e.message } }
   const datos = { arma: arma ? arma.arma : null, armadura: armadura.puestas, mano: bot.heldItem ? bot.heldItem.name : null }
   if (!arma && !armadura.alguna) return { exito: false, causa: 'nada que equipar', ...datos }

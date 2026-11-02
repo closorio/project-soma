@@ -1,4 +1,13 @@
 {
- "zonas": [],
+ "zonas": [
+  {
+   "nombre": "HOGAR",
+   "x1": 711,
+   "z1": -960,
+   "x2": 767,
+   "z2": -887,
+   "modo": "vedada"
+  }
+ ],
  "arboles": []
 }

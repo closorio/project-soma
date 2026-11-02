@@ -13,9 +13,14 @@ RAIZ := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 NVM_BIN := $(lastword $(sort $(wildcard $(HOME)/.nvm/versions/node/*/bin)))
 export PATH := $(RAIZ)/entrenamiento/.venv/bin:$(NVM_BIN):$(PATH)
 
-WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (su server 26.1 por wifi) · usuario (26.3 por ViaProxy) · supervivencia
+WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (server 26.3 de count por wifi, por ViaProxy) · usuario (26.3 por ViaProxy) · supervivencia
 ROLE    ?= casual       # rol v2 del capataz (perfiles/v2/): casual · speedrunner
 BOTS    ?= Oqva         # uno o varios nombres: "Oqva Eco Iris" (2026-11-01: Soma pasó a llamarse Oqva)
+OTHER_BOTS ?=           # bots de otros procesos o del otro PC ("Trivino", "Oqva"): no cuentan como humanos ni se les obedece
+DESTINO ?=              # proxy del compañero: IP:puerto del server 26.3 si no es el de mundos/companero/mundo.json ("127.0.0.1:25565" cuando corre en este mismo PC)
+PROPIOS ?=              # bots tuyos de otros procesos ("Trivino Nico"): como los dueños, ni los echa el centinela ni se defiende de ellos
+OWNERS  ?=              # jugadores a los que obedecen por el chat ("__Count"); vacío, a cualquier humano
+SKIN    ?=              # skin del server que se ponen al entrar (/skin set SKIN, SkinsRestorer): "trivino"
 PORT    ?= 3001         # puerto de control del primero; los demás, consecutivos (Oqva 3001, Eco 3002…)
 STYLE   ?= recolector   # perfil v1 (estilo): recolector · cooperativo · supervivencia · constructor · explorador
 DECIDER ?= capataz      # quién decide en libre: red · guion · capataz
@@ -76,7 +81,7 @@ help:
 	@echo "Bots (en segundo plano; registro en servidor-supervivencia/logs/bots-WORLD.log):"
 	@echo "  casual              BOTS en modo libre con el rol casual      (= bots ROLE=casual)"
 	@echo "  speedrunner         lo mismo con el rol speedrunner (sin medir: llega hasta el hierro y el cubo)"
-	@echo "  bots                BOTS con ROLE en WORLD · bots-stop · bots-log (tail -f)"
+	@echo "  bots                BOTS con ROLE en WORLD (OTHER_BOTS: los de otro proceso) · bots-stop · bots-log (tail -f)"
 	@echo "Manejo en caliente (por el puerto de un bot, PORT=…):"
 	@echo "  status · progress   qué hace · etapa del rol, lo que le falta y las hechas    status-all: todos los BOTS"
 	@echo "  role ROLE=…         cambia de rol (casual, speedrunner)"
@@ -144,7 +149,7 @@ partner-ping:
 # server 26.3 del compañero (2026-10-31): un segundo ViaProxy en 25569 hacia el «destino» de mundos/companero/mundo.json
 # un segundo ViaProxy hacia el «destino» de mundos/$(1)/mundo.json, escuchando en 127.0.0.1:$(2) (companero 25569, paper 25571)
 define proxy_hacia
-	@d=$$(python3 -c 'import json; print(json.load(open("mundos/$(1)/mundo.json"))["servidor"].get("destino", ""))'); \
+	@d="$(strip $(DESTINO))"; test -n "$$d" || d=$$(python3 -c 'import json; print(json.load(open("mundos/$(1)/mundo.json"))["servidor"].get("destino", ""))'); \
 	  test -n "$$d" || { echo "mundos/$(1)/mundo.json no tiene «destino» (IP:puerto): el server es 26.1, no hace falta proxy"; exit 1; }; \
 	  test -f servidor/proxy/viaproxy.yml || { echo "falta servidor/proxy/viaproxy.yml: make proxy-download"; exit 1; }; \
 	  sed -e "s/^bind-address: .*/bind-address: 127.0.0.1:$(2)/" -e "s/^target-address: .*/target-address: $$d/" \
@@ -247,7 +252,7 @@ bots:
 	@# el PID lo escribe el propio proceso antes de hacerse node (exec): con «… &» y $$! quedaba el de una subshell intermedia,
 	@# y bots-stop no paraba a nadie
 	@p=$(strip $(PORT)); args=""; for n in $(BOTS); do args="$$args $$n:$$p:$(strip $(STYLE)):$(strip $(MODE)):$(strip $(BOT_DECIDER))"; p=$$((p + 1)); done; \
-	  cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) IO_BOTS="$$(echo $(BOTS) | tr ' ' ,)" \
+	  cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) IO_BOTS="$$(echo $(BOTS) $(OTHER_BOTS) | tr -s ' ' ,)" IO_AMOS="$$(echo $(OWNERS) | tr -s ' ' ,)" IO_PROPIOS="$$(echo $(PROPIOS) | tr -s ' ' ,)" IO_SKIN="$(strip $(SKIN))" \
 	    setsid nohup bash -c 'echo $$$$ > "$$0"; exec node io.js "$$@"' $(PID) $$args > $(LOG) 2>&1 < /dev/null & \
 	  for i in 1 2 3 4 5 6 7 8 9 10; do [ -s $(PID) ] && break; sleep 0.2; done; \
 	  echo "bots de $(WORLD_) (PID $$(cat $(PID))):$$args"; echo "registro: $(LOG)"
@@ -362,7 +367,7 @@ go:
 # la parte A de probar_libre_seco pide entrenamiento/ejecuciones/ (datos sin versionar): su fallo no cuenta si es solo ese
 test:
 	@cd bot && mal=0; for t in probar_*_seco.js; do printf "%-32s " $$t; s=$$(node $$t 2>&1); u=$$(echo "$$s" | tail -n 1); echo "$$u"; \
-	  if ! echo "$$u" | grep -qE "bien|todo bien"; then \
+	  if ! echo "$$u" | grep -qE "bien|todo bien|pruebas pasan"; then \
 	    if [ $$t = probar_libre_seco.js ] && [ "$$(echo "$$s" | grep -c "^  FALLO")" = 1 ] && echo "$$s" | grep -q "decisiones registradas del mundo del usuario"; then \
 	      echo "                                 (solo la parte A: faltan los registros del mundo del usuario en este PC)"; \
 	    else mal=1; fi; fi; done; exit $$mal
