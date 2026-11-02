@@ -1338,13 +1338,19 @@ class Personaje {
             const [r] = await paso('cosechar', [nombreZona])
             if (r.exito) {
               const n = Object.entries(r.guardado || {}).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')
-              this.ev(`[oficio] cosechados ${r.cosechados}, replantados ${r.replantados}${r.sinSemilla ? `, sin semilla ${r.sinSemilla}` : ''}; guardado: ${n || 'nada'} (${r.causa})`)
-              if (Date.now() - ultimoAviso > 120000) { bot.chat(`Cosechados ${r.cosechados}${n ? `, guardo ${n}` : ''}${r.causa !== 'guardado' ? ` (${r.causa})` : ''}.`); ultimoAviso = Date.now() }
+              this.ev(`[oficio] cosechados ${r.cosechados}, replantados ${r.replantados}${r.reparados ? `, reparados ${r.reparados}` : ''}${r.sinSemilla ? `, sin semilla ${r.sinSemilla}` : ''}; guardado: ${n || 'nada'} (${r.causa})`)
+              if (Date.now() - ultimoAviso > 120000) { bot.chat(`Cosechados ${r.cosechados}${r.reparados ? `, reparo ${r.reparados} parcelas` : ''}${n ? `, guardo ${n}` : ''}${r.causa !== 'guardado' ? ` (${r.causa})` : ''}.`); ultimoAviso = Date.now() }
               await esperar(5000)
             } else {
               if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${nombreZona}.`, pasos: [] }
-              const espera = r.causa === 'sin cultivos maduros' ? ESPERA_COSECHA : 8000 // nada maduro: a que crezca; un fallo (amenaza, sin camino…): poco
-              for (const t1 = Date.now(); Date.now() - t1 < espera && !(tarea && tarea.cancelada); ) await esperar(500)
+              // nada maduro: a que crezca, mirando el campo cada 3 s (polvo de hueso o lo que sea: se pone a cosechar al momento) y, cada ESPERA_COSECHA,
+              // repasando el campo por si hay parcelas que reparar; un fallo (amenaza, sin camino…): poco
+              const espera = /^sin cultivos maduros/.test(r.causa) ? ESPERA_COSECHA : 8000
+              const cosechar = require('./habilidades/cosechar')
+              for (const t1 = Date.now(); Date.now() - t1 < espera && !(tarea && tarea.cancelada); ) {
+                await esperar(3000)
+                if (bot.entity && cosechar.hayMaduros(bot, nombreZona)) break
+              }
             }
           } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
         }

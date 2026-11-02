@@ -2,10 +2,16 @@
 // remolachas), rompe cada uno y vuelve a plantar la misma semilla en el mismo bloque (el campo queda como estaba). Sin romper nada más.
 // Al terminar guarda lo cosechado en un cofre marcado con un marco con comida (zanahoria, chuleta…: cualquier alimento, o el propio
 // cultivo) pegado a él; si hay varios, el del marco con lo que lleva. Éxito si cosechó algo. Fallos: sin zona · sin cultivos maduros.
-// Devuelve { exito, causa, zona, cosechados, replantados, sinSemilla, guardado: { objeto: n }, cofre }.
+// Además lleva la cuenta de las parcelas del campo (campo_<ZONA>.json): si un salto las pisó (la labranza vuelve a ser tierra) o quedaron
+// vacías, las vuelve a preparar con una azada del inventario y a plantar. Devuelve { exito, causa, zona, cosechados, replantados,
+// reparados, sinSemilla, sinAzada, guardado: { objeto: n }, cofre }.
+const fs = require('fs')
+const path = require('path')
 const { Vec3 } = require('vec3')
 const { goals } = require('mineflayer-pathfinder')
 const zonas = require('../zonas')
+const mundo = require('../mundo')
+const alcance = require('../alcance')
 const sv = require('./sv')
 const depositar = require('./depositar')
 const recoger = require('./recoger')
@@ -28,6 +34,42 @@ function madura(b) {
   const p = typeof b.getProperties === 'function' ? b.getProperties() : {}
   const edad = p.age !== undefined ? Number(p.age) : b.metadata
   return edad >= c.edad
+}
+
+// Las parcelas del campo (donde se ha visto un cultivo, de cualquier edad): { 'x,y,z': cultivo }. Sobreviven a reinicios y a otros personajes.
+const rutaCampo = (zona) => path.join(mundo.carpetaDatos, `campo_${alcance.seguro(zona.nombre)}.json`)
+const leerCampo = (zona) => { try { return JSON.parse(fs.readFileSync(rutaCampo(zona), 'utf8')).parcelas || {} } catch (_) { return {} } }
+function guardarCampo(zona, parcelas) {
+  try { const tmp = `${rutaCampo(zona)}.${process.pid}.tmp`; fs.writeFileSync(tmp, JSON.stringify({ parcelas }) + '\n'); fs.renameSync(tmp, rutaCampo(zona)) } catch (_) {}
+}
+const SUELO_PISADO = new Set(['dirt', 'grass_block', 'dirt_path', 'coarse_dirt'])
+
+function limites(zona) {
+  const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
+  return { x1, x2, z1, z2, dentro: (p) => p.x >= x1 && p.x <= x2 && p.z >= z1 && p.z <= z2 && (zona.y1 == null || (p.y >= zona.y1 && p.y <= zona.y2)),
+    centro: (y) => new Vec3((x1 + x2) / 2, y, (z1 + z2) / 2), radio: Math.min(128, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 2) + 8) }
+}
+const maduros = (bot, zona) => {
+  const l = limites(zona)
+  return bot.findBlocks({ matching: (b) => !!b && madura(b), point: l.centro(bot.entity.position.y), maxDistance: l.radio, count: MAX_CULTIVOS })
+    .filter(p => l.dentro(p) && !zonas.pasoVedado(p.x, p.y, p.z) && sv.puedePoner(p.x, p.y, p.z))
+}
+// ¿Hay algo maduro en esa zona? (io.js lo mira cada pocos segundos mientras espera; es local, no gasta red)
+function hayMaduros(bot, nombre) {
+  const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombre || 'HOGAR').toLowerCase())
+  return !!zona && maduros(bot, zona).length > 0
+}
+
+// Con la azada: la tierra pisada vuelve a ser labranza. true si queda labranza.
+async function labrar(bot, suelo) {
+  const azada = bot.inventory.items().find(i => i.name.endsWith('_hoe'))
+  if (!azada) return false
+  try {
+    if (!bot.heldItem || bot.heldItem.name !== azada.name) { await conLimite(bot.equip(azada, 'hand'), 3000); await esperar(80) }
+    await conLimite(bot.activateBlock(suelo), 3000)
+  } catch (_) { /* se comprueba abajo */ }
+  for (let w = 0; w < 8 && (bot.blockAt(suelo.position) || {}).name !== 'farmland'; w++) await esperar(60)
+  return (bot.blockAt(suelo.position) || {}).name === 'farmland'
 }
 
 // El objeto que lleva un marco (nombre del juego) o null si está vacío. La ranura de la entidad guarda { itemId, … } en la metadata.
@@ -86,6 +128,9 @@ async function guardar(bot, desde, tarea) {
   const nombres = new Set(lleva().map(i => i.name))
   marcados.sort((a, b) => (nombres.has(b.objeto) ? 1 : 0) - (nombres.has(a.objeto) ? 1 : 0))
   const guardado = {}, usados = []
+  // se queda una pila de cada cosa (las semillas para reparar el campo, y algo de comer): lo demás va al cofre
+  const reservadas = new Set()
+  const omitir = (it) => { if (!COSECHA.has(it.name)) return true; if (reservadas.has(it.name)) return false; reservadas.add(it.name); return true }
   let causa = null
   for (const c of marcados) {
     if (!lleva().length || (tarea && tarea.cancelada)) break
@@ -95,7 +140,7 @@ async function guardar(bot, desde, tarea) {
     const b = bot.blockAt(c.pos)
     if (r !== 'listo' || !b || !CONTENEDORES.has(b.name)) { causa = `no llego al cofre (${r})`; continue }
     try {
-      const g = await depositar.conCerrojo(`${c.pos.x},${c.pos.y},${c.pos.z}`, () => depositar.guardarEn(bot, b, tarea, it => !COSECHA.has(it.name)))
+      const g = await depositar.conCerrojo(`${c.pos.x},${c.pos.y},${c.pos.z}`, () => depositar.guardarEn(bot, b, tarea, omitir))
       usados.push(`${c.pos.x},${c.pos.y},${c.pos.z}`)
       for (const [k, n] of Object.entries(g.movido)) guardado[k] = (guardado[k] || 0) + n
       if (g.lleno) causa = 'cofre lleno'
@@ -109,18 +154,38 @@ module.exports = async function cosechar(bot, args, tarea) {
   const nombre = (args || []).find(a => a && a !== 'sin_guardar') || 'HOGAR'
   const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombre).toLowerCase())
   if (!zona) return { exito: false, causa: 'sin zona', zona: nombre, cosechados: 0, replantados: 0 }
-  const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
-  const dentro = (p) => p.x >= x1 && p.x <= x2 && p.z >= z1 && p.z <= z2 && (zona.y1 == null || (p.y >= zona.y1 && p.y <= zona.y2))
-  const centro = new Vec3((x1 + x2) / 2, bot.entity.position.y, (z1 + z2) / 2)
-  const radio = Math.min(128, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 2) + 8)
-  const pendientes = bot.findBlocks({ matching: (b) => !!b && madura(b), point: centro, maxDistance: radio, count: MAX_CULTIVOS })
-    .filter(p => dentro(p) && !zonas.pasoVedado(p.x, p.y, p.z) && sv.puedePoner(p.x, p.y, p.z))
-  const base = { zona: zona.nombre, cosechados: 0, replantados: 0, sinSemilla: 0 }
-  if (!pendientes.length) return { exito: false, causa: 'sin cultivos maduros', ...base, guardado: {} }
+  const l = limites(zona), centro = l.centro(bot.entity.position.y)
+  const base = { zona: zona.nombre, cosechados: 0, replantados: 0, reparados: 0, sinSemilla: 0, sinAzada: 0 }
+  // las parcelas que se ven ahora (cualquier edad) se apuntan; las apuntadas que están vacías o pisadas se reparan antes de cosechar
+  const campo = leerCampo(zona)
+  let nuevas = false
+  for (const p of bot.findBlocks({ matching: (b) => !!b && !!CULTIVOS[b.name], point: centro, maxDistance: l.radio, count: 2000 }).filter(l.dentro)) {
+    const k = `${p.x},${p.y},${p.z}`, c = bot.blockAt(p).name
+    if (campo[k] !== c) { campo[k] = c; nuevas = true }
+  }
+  if (nuevas) guardarCampo(zona, campo)
+  const pendientes = maduros(bot, zona)
   const mov = () => prudentes(bot, { pisarVedadas: true })
   const hecho = {}, huecos = []
   const t0 = Date.now()
   let causa = null
+  const vacias = Object.entries(campo).map(([k, c]) => ({ cultivo: c, p: new Vec3(...k.split(',').map(Number)) }))
+    .filter(({ p }) => { const b = bot.blockAt(p), s = bot.blockAt(p.offset(0, -1, 0)); return b && s && b.name === 'air' && (s.name === 'farmland' || SUELO_PISADO.has(s.name)) && sv.puedePoner(p.x, p.y, p.z) && !zonas.pasoVedado(p.x, p.y, p.z) })
+    .sort((a, b) => a.p.distanceTo(bot.entity.position) - b.p.distanceTo(bot.entity.position))
+  for (const v of vacias) {
+    if (tarea && tarea.cancelada) break
+    const suelo0 = bot.blockAt(v.p.offset(0, -1, 0))
+    if (suelo0.name !== 'farmland' && !bot.inventory.items().some(i => i.name.endsWith('_hoe'))) { base.sinAzada++; continue }
+    if (!bot.inventory.items().some(i => i.name === CULTIVOS[v.cultivo].semilla)) { base.sinSemilla++; continue }
+    const meta = v.p.offset(0.5, 0.5, 0.5)
+    const r = await moverHasta(bot, new goals.GoalNear(v.p.x, v.p.y, v.p.z, 2), () => bot.entity.position.offset(0, 1.62, 0).distanceTo(meta) <= 4,
+      { ms: 20000 + meta.distanceTo(bot.entity.position) * 1000, tarea, mov: mov() })
+    if (r === 'cancelado') break
+    if (r !== 'listo') continue
+    const suelo = bot.blockAt(v.p.offset(0, -1, 0))
+    if (suelo.name !== 'farmland' && !(await labrar(bot, suelo))) continue
+    if (await plantar(bot, v.cultivo, v.p, tarea)) base.reparados++
+  }
   while (pendientes.length && !(tarea && tarea.cancelada) && Date.now() - t0 < MS_MAX) {
     pendientes.sort((a, b) => a.distanceTo(bot.entity.position) - b.distanceTo(bot.entity.position))
     const p = pendientes.shift(), meta = p.offset(0.5, 0.5, 0.5)
@@ -148,8 +213,9 @@ module.exports = async function cosechar(bot, args, tarea) {
     if (await plantar(bot, h.cultivo, h.p, tarea)) base.replantados++
     else base.sinSemilla++
   }
-  if (!base.cosechados) return { exito: false, causa: causa || (tarea && tarea.cancelada ? 'cancelado' : 'no coseché nada'), ...base, guardado: {} }
+  if (!base.cosechados && base.reparados) return { exito: true, causa: 'reparado', ...base, guardado: {}, cofre: null }
+  if (!base.cosechados) return { exito: false, causa: causa || (tarea && tarea.cancelada ? 'cancelado' : base.sinSemilla || base.sinAzada ? 'sin cultivos maduros (campo sin reparar: falta ' + (base.sinAzada ? 'azada' : 'semilla') + ')' : 'sin cultivos maduros'), ...base, guardado: {} }
   const g = (tarea && tarea.cancelada) || (args || []).includes('sin_guardar') ? { guardado: {}, cofre: null, causa: 'sin guardar' } : await guardar(bot, centro, tarea)
   return { exito: true, causa: g.causa, ...base, cultivos: hecho, guardado: g.guardado, cofre: g.cofre }
 }
-Object.assign(module.exports, { CULTIVOS, COSECHA, madura, itemDeMarco, cofresMarcados })
+Object.assign(module.exports, { hayMaduros, CULTIVOS, COSECHA, madura, itemDeMarco, cofresMarcados })
