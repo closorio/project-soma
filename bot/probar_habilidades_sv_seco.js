@@ -377,6 +377,8 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const o = ordenes.interpretar(t); ok(o && o.tipo === 'escolta' && o.a === a, `«${t}» → ${JSON.stringify(o)} (esperaba escolta${a ? ' a ' + a : ''})`)
   }
   ok(ordenes.interpretar('defiéndete').tipo === 'ataca', '«defiéndete» sigue siendo atacar')
+  for (const [t, modo] of [['defiéndeme', 'pasivo'], ['defiéndeme agresivo', 'agresivo'], ['defiéndeme pasivo', 'pasivo'], ['defiende a Pepe agresiva', 'agresivo']])
+    ok(ordenes.interpretar(t).modo === modo, `«${t}» → modo ${ordenes.interpretar(t).modo} (esperaba ${modo})`)
   { const o = ordenes.interpretar('ataca a __Count'); ok(o.tipo === 'ataca' && o.nombre === '__count' && !o.de, `«ataca a __Count» → ${JSON.stringify(o)}`) }
   { const o = ordenes.interpretar('ataca a Trivino en 120 64 -300'); ok(o.nombre === 'trivino' && JSON.stringify(o.en) === '[120,64,-300]', `«ataca a Trivino en 120 64 -300» → ${JSON.stringify(o)}`) }
   { const j = require('./jugadores'), b = new (require('events'))(), e = { type: 'player', username: 'Pepe', position: new Vec3(5, 64, -7) }
@@ -393,6 +395,14 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
       [amigo, creeper, false, 'un creeper (nunca se pelea)'], [vaca, zombi, false, 'el zombi pega a una vaca'],
       [amigo, undefined, false, 'daño sin atacante (caída, fuego)']]
     for (const [v, f, quiero, txt] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
+    // agresivo: el hostil más cercano al protegido (a ≤ 10), sin creepers ni los ignorados
+    const P = (x, z) => new Vec3(x, 64, z), amigoP = { ...amigo, position: P(0, 0) }
+    const ents = { 0: { ...yo, position: P(-3, 0) }, 1: amigoP, 3: { ...zombi, position: P(4, 0) }, 7: { id: 7, type: 'hostile', name: 'skeleton', position: P(0, 6) },
+      5: { ...creeper, position: P(1, 0) }, 6: { ...vaca, position: P(0, 1) }, 8: { id: 8, type: 'hostile', name: 'zombie', position: P(30, 0) } }
+    const bz = { entity: ents[0], entities: ents, yo: {} }
+    const cerca = (ign) => { const x = require('./habilidades/sv').amenazaCerca(bz, amigoP, 10, ign); return x && x.id }
+    ok(cerca() === 3, `agresivo: el zombi a 4 (no el creeper a 1, ni la vaca, ni el zombi a 30): ${cerca()}`)
+    ok(cerca(new Set([3])) === 7, `agresivo: ignorando el zombi, el esqueleto: ${cerca(new Set([3]))}`)
   }
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

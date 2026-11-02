@@ -140,6 +140,15 @@ function esAgresor(bot, victima, fuente, protegido) {
   return !NUNCA_ATACAR.has(fuente.name)
 }
 
+// «defiéndeme agresivo»: el hostil vivo más cercano al protegido (a ≤ radio de él y a ≤ 16 del bot), sin los de NUNCA_ATACAR ni
+// los de `ignorar` (ids con los que atacar acaba de negarse). null si no hay.
+function amenazaCerca(bot, protegido, radio = 10, ignorar = new Set()) {
+  if (!protegido || !bot.entity) return null
+  const d = (x) => x.position.distanceTo(protegido.position)
+  return Object.values(bot.entities).filter(x => x !== bot.entity && x !== protegido && esAmenaza(bot, x) && vivo(bot, x) && !NUNCA_ATACAR.has(x.name) &&
+    !ignorar.has(x.id) && d(x) <= radio && x.position.distanceTo(bot.entity.position) <= 16).sort((a, b) => d(a) - d(b))[0] || null
+}
+
 // ---- el refugio en la memoria del personaje ----
 // refugio: la casilla de los pies dentro de la celda (la usan los sentidos: refugio_dist); refugioInfo: cómo se hizo (modo, salida,
 // bloques puestos y picados, para salir y para que el banco de pruebas reponga el terreno).
@@ -169,5 +178,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, anotarRefugio, refugioInfo,
   centrar }

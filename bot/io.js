@@ -93,7 +93,7 @@ const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s y
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
 const PALABRAS = { ordenes: 'órdenes', libre: 'libre' }
 // Lo que dice al aceptar una orden con acción (por el chat, y la respuesta inmediata de `orden` por el puerto).
-const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (o.a ? `Cubro a ${o.a}.` : 'Te cubro.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
+const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
   tala: (o) => `Voy a talar ${o.n} tronco${o.n > 1 ? 's' : ''}.`, guarda: () => 'Voy al cofre.',
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
@@ -764,11 +764,14 @@ class Personaje {
       }
       case 'escolta': {
         // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y, si alguien le pega a él o al bot (sv.esAgresor), corta, pelea (atacar id:N, con
-        // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Defensivo: el mob que no pega no cuenta.
+        // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Pasivo (por defecto): el mob que no pega no cuenta.
+        // Agresivo («defiéndeme agresivo»): además, a por el hostil más cercano a ≤ 10 del protegido (sv.amenazaCerca).
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
         const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
+        const agresivo = o.modo === 'agresivo' // también a por los hostiles a ≤ 10 del protegido, aunque no peguen
         let agresor = null, negado = false
+        const ignorar = new Map() // id → hasta cuándo no reintentar (atacar se negó: creeper, demasiados…), para no girar en vacío
         const alGolpe = (victima, fuente) => {
           if (!sv.esAgresor(bot, victima, fuente, e)) return
           agresor = { id: fuente.id, t: Date.now() }
@@ -778,6 +781,12 @@ class Personaje {
           const x = agresor && bot.entities[agresor.id]
           return !!x && x.isValid !== false && Date.now() - agresor.t < AGRESOR_ESCOLTA_MS && x.position.distanceTo(bot.entity.position) <= 16
         }
+        const objetivo = () => {
+          for (const [id, hasta] of ignorar) if (Date.now() > hasta) ignorar.delete(id)
+          if (vivo() && !ignorar.has(agresor.id)) return agresor.id
+          const x = agresivo ? sv.amenazaCerca(bot, e, 10, new Set(ignorar.keys())) : null
+          return x ? x.id : null
+        }
         bot.on('entityHurt', alGolpe)
         const t0 = Date.now()
         let r = 'cancelado'
@@ -786,13 +795,16 @@ class Personaje {
             const queda = SIGUEME_MAX - (Date.now() - t0)
             if (queda <= 0) { r = 'tiempo agotado'; break }
             // entra tras él en las zonas vedadas (GoalFollow, no GoalSeguirFuera): pisa, pero no rompe ni pone
-            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), vivo, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => objetivo() !== null, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
             if (r !== 'listo') break
-            const p = await this.ejecutarHabilidad('atacar', ['id:' + agresor.id, '20', 'vedadas'], tarea)
+            const id = objetivo()
+            if (id === null) continue
+            const p = await this.ejecutarHabilidad('atacar', ['id:' + id, '20', 'vedadas'], tarea)
+            if (p && !p.exito) ignorar.set(id, Date.now() + 5000)
             if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
-            agresor = null
+            if (agresor && agresor.id === id) agresor = null
           }
         } finally { bot.removeListener('entityHurt', alGolpe) }
         const textos = { 'tiempo agotado': 'Llevo diez minutos cubriéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
