@@ -1,0 +1,42 @@
+{
+ "bots": [
+  {
+   "nombre": "Oqva"
+  },
+  {
+   "nombre": "Soma"
+  },
+  {
+   "nombre": "Iris"
+  }
+ ],
+ "zonas": [
+  {
+   "nombre": "TALLER",
+   "x1": 657,
+   "z1": -840,
+   "x2": 679,
+   "z2": -818,
+   "modo": "trabajo"
+  },
+  {
+   "nombre": "CASASOMA",
+   "x1": 654,
+   "z1": -852,
+   "x2": 680,
+   "z2": -814,
+   "modo": "vedada"
+  },
+  {
+   "nombre": "BOSQUE",
+   "x1": 608,
+   "z1": -810,
+   "x2": 727,
+   "z2": -784,
+   "modo": "trabajo"
+  }
+ ],
+ "arboles": [],
+ "base": "CASASOMA",
+ "lanzador": "192.168.1.33:3150"
+}

@@ -48,6 +48,7 @@ import java.util.Map;
 public final class SomaConnect extends JavaPlugin implements Listener {
     private File script;
     private File personajes;
+    private File jugadores; // 2026-11-02: el plantel del mundo compartido, mundos/<mundo>/jugadores/<jugador>.json (bot/plantel.js)
     private File ficheroOperadores;
     private final Set<String> operadores = new HashSet<>(); // nombres en minúsculas
     private final Map<java.util.UUID, PermissionAttachment> permisos = new HashMap<>();
@@ -65,6 +66,7 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         String carpeta = "mundos/" + getConfig().getString("mundo", "companero");
         personajes = new File(proyecto, carpeta + "/personajes.local.json");
         if (!personajes.exists()) personajes = new File(proyecto, carpeta + "/personajes.json");
+        jugadores = new File(proyecto, carpeta + "/jugadores");
         ficheroOperadores = new File(getDataFolder(), "operadores.yml");
         operadores.addAll(YamlConfiguration.loadConfiguration(ficheroOperadores).getStringList("operadores"));
         getServer().getPluginManager().registerEvents(this, this);
@@ -93,8 +95,11 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         if (desconectar) params.add("--desconectar");
         if (de != null) { params.add("--de"); params.add(de); }
         params.addAll(pedidos);
+        // 2026-11-02: los bots de un jugador con «lanzador» en su jugadores/<jugador>.json corren en su PC: se le pide a su lanzador
+        // (bot/lanzador.js) con la clave de config.yml (claves.<jugador>); sin lanzador o sin clave, conectar.sh aquí, como siempre
+        String lanzador = de != null ? lanzadorDe(de) : null, clave = de != null ? getConfig().getString("claves." + de, "") : "";
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            List<String> salida = ejecutar(params);
+            List<String> salida = lanzador != null && !clave.isEmpty() ? pedirALanzador(lanzador, clave, de, pedidos, desconectar) : ejecutar(params);
             Bukkit.getScheduler().runTask(this, () -> salida.forEach(quien::sendMessage));
         });
         return true;
@@ -230,8 +235,47 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         return mejor;
     }
 
+    // «lanzador» del jugador en el plantel ("IP:puerto"), o null
+    private String lanzadorDe(String jugador) {
+        File[] fs = jugadores.listFiles((d, n) -> n.equalsIgnoreCase(jugador + ".json"));
+        if (fs == null || fs.length == 0) return null;
+        try {
+            JsonElement l = JsonParser.parseString(java.nio.file.Files.readString(fs[0].toPath())).getAsJsonObject().get("lanzador");
+            return l == null || l.isJsonNull() || l.getAsString().isBlank() ? null : l.getAsString();
+        } catch (Exception e) { getLogger().warning("no puedo leer " + fs[0] + ": " + e.getMessage()); return null; }
+    }
+
+    private List<String> pedirALanzador(String lanzador, String clave, String jugador, List<String> nombres, boolean desconectar) {
+        List<String> salida = new ArrayList<>();
+        try {
+            StringBuilder lista = new StringBuilder();
+            for (String n : nombres) lista.append(lista.length() > 0 ? "," : "").append('"').append(n).append('"'); // ya validados: [A-Za-z0-9_]
+            String cuerpo = "{\"jugador\":\"" + jugador + "\",\"nombres\":[" + lista + "],\"desconectar\":" + desconectar + "}";
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://" + lanzador + "/conectar"))
+                .timeout(java.time.Duration.ofSeconds(40)).header("content-type", "application/json").header("x-clave", clave)
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(cuerpo)).build();
+            java.net.http.HttpResponse<String> r = java.net.http.HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build()
+                .send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            var o = JsonParser.parseString(r.body()).getAsJsonObject();
+            if (o.has("lineas")) for (JsonElement e : o.getAsJsonArray("lineas")) salida.add(e.getAsString());
+            else salida.add("Tu lanzador dice: " + (o.has("error") ? o.get("error").getAsString() : r.body()));
+        } catch (Exception e) {
+            salida.add("No llego a tu lanzador (" + lanzador + "): " + e.getMessage() + " — ¿make launcher-start en tu PC?");
+        }
+        return salida;
+    }
+
     private Set<String> nombresDeBots() {
         Set<String> r = new HashSet<>();
+        // 2026-11-02: los del plantel (todos los jugadores) y, de respaldo, los de personajes.json
+        File[] fs = jugadores.listFiles((d, n) -> n.endsWith(".json") && !n.equalsIgnoreCase("EJEMPLO.json"));
+        if (fs != null) for (File f : fs) {
+            try {
+                for (JsonElement e : JsonParser.parseString(java.nio.file.Files.readString(f.toPath())).getAsJsonObject().getAsJsonArray("bots"))
+                    r.add(e.getAsJsonObject().get("nombre").getAsString());
+            } catch (Exception e) { getLogger().warning("no puedo leer " + f + ": " + e.getMessage()); }
+        }
+        if (!personajes.exists()) return r;
         try {
             for (JsonElement e : JsonParser.parseString(java.nio.file.Files.readString(personajes.toPath())).getAsJsonObject().getAsJsonArray("personajes"))
                 r.add(e.getAsJsonObject().get("nombre").getAsString());

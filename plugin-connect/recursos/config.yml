@@ -2,3 +2,7 @@
 proyecto: /home/count/codes/project-soma
 # Mundo cuyos personajes (mundos/<mundo>/personajes.json) reciben el color de su puntero al entrar
 mundo: companero
+# 2026-11-02: clave del lanzador de cada jugador cuyos bots corren en su PC («lanzador» en mundos/<mundo>/jugadores/<jugador>.json).
+# La misma que SOMA_LANZADOR_CLAVE en el local.mk de ese jugador. Sin su clave, /connect lanza aquí con conectar.sh, como siempre.
+claves: {}
+#  seppuq: "la-clave-de-seppuq"

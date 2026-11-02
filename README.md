@@ -101,12 +101,31 @@ defecto**; se activa por máquina con `SOMA_OLLAMA_MODELO` en `local.env`. Detal
 - **Vault** (`conocimiento/`, ábrelo en Obsidian): cada decisión, experimento o aprendizaje es una nota con su plantilla.
   El roadmap de cada fase vive en `conocimiento/roadmap/` (los campos `responsable` y `siguiente`). `git pull` antes de
   escribir.
-- **Tu server**: ahí los bots pican y construyen en cualquier sitio que no esté protegido. Pon tus zonas en
-  `mundos/companero/zonas.json` o crea zonas de trabajo (`!zona fin NOMBRE trabajo`).
+- **Tu server**: ahí los bots pican y construyen en cualquier sitio que no esté protegido. Tus zonas van en tu
+  `mundos/companero/jugadores/<tú>.json` (con `!zona …` desde el juego y `make share WORLD=companero` para subirlas); también
+  puedes crear zonas de trabajo (`!zona fin NOMBRE trabajo`).
 - Commits: conventional commits en inglés, en la rama `develop`.
 - **Versionado** (`herramientas/version.sh`, o `make version` / `make publicar`): semver con etiquetas `vX.Y.Z` calculadas de los
   commits (`feat` sube el minor, `fix` y el resto el parche, `!` o `BREAKING CHANGE` el major). Línea base `v1.0.0`. Por eso importa
   escribir bien el tipo del commit. Cada versión major se publica con una PR hacia el `main` del fork de Count.
+
+## Configuración: qué es de quién
+
+En un mundo compartido (el server de count) cada dato tiene un solo dueño, así que ningún pull trae ni borra lo del otro:
+
+| Qué | Dónde | En git | Lo escribe |
+|---|---|---|---|
+| El server: dirección, versión, proxy | `mundos/<mundo>/mundo.json` | sí | a mano |
+| Tus bots, tus zonas, tu base y tu lanzador | `mundos/<mundo>/jugadores/<tú>.json` (plantilla: `EJEMPLO.json`) | sí | solo tú (`!zona`, `make share`) |
+| Quién eres, tu base, tu clave de lanzador | `local.mk` (`IO_DUENOS`, `OWNERS`, `IO_BASE`, `SOMA_LANZADOR_CLAVE`) | no | tú |
+| Cómo lanzas tus bots (puerto, estilo, modo) | `mundos/<mundo>/personajes.local.json` | no | tú |
+| Lo que hacen tus bots: cofres, obras, diario, memoria, aliados | `*.local.json`, `diario.local.md`, `memoria_*.json`… | no | tus bots |
+| Solo el PC del server: ruta del proyecto y claves de lanzador | `plugins/SomaConnect/config.yml` del server | no | el del server |
+
+Los bots respetan las zonas vedadas, las de no talar y los árboles protegidos de todos; las de trabajo, solo las de su dueño.
+`/connect` lanza cada bot **en el PC de su dueño**: si tu `jugadores/<tú>.json` trae `"lanzador": "TU_IP:3150"` y el server tiene
+tu clave en su `config.yml` (`claves: { tú: "…" }`), el plugin se lo pide a tu `make launcher-start`; si no, lo lanza el PC del
+server. Los mundos de un solo jugador (el tuyo, `local`, `supervivencia`) no tienen `jugadores/`: sus datos van en los `.local`.
 
 ## Dónde leer más
 

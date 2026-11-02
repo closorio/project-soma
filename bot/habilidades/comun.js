@@ -8,6 +8,7 @@ const taxonomia = require('./taxonomia')
 // Nombres de los personajes (bots) que no son jugadores humanos: los de este proceso (io.js los añade) y los de IO_BOTS
 // (otros procesos, separados por comas). «El jugador» de la observación y de ir_a_jugador/ven es siempre un humano.
 const PERSONAJES = new Set((process.env.IO_BOTS || '').split(',').map(s => s.trim()).filter(Boolean))
+for (const b of require('../plantel').todos()) PERSONAJES.add(b) // 2026-11-02: los bots de todos los jugadores del plantel (mundo compartido)
 const esBot = (nombre) => PERSONAJES.has(nombre)
 // Bots de los personajes de este proceso, por nombre (io.js los registra al conectar): de ellos se lee el objetivo (fase C).
 const BOTS = new Map()

@@ -120,6 +120,7 @@ const AMOS = new NombresSinMayus((process.env.IO_AMOS || '').split(',').map(s =>
 const ALIADOS = require('./alcance').aliados(mundo.carpetaDatos, require('./alcance').duenoDe(AMOS), { heredado: path.join(mundo.carpetaDatos, 'aliados.json') })
 // IO_PROPIOS=Nombre1,Nombre2: los bots del usuario (de otros procesos de esta misma máquina). Con los de este proceso (VIVOS), cuentan como dueños.
 const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.trim()).filter(Boolean))
+for (const b of require('./plantel').mios()) PROPIOS.add(b) // 2026-11-02: en un mundo compartido, mis bots del plantel (jugadores/<yo>.json)
 // El brand del cliente (lo que todo cliente le dice al server al conectar): «soma-bot;dueno=NOMBRE». ASCII, sin espacios.
 const marcaDeBot = () => `soma-bot;dueno=${require('./alcance').duenoDe(AMOS)}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
@@ -130,6 +131,8 @@ const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(r
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
 // IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json; respaldo del canal soma:duenos): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
 const BOTS_DE = new Map((process.env.IO_BOTS_DE || '').split(';').filter(Boolean).map(x => { const [j, b = ''] = x.split('='); return [j.trim().toLowerCase(), b.split(',').map(y => y.trim()).filter(Boolean)] }))
+// 2026-11-02: y los del plantel del mundo compartido (mundos/<mundo>/jugadores/), que van por git y no dependen de cómo se lanzó el bot
+for (const j of require('./plantel').jugadores()) BOTS_DE.set(j.toLowerCase(), [...new Set([...(BOTS_DE.get(j.toLowerCase()) || []), ...require('./plantel').botsDe(j)])])
 const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(require('./alcance').botsDelCanal(k) || BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.tiene(n) // el que puede entrar en la zona del centinela
@@ -1957,13 +1960,15 @@ class Personaje {
     }
     const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : 'vedada')
     const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro' }
+    // 2026-11-02: en un mundo compartido va a mi jugadores/<yo>.json (plantel.js), que viaja por git: hasta «make share», solo la ven mis bots
+    const comparte = zonas.compartido() ? ' · para que la vean los demás: make share' : ''
     switch (verbo) {
       case 'inicio': { const q = pos(); ESQUINAS.set(usuario, q); return `esquina A en ${q.x}, ${q.z}; ve a la opuesta y di: !zona fin NOMBRE` }
       case 'fin': {
         const a = ESQUINAS.get(usuario); if (!a) return 'primero marca una esquina con: !zona inicio'
         if (!p[0]) return 'ponle nombre: !zona fin NOMBRE'
         const b = pos(); zonas.zonaNueva(p[0], a.x, a.z, b.x, b.z, modo(p[1])); ESQUINAS.delete(usuario)
-        return `zona ${p[0]} guardada (${TIPO[modo(p[1])]}): x ${Math.min(a.x, b.x)}..${Math.max(a.x, b.x)}, z ${Math.min(a.z, b.z)}..${Math.max(a.z, b.z)}`
+        return `zona ${p[0]} guardada (${TIPO[modo(p[1])]}): x ${Math.min(a.x, b.x)}..${Math.max(a.x, b.x)}, z ${Math.min(a.z, b.z)}..${Math.max(a.z, b.z)}${comparte}`
       }
       case 'arbol': {
         if (!p[0]) return 'ponle nombre: !zona arbol NOMBRE'
@@ -1973,11 +1978,11 @@ class Personaje {
         // todo el tronco de la columna más cercana
         const c = ts[0]; const col = ts.filter(v => v.x === c.x && v.z === c.z)
         col.forEach((v, i) => zonas.arbolNuevo(p[0] + (col.length > 1 ? '#' + i : ''), v.x, v.y, v.z))
-        return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)`
+        return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)${comparte}`
       }
       case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
       case 'tronco': { const [n, x, y, z] = p; zonas.arbolNuevo(n, +x, +y, +z); return 'tronco ' + n + ' protegido' }
-      case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}` : 'di cuál: !zona borrar NOMBRE'
+      case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}${comparte}` : 'di cuál: !zona borrar NOMBRE'
       case 'lista': { const l = zonas.lista(); return l.length ? l.join('\n') : 'no hay zonas protegidas' }
       default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE'
     }

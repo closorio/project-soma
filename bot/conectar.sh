@@ -15,10 +15,16 @@ RAIZ=$(cd "$(dirname "$0")/.." && pwd)
 MUNDO=${IO_SERVIDOR:-companero}
 # 2026-11-02: los personajes son de cada persona: personajes.local.json (no se versiona, como un .env), hecho de personajes.json si falta
 JSON=$RAIZ/mundos/$MUNDO/personajes.local.json
-[ -f "$JSON" ] || { [ -f "$RAIZ/mundos/$MUNDO/personajes.json" ] && cp "$RAIZ/mundos/$MUNDO/personajes.json" "$JSON"; }
-[ -f "$JSON" ] || { echo "falta $JSON: copia mundos/companero/personajes.ejemplo.json a mundos/$MUNDO/personajes.local.json y pon tus amos y tus bots"; exit 1; }
+# 2026-11-02: en un mundo compartido, los personajes son los del plantel (mundos/<mundo>/jugadores/<jugador>.json, en git; bot/plantel.js)
+# y personajes.local.json solo dice cómo lanzo los míos (puerto, estilo, modo, decisor). Los de un jugador con «lanzador» (otro PC) no
+# se lanzan aquí: el plugin /connect se los pide a su PC (bot/lanzador.js). Quién soy: IO_DUENOS, o el de local.mk.
+JUG=$RAIZ/mundos/$MUNDO/jugadores
+YO=${IO_DUENOS:-$(sed -n 's/^export IO_DUENOS *= *//p' "$RAIZ/local.mk" 2>/dev/null | head -n 1)}; YO=${YO%%,*}
+if [ ! -d "$JUG" ]; then
+  [ -f "$JSON" ] || { [ -f "$RAIZ/mundos/$MUNDO/personajes.json" ] && cp "$RAIZ/mundos/$MUNDO/personajes.json" "$JSON"; }
+  [ -f "$JSON" ] || { echo "falta $JSON: copia mundos/companero/personajes.ejemplo.json a mundos/$MUNDO/personajes.local.json y pon tus amos y tus bots"; exit 1; }
+fi
 LOGS=$RAIZ/servidor-supervivencia/logs
-[ -f "$JSON" ] || { echo "falta $JSON"; exit 1; }
 
 # ajustes de esta máquina, sin versionar (local.env, p. ej. SOMA_OLLAMA_MODELO=qwen3:4b para el respaldo con LLM de interprete_llm.js)
 [ -f "$RAIZ/local.env" ] && { set -a; . "$RAIZ/local.env"; set +a; }
@@ -29,15 +35,41 @@ MISE_BIN=$(ls -d "$HOME"/.local/share/mise/installs/node/*/bin 2>/dev/null | sor
 export PATH="$NVM_BIN:$MISE_BIN:$PATH"
 command -v node > /dev/null || { echo "no encuentro node"; exit 1; }
 
-# una línea por personaje: nombre puerto estilo modo decisor skin(o «-») dueno(o «-»), y las listas de amos y externos
-datos=$(python3 - "$JSON" <<'PY'
-import json, sys
-d = json.load(open(sys.argv[1]))
-print("AMOS", ",".join(d.get("amos", [])))
-print("EXTERNOS", ",".join(d.get("externos", [])))
-print("BOTSDE", ";".join(j + "=" + ",".join(b) for j, b in d.get("bots_de", {}).items()))
-for p in d["personajes"]:
-    print("P", p["nombre"], p["puerto"], p.get("estilo", "recolector"), p.get("modo", "ordenes"), p.get("decisor", "guion"), p.get("skin") or "-", p.get("dueno") or "-")
+# una línea por personaje: nombre puerto estilo modo decisor skin(o «-») dueno(o «-») donde(aqui|remoto), y las listas de amos y externos
+datos=$(python3 - "$JSON" "$JUG" "$YO" <<'PY'
+import glob, json, os, sys
+personajes, jug, yo = sys.argv[1], sys.argv[2], sys.argv[3].lower()
+if os.path.isdir(jug):  # mundo compartido: el plantel, con mis ajustes de lanzamiento
+    try:
+        ajustes = {p["nombre"].lower(): p for p in json.load(open(personajes)).get("personajes", [])}
+    except (OSError, ValueError):
+        ajustes = {}
+    print("AMOS ")
+    print("EXTERNOS ")
+    botsde, filas, puerto = [], [], 3011
+    for f in sorted(glob.glob(os.path.join(jug, "*.json"))):
+        j = os.path.basename(f)[:-5]
+        if j.lower() == "ejemplo":
+            continue
+        d = json.load(open(f))
+        remoto = bool(d.get("lanzador")) and j.lower() != yo
+        bots = d.get("bots", [])
+        botsde.append(j + "=" + ",".join(b["nombre"] for b in bots))
+        for b in bots:
+            a = ajustes.get(b["nombre"].lower(), {})
+            filas.append(["P", b["nombre"], a.get("puerto", b.get("puerto", puerto)), a.get("estilo", "recolector"), a.get("modo", "ordenes"),
+                          a.get("decisor", "guion"), b.get("skin") or a.get("skin") or "-", j, "remoto" if remoto else "aqui"])
+            puerto += 1
+    print("BOTSDE", ";".join(botsde))
+    for f in filas:
+        print(" ".join(map(str, f)))
+else:
+    d = json.load(open(personajes))
+    print("AMOS", ",".join(d.get("amos", [])))
+    print("EXTERNOS", ",".join(d.get("externos", [])))
+    print("BOTSDE", ";".join(j + "=" + ",".join(b) for j, b in d.get("bots_de", {}).items()))
+    for p in d["personajes"]:
+        print("P", p["nombre"], p["puerto"], p.get("estilo", "recolector"), p.get("modo", "ordenes"), p.get("decisor", "guion"), p.get("skin") or "-", p.get("dueno") or "-", "aqui")
 PY
 ) || { echo "personajes.json no se puede leer"; exit 1; }
 
@@ -65,7 +97,7 @@ es_de() { # es_de DUENO_DE_LA_FILA JUGADOR
 TODAS=("${FILAS[@]}")
 if [ -n "$DE" ]; then
   FILAS=()
-  for f in "${TODAS[@]}"; do read -r _ _ _ _ _ _ dueno <<< "$f"; es_de "$dueno" "$DE" && FILAS+=("$f"); done
+  for f in "${TODAS[@]}"; do read -r _ _ _ _ _ _ dueno _ <<< "$f"; es_de "$dueno" "$DE" && FILAS+=("$f"); done
 fi
 NOMBRES=$(for f in "${FILAS[@]}"; do echo "${f%% *}"; done)
 NOMBRES_TODOS=$(for f in "${TODAS[@]}"; do echo "${f%% *}"; done)
@@ -77,7 +109,8 @@ TODOS=$(echo "$NOMBRES_TODOS" | paste -sd, -)
 mkdir -p "$LOGS"
 
 conectar() {
-  local nombre=$1 puerto=$2 estilo=$3 modo=$4 decisor=$5 skin=$6 dueno=${7:--}
+  local nombre=$1 puerto=$2 estilo=$3 modo=$4 decisor=$5 skin=$6 dueno=${7:--} donde=${8:-aqui}
+  [ "$donde" = "remoto" ] && { echo "$nombre: es de $dueno y se lanza en su PC (su lanzador: make launcher-start allí)"; return; }
   [ "$skin" = "-" ] && skin=""
   # su dueño: el de su entrada, o los amos de la lista; los «propios» son los demás personajes del mismo dueño
   local amos=$AMOS; [ "$dueno" != "-" ] && amos=$dueno
@@ -85,7 +118,7 @@ conectar() {
   # por la línea de comandos y no por el PID apuntado: los lanzados a mano no tienen archivo
   if pgrep -f "node io.js $nombre:" > /dev/null; then echo "$nombre: ya estaba conectado"; return; fi
   # los demás de la lista son «propios»: ni los echa el centinela ni se defiende de ellos
-  local propios; propios=$(for f in "${TODAS[@]}"; do read -r n _ _ _ _ _ d <<< "$f"; [ "$n" != "$nombre" ] && [ "$d" = "$dueno" ] && echo "$n"; done | paste -sd, -)
+  local propios; propios=$(for f in "${TODAS[@]}"; do read -r n _ _ _ _ _ d _ <<< "$f"; [ "$n" != "$nombre" ] && [ "$d" = "$dueno" ] && echo "$n"; done | paste -sd, -)
   rm -f "$pidf"
   ( cd "$RAIZ/bot" && IO_SERVIDOR=$MUNDO IO_BOTS="$TODOS${EXTERNOS:+,$EXTERNOS}" IO_AMOS=$amos IO_BOTS_DE=$BOTSDE IO_PROPIOS=$propios IO_SKIN=$skin IO_RECONECTAR=0 \
       setsid nohup bash -c 'echo $$ > "$0"; exec node io.js "$1"' "$pidf" "$nombre:$puerto:$estilo:$modo:$decisor" \
@@ -106,18 +139,18 @@ desconectar() {
 
 pedidos=("$@")
 [ "${1,,}" = "bots" ] && mapfile -t pedidos <<< "$NOMBRES"
-[ "${1,,}" = "bots" ] && [ -z "$NOMBRES" ] && { echo "no tienes personajes en personajes.json${DE:+ ($DE)}"; exit 0; }
+[ "${1,,}" = "bots" ] && [ -z "$NOMBRES" ] && { echo "no tienes personajes en la lista${DE:+ ($DE)}"; exit 0; }
 for pedido in "${pedidos[@]}"; do
   hallado=0
   for f in "${FILAS[@]}"; do
-    read -r nombre puerto estilo modo decisor skin dueno <<< "$f"
+    read -r nombre puerto estilo modo decisor skin dueno donde <<< "$f"
     if [ "${nombre,,}" = "${pedido,,}" ]; then
-      if [ $DESCONECTAR = 1 ]; then desconectar "$nombre"; else conectar "$nombre" "$puerto" "$estilo" "$modo" "$decisor" "$skin" "$dueno"; fi
+      if [ $DESCONECTAR = 1 ]; then desconectar "$nombre"; else conectar "$nombre" "$puerto" "$estilo" "$modo" "$decisor" "$skin" "$dueno" "$donde"; fi
       hallado=1
     fi
   done
   if [ $hallado = 0 ]; then
     if [ -n "$DE" ] && grep -qix "$pedido" <<< "$NOMBRES_TODOS"; then echo "$pedido: no es tuyo"
-    else hay=$NOMBRES_TODOS; [ -n "$DE" ] && hay=$NOMBRES; echo "$pedido: no está en personajes.json (hay: $(echo "$hay" | tr '\n' ' '))"; fi
+    else hay=$NOMBRES_TODOS; [ -n "$DE" ] && hay=$NOMBRES; echo "$pedido: no está en la lista de personajes (hay: $(echo "$hay" | tr '\n' ' '))"; fi
   fi
 done

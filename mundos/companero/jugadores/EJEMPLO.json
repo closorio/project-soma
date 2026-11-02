@@ -1,0 +1,13 @@
+{
+ "nota": "Plantilla del plantel de un mundo compartido: cópiala a jugadores/<tu jugador>.json (va en git y solo la escribes tú). bots: tus personajes (y su skin); zonas y arboles: las que todos los bots respetan (las de trabajo, solo los tuyos); base: tu zona de cofres; lanzador: «IP:puerto» de tu PC si tus bots corren allí y no en el del servidor (make launcher-start). Cómo lanzas tus bots (puerto, estilo, modo, decisor) va en personajes.local.json, que no se versiona.",
+ "bots": [
+  {
+   "nombre": "MiBot",
+   "skin": ""
+  }
+ ],
+ "zonas": [],
+ "arboles": [],
+ "base": "",
+ "lanzador": ""
+}

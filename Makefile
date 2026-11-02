@@ -60,7 +60,7 @@ publicar:
 .PHONY: version publicar help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order go move-log zone zones zone-delete import-structure structures test validate-profiles bench-smoke bench-k bench-prepare
+        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -98,6 +98,8 @@ help:
 	@echo "  go POS=\"x y z\"      que vaya a esas coordenadas (las de F3): cuando está lejos y «ven» no te ve"
 	@echo "  zone NAME=… AREA=\"x1 z1 x2 z2\" [TYPE=trabajo|no_talar]   zona por coordenadas · zones (lista) · zone-delete NAME=…"
 	@echo "  import-structure FILE=… NAME=… [ALIAS=\"…\"] [FORCE=1]   importa un .litematic (catalogo/) a bot/estructuras/ · structures (lista)"
+	@echo "  launcher-start · launcher-stop   lanzador: el /connect del servidor de otro PC lanza aquí tus bots (SOMA_LANZADOR_CLAVE en local.mk)"
+	@echo "  share WORLD=companero   sube a git tu jugadores/<tú>.json (tus bots y zonas del mundo compartido) para que lo vean los demás"
 	@echo "  move-log [WORLD=…]  ¿el server lo recoloca? ¿por qué rehace la ruta? (cuando no avanza)"
 	@echo "Pruebas y bancos:"
 	@echo "  test                todas las pruebas en seco (bot/probar_*_seco.js) · validate-profiles"
@@ -370,6 +372,23 @@ zone-delete:
 go:
 	@test -n "$(strip $(POS))" || { echo 'uso: make go POS="x y z" [PORT=3001]'; exit 1; }
 	@curl -s --max-time 600 "127.0.0.1:$(strip $(PORT))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "ir $(strip $(POS))")"; echo
+
+# mundos compartidos (2026-11-02): el lanzador de mis bots para el /connect del servidor de otro PC, y compartir mi plantel
+LANZADOR_PID := $(LOGS)/lanzador.pid
+launcher-start:
+	@test -n "$$SOMA_LANZADOR_CLAVE" || { echo 'falta SOMA_LANZADOR_CLAVE: ponla en local.mk (export SOMA_LANZADOR_CLAVE = …) y en el config.yml del plugin del servidor'; exit 1; }
+	@if [ -f $(LANZADOR_PID) ] && kill -0 $$(cat $(LANZADOR_PID)) 2>/dev/null; then echo "el lanzador ya está en marcha (PID $$(cat $(LANZADOR_PID)))"; exit 0; fi
+	@mkdir -p $(LOGS); cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) setsid nohup bash -c 'echo $$$$ > "$$0"; exec node lanzador.js' $(LANZADOR_PID) > $(LOGS)/lanzador.log 2>&1 < /dev/null &
+	@sleep 1; tail -n 2 $(LOGS)/lanzador.log
+
+launcher-stop:
+	@if [ ! -f $(LANZADOR_PID) ]; then echo "no hay lanzador apuntado"; exit 0; fi; p=$$(cat $(LANZADOR_PID)); \
+	  if kill -0 $$p 2>/dev/null && tr '\0' ' ' < /proc/$$p/cmdline | grep -q 'lanzador.js'; then kill -TERM $$p; echo "lanzador parado"; else echo "el lanzador ya no estaba en marcha"; fi; rm -f $(LANZADOR_PID)
+
+share:
+	@yo=$${IO_DUENOS%%,*}; f=mundos/$(WORLD_)/jugadores/$$yo.json; test -n "$$yo" -a -f "$$f" || { echo "no encuentro $$f (¿IO_DUENOS en local.mk?)"; exit 1; }; \
+	  if git diff --quiet -- "$$f" && git ls-files --error-unmatch "$$f" >/dev/null 2>&1; then echo "$$f: nada nuevo que compartir"; exit 0; fi; \
+	  git add "$$f" && git commit -q -m "chore(mundos): update $$yo's roster and zones in $(WORLD_)" -- "$$f" && echo "$$f en git; súbelo con git push"
 
 # catálogo de estructuras: .litematic → bot/estructuras/<id>.json y bot/materiales/<id>.json (offline, sin juego)
 import-structure:

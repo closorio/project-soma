@@ -15,14 +15,24 @@ const RUTA = mundo.zonas
 const VACIO = () => ({ zonas: [], arboles: [] })
 let cache = { mtime: -1, datos: VACIO() }
 
+// 2026-11-02: en un mundo compartido (mundos/<mundo>/jugadores/, plantel.js) las zonas son las de todos los jugadores (las de trabajo,
+// solo las mías) y !zona escribe en mi jugadores/<yo>.json; sin esa carpeta, en zonas.local.json como siempre
+const plantel = require('./plantel')
+const compartido = () => plantel.compartido() && !!plantel.yo()
 function leer() {
+  if (compartido()) return plantel.zonasDeTodos()
   try {
     const st = fs.statSync(RUTA)
     if (st.mtimeMs !== cache.mtime) cache = { mtime: st.mtimeMs, datos: Object.assign(VACIO(), JSON.parse(fs.readFileSync(RUTA, 'utf8'))) }
   } catch (_) { cache = { mtime: -1, datos: VACIO() } }
   return cache.datos
 }
-function guardar(d) { fs.writeFileSync(RUTA, JSON.stringify(d, null, 1) + '\n'); cache.mtime = -2 }
+function guardar(d) {
+  if (compartido()) return plantel.guardarMio({ ...plantel.mio(), zonas: d.zonas, arboles: d.arboles })
+  fs.writeFileSync(RUTA, JSON.stringify(d, null, 1) + '\n'); cache.mtime = -2
+}
+// Lo que se cambia con !zona: en un mundo compartido, solo lo mío (las zonas de otro jugador no se tocan desde aquí)
+const propio = () => (compartido() ? (({ zonas, arboles }) => ({ zonas, arboles }))(plantel.mio()) : leer())
 
 const dentro = (zn, x, y, z) => x >= zn.x1 && x <= zn.x2 && z >= zn.z1 && z <= zn.z2 && (zn.y1 == null || (y >= zn.y1 && y <= zn.y2))
 const esTrabajo = (zn) => zn.modo === 'trabajo'
@@ -78,27 +88,28 @@ function aplicar(mov, { pisarVedadas = false } = {}) {
 }
 
 function zonaNueva(nombre, ax, az, bx, bz, modo = 'vedada') {
-  const d = leer()
+  const d = propio()
   d.zonas = d.zonas.filter(z => z.nombre !== nombre)
   d.zonas.push({ nombre, x1: Math.min(ax, bx), z1: Math.min(az, bz), x2: Math.max(ax, bx), z2: Math.max(az, bz), modo })
   guardar(d)
 }
 function arbolNuevo(nombre, x, y, z) {
-  const d = leer()
+  const d = propio()
   d.arboles = d.arboles.filter(a => a.nombre !== nombre && !(a.x === x && a.y === y && a.z === z))
   d.arboles.push({ nombre, x, y, z })
   guardar(d)
 }
 function borrar(nombre) {
-  const d = leer(); const n = d.zonas.length + d.arboles.length
+  const d = propio(); const n = d.zonas.length + d.arboles.length
   d.zonas = d.zonas.filter(z => z.nombre !== nombre); d.arboles = d.arboles.filter(a => a.nombre !== nombre)
   guardar(d); return n - d.zonas.length - d.arboles.length
 }
 function lista() {
   const d = leer()
   const tipo = (z) => (z.modo === 'no_talar' ? 'sin talar' : esTrabajo(z) ? 'de trabajo' : 'vedada')
-  return [...d.zonas.map(z => `${z.nombre}: zona ${tipo(z)} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}`),
+  const de = (z) => (z.dueno && z.dueno.toLowerCase() !== String(plantel.yo() || '').toLowerCase() ? ` (de ${z.dueno})` : '')
+  return [...d.zonas.map(z => `${z.nombre}: zona ${tipo(z)} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}${de(z)}`),
     ...d.arboles.map(a => `${a.nombre}: árbol en ${a.x},${a.y},${a.z}`)]
 }
-module.exports = { leer, talaProtegida, protegidoPor, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
+module.exports = { compartido, leer, talaProtegida, protegidoPor, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
   trabajo, fueraDeTrabajo, esTrabajo, FUERA_DE_TRABAJO }
