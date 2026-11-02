@@ -59,7 +59,8 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
     if (estructuras.familia(k) === 'planks') {
       for (const [m, t] of Object.entries(troncos).sort((a, b) => b[1] - a[1])) {
         const usa = Math.min(resto, t * 4), k2 = estructuras.conMadera(k, m, registry)
-        if (usa > 0 && (k2 !== k || estructuras.madera(k) === m)) { // k2 === k en otra madera: esa pieza no existe en ella faltan[k2] = (faltan[k2] || 0) + usa; troncos[m] -= Math.ceil(usa / 4); resto -= usa }
+        // k2 === k en otra madera: esa pieza no existe en ella
+        if (usa > 0 && (k2 !== k || estructuras.madera(k) === m)) { faltan[k2] = (faltan[k2] || 0) + usa; troncos[m] -= Math.ceil(usa / 4); resto -= usa }
         if (!resto) break
       }
     }
