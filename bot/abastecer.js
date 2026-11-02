@@ -66,10 +66,15 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
     }
     if (resto > 0) { const k2 = estructuras.conMadera(k, madera, registry); faltan[k2] = (faltan[k2] || 0) + resto }
   }
-  const sacar = (item, n) => { // de los cofres lo que haya, hasta n; devuelve cuánto se sacó
-    const k = Math.min(n, cofre[item] || 0)
-    if (k > 0) { cofre[item] -= k; pasos.push({ tipo: 'saca', objeto: item, n: k, para: item }) }
-    return k
+  const sacar = (item, n) => { // de los cofres lo que haya, hasta n (lo de madera, en cualquier madera); devuelve cuánto se sacó
+    let total = 0
+    const nombres = [item, ...Object.keys(cofre).filter(k => k !== item && estructuras.familia(item) && estructuras.mismoMaterial(k, item))]
+    for (const nombre of nombres) {
+      const k = Math.min(n - total, cofre[nombre] || 0)
+      if (k > 0) { cofre[nombre] -= k; total += k; pasos.push({ tipo: 'saca', objeto: nombre, n: k, para: item }) }
+      if (total >= n) break
+    }
+    return total
   }
   // 1. directamente de los cofres
   const resto = []
