@@ -123,7 +123,7 @@ function interpretar(texto) {
   if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta' }
   if ((m = t.match(/\b(?:defiende|defended|protege|proteged|escolta|escoltad) a (\w+)/))) return { tipo: 'escolta', a: m[1] }
   if ((m = t.match(/\b(?:ataca|atacad|atacar|mata|matad|matar|pelea|pelead|lucha|luchad|defiendete|defendeos|acaba con)\b(?: (?:a la |a los |a las |al |a |el |la |los |las |ese |esa |este |esta )?(\w+))?/)))
-    return { tipo: 'ataca', de: (m[1] && MOBS[m[1]]) || null }
+    return { tipo: 'ataca', de: (m[1] && MOBS[m[1]]) || null, ...(m[1] && !MOBS[m[1]] ? { nombre: m[1] } : {}) } // nombre: quizá un jugador (io.js)
   if (/\b(?:refugiate|refugiaos|refugiarse|refugiarte|escondete|escondeos|tapiate|tapiaos|entierrate|metete en un hoyo|cava un refugio)\b/.test(t))
     return { tipo: 'refugiate', modo: /\b(?:tapia|tapiate|tapiaos)\b/.test(t) ? 'tapiar' : /\b(?:cava|entierrate|hoyo)\b/.test(t) ? 'cavar' : 'auto' }
   if (/^(?:sal|salid|salte|sal fuera)\b|\b(?:sal|salid) del (?:refugio|hoyo|agujero|pozo)\b/.test(t)) return { tipo: 'sal' }

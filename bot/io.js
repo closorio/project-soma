@@ -93,7 +93,7 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (
   tala: (o) => `Voy a talar ${o.n} tronco${o.n > 1 ? 's' : ''}.`, guarda: () => 'Voy al cofre.',
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
-  come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
+  come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : o.nombre ? `Voy a por ${o.nombre}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
   sal: () => 'Salgo del refugio.', duerme: () => 'Voy a la cama.', dame: (o) => (o.objeto === 'todo' ? 'Te doy lo que llevo.' : `Te doy ${o.n || 'los'} ${o.objeto}.`), fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
   equipate: () => 'Me equipo.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
@@ -855,6 +855,16 @@ class Personaje {
         return { exito: !!r.exito, texto, pasos: [d] }
       }
       case 'ataca': {
+        // 2026-11-01: «ataca a NOMBRE» con un jugador conectado (no él mismo) va a por ese jugador; si no es un jugador, como siempre
+        const jugador = o.nombre && Object.keys(bot.players).find(n => n.toLowerCase() === o.nombre && n !== bot.username)
+        if (jugador) {
+          const e = bot.players[jugador].entity
+          if (!e) return { exito: false, texto: `No veo a ${jugador} cerca.` }
+          const [r, d] = await paso('atacar', ['id:' + e.id, '30'])
+          const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se fue.`, 'sin hostil': `No veo a ${jugador} cerca.`,
+            'salud baja': 'Estoy muy herido: no peleo.', demasiados: 'Hay demasiados monstruos: no peleo.', 'sin arma': 'No llevo arma: no peleo.' }
+          return { exito: !!r.exito, texto: textos[r.causa] || `No pude: ${r.causa}.`, pasos: [d] }
+        }
         const [r, d] = await paso('atacar', [o.de || '-', '30'])
         const textos = { muerto: `Lo maté (${r.golpes} golpes).`, 'huyó': 'Se fue.', 'sin hostil': 'No veo ningún monstruo cerca.',
           creeper: 'Es un creeper: me aparto, no peleo con él.', 'salud baja': 'Estoy muy herido: no peleo.', demasiados: 'Son demasiados: no peleo.',
