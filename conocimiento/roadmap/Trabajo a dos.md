@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F-equipo
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-10-23
-siguiente: El compañero arranca el hub en su PC y ambos ponen .claude/settings.local.json; probar el push con compartido/claude-canal
+actualizado: 2026-11-02
+siguiente: Aparcado por seppuq desde el 2026-11-02 hasta nuevo aviso (el hub no respondía); el vault sigue
 ---
 # Trabajo a dos
 
