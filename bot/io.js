@@ -88,6 +88,8 @@ const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia 
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
+const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
+const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
 const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s ya no pide pelea
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
 const PALABRAS = { ordenes: 'órdenes', libre: 'libre' }
@@ -158,7 +160,7 @@ class Personaje {
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
-    sv.vigilarGolpes(bot, () => setImmediate(() => this.reposo())) // F7.2: los golpes de monstruos, para el reflejo de defensa
+    sv.vigilarGolpes(bot, () => setImmediate(() => this.reposo()), (n) => esBot(n) || AMOS.has(n)) // F7.2: los golpes de monstruos, para el reflejo de defensa
     // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
     // recoloca (forcedMove); eso y por qué el navegador rehace la ruta van al registro (make move-log), como mucho 1 línea / 2 s
     const mov = { n: 0, t: 0 }
@@ -185,7 +187,14 @@ class Personaje {
       this.ev(`[mc] <${u}> ${m}`)
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
-      if (AMOS.size && !AMOS.has(u)) return // con dueños, el resto solo conversa
+      if (AMOS.size && !AMOS.has(u)) { // con dueños, el resto solo conversa; si le piden algo por su nombre, se ríe
+        const clave = u + '|' + t
+        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && !CHAT_ORDEN.has(clave)) {
+          CHAT_ORDEN.add(clave); setTimeout(() => CHAT_ORDEN.delete(clave), 3000)
+          bot.chat('jaja bobo')
+        }
+        return
+      }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
         const { a } = ordenes.destinatario(t, [...VIVOS.keys()])
         const clave = u + '|' + t // varios personajes oyen el mismo chat: la atiende el primero que la ve, para todos los destinatarios
@@ -760,21 +769,25 @@ class Personaje {
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
       case 'escolta': {
-        // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y, si alguien le pega a él o al bot (sv.esAgresor), corta, pelea (atacar id:N, con
-        // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Defensivo: el mob que no pega no cuenta.
+        // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y vigila: si un monstruo hostil se le acerca
+        // (sv.amenazaCerca) o alguien le pega a él o al bot (sv.esAgresor: monstruos y jugadores que no sean dueños ni personajes),
+        // corta, pelea (atacar id:N, con sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle.
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
         const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
+        const aliado = (n) => n === e.username || esBot(n) || AMOS.has(n)
+        const ignorar = new Map() // id → hasta cuándo no se reintenta (atacar se negó)
         let agresor = null, negado = false
         const alGolpe = (victima, fuente) => {
-          if (!sv.esAgresor(bot, victima, fuente, e)) return
+          if (!sv.esAgresor(bot, victima, fuente, e, aliado)) return
           agresor = { id: fuente.id, t: Date.now() }
           taxonomia.anotarAgresor(bot, fuente) // un neutral que pega cuenta como amenaza un rato (lo mira atacar)
         }
-        const vivo = () => {
+        const golpeador = () => {
           const x = agresor && bot.entities[agresor.id]
-          return !!x && x.isValid !== false && Date.now() - agresor.t < AGRESOR_ESCOLTA_MS && x.position.distanceTo(bot.entity.position) <= 16
+          return !!x && x.isValid !== false && Date.now() - agresor.t < AGRESOR_ESCOLTA_MS && x.position.distanceTo(bot.entity.position) <= 16 ? x : null
         }
+        const objetivo = () => golpeador() || sv.amenazaCerca(bot, e, ESCOLTA_RADIO, ignorar)
         bot.on('entityHurt', alGolpe)
         const t0 = Date.now()
         let r = 'cancelado'
@@ -783,12 +796,17 @@ class Personaje {
             const queda = SIGUEME_MAX - (Date.now() - t0)
             if (queda <= 0) { r = 'tiempo agotado'; break }
             // entra tras él en las zonas vedadas (GoalFollow, no GoalSeguirFuera): pisa, pero no rompe ni pone
-            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), vivo, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
             if (r !== 'listo') break
-            const p = await this.ejecutarHabilidad('atacar', ['id:' + agresor.id, '20', 'vedadas'], tarea)
-            if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
+            const x = objetivo()
+            if (!x) continue
+            const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'vedadas'], tarea)
+            if (p && !p.exito && /creeper|salud|demasiados|sin arma|nunca|sin camino|lo perd/.test(p.causa || '')) {
+              ignorar.set(x.id, Date.now() + ESCOLTA_REINTENTO_MS) // no reintentar al momento al que se negó a pelear
+              if (!negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
+            }
             agresor = null
           }
         } finally { bot.removeListener('entityHurt', alGolpe) }
@@ -912,9 +930,12 @@ class Personaje {
         return { exito: !!r.exito, texto: r.exito ? `Fabricado: ${hecho}.` : `No pude fabricar: ${r.causa}.`, pasos: [d] }
       }
       case 'equipate': {
+        // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
+        const [rs, ds] = await paso('equipar_soportes', ['24'])
+        if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
-        return { exito: !!r.exito, texto, pasos: [d] }
+        return { exito: !!r.exito, texto, pasos: [ds, d] }
       }
       case 'apartate': {
         const [r, d] = await paso('apartarse', [])

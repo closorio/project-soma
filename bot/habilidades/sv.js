@@ -48,15 +48,25 @@ const comidaComible = (n) => !COMIDA_MALA.has(n)
 
 // ---- armas y armadura ----
 const MATERIAL = ['wooden', 'golden', 'stone', 'copper', 'iron', 'diamond', 'netherite']
-// Puntuación de un arma: la de los sentidos (valorArma: 0, 0,5 madera u oro, 1 piedra o mejor) y, a igualdad, espada antes que
-// hacha (golpea cada 0,65 s; el hacha, cada 1,1) y el mejor material.
-function puntosArma(n) {
-  const v = valorArma(n)
-  if (!v) return 0
-  const m = /^([a-z]+)_(sword|axe)$/.exec(n)
-  return v * 100 + (m && m[2] === 'sword' ? 10 : 0) + (m ? MATERIAL.indexOf(m[1]) : 0)
+// Puntuación de un arma (2026-11-01): daño por segundo con la barra llena (daño × golpes/s, los del juego en Java 1.21), más
+// Afilado (+0,5 por nivel +0,5). Así un hacha de netherite gana a una espada de piedra y el tridente a un hacha de piedra.
+const DANO_ARMA = {
+  sword: { wooden: [4, 1.6], golden: [4, 1.6], stone: [5, 1.6], copper: [5, 1.6], iron: [6, 1.6], diamond: [7, 1.6], netherite: [8, 1.6] },
+  axe: { wooden: [7, 0.8], golden: [7, 1], stone: [9, 0.8], copper: [9, 0.8], iron: [9, 0.9], diamond: [9, 1], netherite: [10, 1] }
 }
-const mejorArma = (bot) => bot.inventory.items().filter(i => puntosArma(i.name) > 0).sort((a, b) => puntosArma(b.name) - puntosArma(a.name))[0] || null
+const DANO_OTRAS = { trident: [9, 1.1], mace: [6, 0.6] }
+// Nivel de un encantamiento en un objeto (0 si no lo tiene o no se puede leer)
+function nivelEncantamiento(item, nombre) {
+  try { return ((item && item.enchants) || []).find(e => e.name === nombre)?.lvl || 0 } catch (e) { return 0 }
+}
+function puntosArma(n, item) {
+  if (!valorArma(n)) return 0
+  const m = /^([a-z]+)_(sword|axe)$/.exec(n)
+  const [dano, ritmo] = (m ? DANO_ARMA[m[2]][m[1]] : DANO_OTRAS[n]) || [1, 1]
+  const afilado = nivelEncantamiento(item, 'sharpness')
+  return (dano + (afilado ? 0.5 * afilado + 0.5 : 0)) * ritmo
+}
+const mejorArma = (bot) => bot.inventory.items().filter(i => puntosArma(i.name, i) > 0).sort((a, b) => puntosArma(b.name, b) - puntosArma(a.name, a))[0] || null
 // Cada cuánto golpear con el arma en la mano (ms): con la barra de ataque llena (espada 1,6 golpes/s; hacha de piedra 0,8; puño 4).
 function cadencia(n) {
   if (!n) return 300
@@ -69,6 +79,13 @@ const DESTINO_PIEZA = { helmet: 'head', chestplate: 'torso', leggings: 'legs', b
 function puntosPieza(n) {
   const m = /^([a-z]+)_(helmet|chestplate|leggings|boots)$/.exec(n || '')
   return m ? (PUNTOS_ARMADURA[m[1]] || [0, 0, 0, 0])[PIEZAS.indexOf(m[2])] : 0
+}
+// Para elegir entre dos piezas: los puntos, luego la dureza (diamante 2, netherite 3) y luego Protección.
+const DUREZA = { diamond: 2, netherite: 3 }
+function valorPieza(item) {
+  if (!item) return 0
+  const m = /^([a-z]+)_/.exec(item.name)
+  return puntosPieza(item.name) * 100 + ((m && DUREZA[m[1]]) || 0) * 10 + nivelEncantamiento(item, 'protection')
 }
 
 // ---- bloques para tapiarse ----
@@ -118,26 +135,39 @@ function golpeReciente(bot, ms = 3000, desde = 0) {
   return !!(e.activo && g && g.t > e.atendido && g.t >= desde && Date.now() - g.t < ms) ? g : null
 }
 const atendido = (bot) => { estado(bot).atendido = Date.now() }
-// Apunta los golpes de monstruos (el daño sin atacante o de un no-monstruo —caída, fuego, lava, hambre, un jugador— no cuenta).
+// Apunta los golpes de monstruos y de jugadores no aliados (el daño sin atacante —caída, fuego, lava, hambre— no cuenta).
 // io.js lo llama con cada bot nuevo. `alGolpe(golpe)`: para reaccionar enseguida en reposo.
-function vigilarGolpes(bot, alGolpe = () => {}) {
+function vigilarGolpes(bot, alGolpe = () => {}, aliado = () => false) {
   bot.on('entityDead', (e) => { if (e) muertos(bot).set(e.id, Date.now()) })
   bot.on('entityHurt', (e, fuente) => {
     if (!bot.entity || e !== bot.entity) return
     anotarAgresor(bot, fuente) // un neutral que golpea pasa a ser amenaza un rato (taxonomia.AGRESOR_MS)
-    if (!esMonstruo(bot, fuente)) return
-    const g = estado(bot).golpe = { t: Date.now(), id: fuente.id, nombre: fuente.name, tipo: tipoHostil(fuente) }
+    // 2026-11-01: un jugador que le pega también cuenta, salvo los aliados (`aliado(nombre)`: sus dueños y los demás personajes)
+    const jugador = !!fuente && fuente.type === 'player' && fuente !== bot.entity && !aliado(fuente.username)
+    if (!jugador && !esMonstruo(bot, fuente)) return
+    const g = estado(bot).golpe = { t: Date.now(), id: fuente.id, nombre: jugador ? fuente.username : fuente.name, tipo: jugador ? 'jugador' : tipoHostil(fuente) }
     alGolpe(g)
   })
 }
 
-// «defiéndeme» (2026-11-01): ¿el golpe a `victima` lo da alguien con quien el guardaespaldas pelea? Solo cuentan los golpes al
-// protegido o al propio bot, de una entidad que no sea un jugador ni de NUNCA_ATACAR (el creeper, el warden…). Es defensivo:
-// un mob que no ha pegado no cuenta, por hostil o cerca que esté.
-function esAgresor(bot, victima, fuente, protegido) {
-  if (!victima || !fuente || fuente === bot.entity || fuente.type === 'player') return false
+// «protégeme» (2026-11-01): ¿el golpe a `victima` lo da alguien con quien el guardaespaldas pelea? Solo cuentan los golpes al
+// protegido o al propio bot, de una entidad que no sea de NUNCA_ATACAR (el creeper, el warden…). Un jugador cuenta si no es
+// aliado (`aliado(nombre)`: el propio protegido, los dueños y los demás personajes no). Es defensivo: un mob que no ha pegado
+// no cuenta aquí (para eso, amenazaCerca).
+function esAgresor(bot, victima, fuente, protegido, aliado = () => false) {
+  if (!victima || !fuente || fuente === bot.entity) return false
   if (victima !== bot.entity && victima !== protegido) return false
+  if (fuente.type === 'player') return fuente !== protegido && !aliado(fuente.username)
   return !NUNCA_ATACAR.has(fuente.name)
+}
+
+// «protégeme», vigilancia: el monstruo hostil (o neutral que ya ha pegado) más cercano a ≤ `radio` del protegido o del bot, sin
+// los de NUNCA_ATACAR ni los de `ignorar` (id → hasta cuándo: los que atacar se negó a pelear, para no reintentarlos en bucle).
+function amenazaCerca(bot, protegido, radio = 12, ignorar = new Map()) {
+  const d = (e, o) => e.position.distanceTo(o.position)
+  return Object.values(bot.entities).filter(e => esAmenaza(bot, e) && !NUNCA_ATACAR.has(e.name) && vivo(bot, e) && !((ignorar.get(e.id) || 0) > Date.now())
+    && (d(e, bot.entity) <= radio || (protegido && d(e, protegido) <= radio)))
+    .sort((a, b) => d(a, bot.entity) - d(b, bot.entity))[0] || null
 }
 
 // ---- el refugio en la memoria del personaje ----
@@ -168,6 +198,6 @@ async function centrar(bot, ms = 1500) {
 }
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
-  puntosArma, mejorArma, cadencia, puntosPieza, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, anotarRefugio, refugioInfo,
+  puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, anotarRefugio, refugioInfo,
   centrar }

@@ -28,6 +28,7 @@ const HABILIDADES = {
   usar_cama: require('./usar_cama'), // 2026-11-01: una cama ya puesta, para guardar el spawn (no la recoge)
   fabricar: require('./fabricar'),
   equipar: require('./equipar'),
+  equipar_soportes: require('./equipar_soportes'), // 2026-11-01: armadura de los armor stands y espada o hacha del cofre más cercano a uno
   apartarse: require('./apartarse'),
   recoger_comida: require('./recoger_comida'),
   // F8.0b (fundación de los perfiles v2, PLAN_F8_perfiles.md): horno, poner bloques, sacar del cofre
@@ -54,7 +55,7 @@ const HABILIDADES = {
 // io.js decide si defenderse o huir). Y la interrupción corta solo la habilidad (una subtarea), no la tarea de quien la pidió: el
 // bucle libre o la orden siguen y deciden qué hacer. En el mundo del usuario todo sigue como antes.
 const RADIO_AMENAZA = 6
-const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar', 'poner', 'sacar_del_cofre', 'iluminar', 'recoger_agua', 'verter',
+const SIN_CORTE = new Set(['huir', 'atacar', 'refugiarse', 'apartarse', 'equipar', 'equipar_soportes', 'poner', 'sacar_del_cofre', 'iluminar', 'recoger_agua', 'verter',
   'desatascarse', 'subir_a_superficie']) // F8.0b: pasos cortos o de salir de un sitio cerrado
 
 // Una tarea hija: cancelada si lo está la de fuera o si la cancela la alerta (sin tocar la de fuera).

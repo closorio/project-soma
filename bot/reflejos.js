@@ -4,10 +4,10 @@
 // él; IO_REFLEJOS=si|no lo fuerza). Esta función solo decide; io.js ejecuta.
 // Por orden de urgencia (fuera del refugio; dentro no hace falta nada salvo comer):
 //   1 creeper a ≤ 6                         → huir de él (a 12). Nunca se pelea con un creeper.
-//   2 le ha golpeado un monstruo (≤ 3 s)    → regla del usuario (2026-10-15): huir si hay MÁS DE 2 hostiles a la vista (≤ 16) o la
+//   2 le ha golpeado un monstruo o un jugador no aliado (≤ 3 s)    → regla del usuario (2026-10-15): huir si hay MÁS DE 2 hostiles a la vista (≤ 16) o la
 //                                             salud es < 8, o si no lleva arma (atacar se niega sin ella); si no, defenderse:
 //                                             atacar a quien le golpeó. El daño que no viene de un monstruo (caída, fuego, lava,
-//                                             hambre, un jugador) no cuenta (sv.vigilarGolpes ni lo apunta).
+//                                             hambre) no cuenta (sv.vigilarGolpes ni lo apunta); tampoco un dueño ni otro personaje.
 //   3 salud < 8 con un hostil a ≤ 8         → huir (el reflejo duro del plan)
 //   (tras huir por 2 o 3, de noche: refugiarse; refugiarse no empieza con un hostil a ≤ 4)
 //   acorralado: si huir ha fallado (en esta ronda o hace < 15 s: no perder otros 2 s buscando salida mientras le pegan) y un

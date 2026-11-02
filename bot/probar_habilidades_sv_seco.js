@@ -175,7 +175,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   x = decide({ inventario: espada }, 'nadie')
   ok(!x.r && !sv.estado(x.bb).golpe, `daño sin atacante (caída, fuego, hambre): no cuenta (${JSON.stringify(x.r)})`)
   x = decide({ entidades: [{ name: 'player', username: 'Seppuq', type: 'player', pos: [2.5, 64, 0.5] }], inventario: espada }, 1)
-  ok(!x.r, 'golpe de un jugador: no cuenta')
+  ok(x.r && x.r.habilidad === 'atacar', `golpe de un jugador que no es aliado: se defiende (${JSON.stringify(x.r)})`)
   ;({ r } = decide({ salud: 7, entidades: [z(6.5)], inventario: espada }))
   ok(r && r.habilidad === 'huir', `salud 7 con un zombi a 6 sin golpe: huir (${JSON.stringify(r)})`)
   x = decide({ entidades: [z(2.5), z(0.5, 2.5), z(-1.5)], inventario: espada })
@@ -389,10 +389,10 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const zombi = { id: 3, type: 'hostile', name: 'zombie' }, ender = { id: 4, type: 'hostile', name: 'enderman' }
     const creeper = { id: 5, type: 'hostile', name: 'creeper' }, vaca = { id: 6, type: 'animal', name: 'cow' }
     const casos = [[amigo, zombi, true, 'un zombi pega al protegido'], [yo, zombi, true, 'un zombi pega al bot'],
-      [amigo, ender, true, 'un enderman pega al protegido'], [amigo, otro, false, 'otro jugador le pega'],
+      [amigo, ender, true, 'un enderman pega al protegido'], [amigo, otro, true, 'un jugador cualquiera le pega'], [amigo, otro, false, 'otro jugador aliado le pega', (n) => n === 'Ana'], [yo, amigo, false, 'el propio protegido pega al bot'],
       [amigo, creeper, false, 'un creeper (nunca se pelea)'], [vaca, zombi, false, 'el zombi pega a una vaca'],
       [amigo, undefined, false, 'daño sin atacante (caída, fuego)']]
-    for (const [v, f, quiero, txt] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
+    for (const [v, f, quiero, txt, al] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo, al) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
   }
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
