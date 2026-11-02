@@ -228,7 +228,7 @@ class Personaje {
   conectar() {
     const bot = this.bot = mineflayer.createBot({
       host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: SERVIDOR.version,
-      brand: marcaDeBot(), // PRUEBA EXPLORATORIA: «soma-bot;dueno=NOMBRE» en el brand del cliente, para que el server los reconozca solo
+      brand: marcaDeBot(), // el server (plugin SomaConnect) los reconoce como bots por este brand
     })
     if (mundo.tickEnd) require('./tick_end').instalar(bot) // A0 del asistente: 26.3 expulsa sin client_tick_end
     require('./colisiones').vigilar(bot) // 2026-11-02: no se apilan: las hitboxes que se solapan se empujan, como en vanilla

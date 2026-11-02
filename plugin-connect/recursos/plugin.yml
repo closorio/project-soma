@@ -1,18 +1,30 @@
 name: SomaConnect
-version: 1.0
+version: 1.1
 main: soma.connect.SomaConnect
 api-version: "26.3"
-description: /connect y /disconnect (bots | NOMBRE) conectan y desconectan los personajes de project-soma desde el juego.
+description: /connect y /disconnect conectan y desconectan los personajes de project-soma desde el juego; /bo y /debo dan y quitan el rol de bot operator.
 commands:
   connect:
-    description: Conecta todos los bots (/connect bots) o uno solo (/connect trivino).
+    description: Conecta todos tus bots (/connect bots) o uno solo (/connect trivino). Un bot operator solo maneja los suyos.
     usage: /connect <bots|nombre>
-    permission: somaconnect.use
   disconnect:
-    description: Desconecta todos los bots (/disconnect bots) o uno solo (/disconnect trivino).
+    description: Desconecta todos tus bots (/disconnect bots) o uno solo (/disconnect trivino). Un bot operator solo maneja los suyos.
     usage: /disconnect <bots|nombre>
-    permission: somaconnect.use
+  bo:
+    description: Da el rol de bot operator a un jugador (puede usar /connect y /disconnect con sus propios bots, sin ser op).
+    usage: /bo <jugador>
+    permission: somaconnect.admin
+  debo:
+    description: Quita el rol de bot operator a un jugador.
+    usage: /debo <jugador>
+    permission: somaconnect.admin
 permissions:
   somaconnect.use:
-    description: Puede conectar los bots de project-soma.
+    description: Maneja todos los bots de project-soma con /connect y /disconnect.
+    default: op
+  somaconnect.operator:
+    description: Rol bot operator (se da con /bo): maneja solo los bots de los que es dueño.
+    default: false
+  somaconnect.admin:
+    description: Da y quita el rol de bot operator (/bo, /debo).
     default: op

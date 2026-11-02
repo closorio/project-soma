@@ -24,16 +24,30 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.plugin.java.JavaPlugin;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * /connect bots | /connect NOMBRE y /disconnect bots | /disconnect NOMBRE: lanzan bot/conectar.sh de project-soma. Los nombres que admite (y que completa el tabulador)
  * los da el propio script (--listar), que los lee de mundos/<mundo>/personajes.json; aquí no hay ninguna lista.
  * La ruta del proyecto sale de config.yml (clave «proyecto»).
+ * Rol «bot operator» (2026-11-02): /bo JUGADOR lo da y /debo JUGADOR lo quita (solo admins: somaconnect.admin, op por defecto). Queda guardado en
+ * plugins/SomaConnect/operadores.yml y se aplica al entrar como el permiso somaconnect.operator. Un bot operator, sin ser op, usa /connect y
+ * /disconnect solo con SUS bots (los de su entrada «dueno» en personajes.json): el plugin le añade «--de SU_NOMBRE» al script. Un op (o la
+ * consola) maneja todos, como siempre.
+ * Marca de bot (2026-11-02): los bots mandan el brand del cliente «soma-bot;dueno=NOMBRE» (bot/io.js, opción brand de mineflayer); al entrar, el
+ * plugin lo lee (Player#getClientBrandName, llega al cabo de ~1 s) y colorea al que lo trae. La lista de personajes.json queda de respaldo.
  */
 public final class SomaConnect extends JavaPlugin implements Listener {
     private File script;
     private File personajes;
+    private File ficheroOperadores;
+    private final Set<String> operadores = new HashSet<>(); // nombres en minúsculas
+    private final Map<java.util.UUID, PermissionAttachment> permisos = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -41,14 +55,21 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         File proyecto = new File(getConfig().getString("proyecto", "/home/count/codes/project-soma"));
         script = new File(proyecto, "bot/conectar.sh");
         personajes = new File(proyecto, "mundos/" + getConfig().getString("mundo", "companero") + "/personajes.json");
+        ficheroOperadores = new File(getDataFolder(), "operadores.yml");
+        operadores.addAll(YamlConfiguration.loadConfiguration(ficheroOperadores).getStringList("operadores"));
         getServer().getPluginManager().registerEvents(this, this);
+        Bukkit.getOnlinePlayers().forEach(this::aplicarRol);
         Bukkit.getOnlinePlayers().forEach(this::colorear); // tras un /reload ya están dentro
         if (!script.isFile()) getLogger().warning("no encuentro " + script + ": cambia «proyecto» en plugins/SomaConnect/config.yml");
     }
 
     @Override
     public boolean onCommand(CommandSender quien, Command orden, String etiqueta, String[] args) {
+        String nombreOrden = orden.getName().toLowerCase(Locale.ROOT);
+        if (nombreOrden.equals("bo") || nombreOrden.equals("debo")) return darOQuitarRol(quien, nombreOrden.equals("bo"), args);
         if (args.length == 0) return false;
+        String de = alcance(quien); // null = todos los bots; "" = sin permiso; si no, el nombre del bot operator
+        if (de != null && de.isEmpty()) { quien.sendMessage("No tienes permiso: pide a un admin que te dé el rol con /bo " + quien.getName() + "."); return true; }
         // solo nombres de personaje: nada de lo escrito llega a una shell (ProcessBuilder sin shell) y se corta a algo razonable
         List<String> pedidos = new ArrayList<>();
         for (String a : args) {
@@ -59,6 +80,7 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         quien.sendMessage((desconectar ? "Desconectando " : "Conectando ") + String.join(", ", pedidos) + "…");
         List<String> params = new ArrayList<>();
         if (desconectar) params.add("--desconectar");
+        if (de != null) { params.add("--de"); params.add(de); }
         params.addAll(pedidos);
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             List<String> salida = ejecutar(params);
@@ -70,12 +92,66 @@ public final class SomaConnect extends JavaPlugin implements Listener {
     @Override
     public List<String> onTabComplete(CommandSender quien, Command orden, String etiqueta, String[] args) {
         // el script tarda unos ms: se pide una vez por ráfaga de tabulador, no en el hilo principal si se puede evitar
+        String nombreOrden = orden.getName().toLowerCase(Locale.ROOT);
+        if (nombreOrden.equals("bo")) { List<String> r = new ArrayList<>(); Bukkit.getOnlinePlayers().forEach(p -> r.add(p.getName())); return filtrar(r, args); }
+        if (nombreOrden.equals("debo")) return filtrar(new ArrayList<>(operadores), args);
+        String de = alcance(quien);
+        if (de != null && de.isEmpty()) return new ArrayList<>();
         List<String> todos = new ArrayList<>(List.of("bots"));
-        todos.addAll(ejecutar(List.of("--listar")));
+        todos.addAll(ejecutar(de == null ? List.of("--listar") : List.of("--listar", "--de", de)));
+        return filtrar(todos, args);
+    }
+
+    private static List<String> filtrar(List<String> todos, String[] args) {
         String prefijo = args[args.length - 1].toLowerCase(Locale.ROOT);
         todos.removeIf(n -> !n.toLowerCase(Locale.ROOT).startsWith(prefijo));
         return todos;
     }
+
+    // ---- Rol «bot operator» ---------------------------------------------------------------------------------------------------
+    // Con qué alcance puede usar /connect y /disconnect quien escribe: null = todos los bots (consola, op o somaconnect.use); el nombre del
+    // jugador = solo los suyos (rol somaconnect.operator, que da /bo); "" = ninguno.
+    private String alcance(CommandSender quien) {
+        if (!(quien instanceof Player) || quien.hasPermission("somaconnect.use")) return null;
+        return quien.hasPermission("somaconnect.operator") ? quien.getName() : "";
+    }
+
+    private boolean darOQuitarRol(CommandSender quien, boolean dar, String[] args) {
+        if (args.length != 1 || !args[0].matches("[A-Za-z0-9_]{1,16}")) { quien.sendMessage("Uso: /" + (dar ? "bo" : "debo") + " <jugador>"); return true; }
+        String clave = args[0].toLowerCase(Locale.ROOT);
+        boolean cambio = dar ? operadores.add(clave) : operadores.remove(clave);
+        if (cambio) guardarOperadores();
+        Player p = Bukkit.getPlayerExact(args[0]);
+        if (p != null) { aplicarRol(p); p.sendMessage(dar ? "Ahora eres bot operator: /connect y /disconnect con tus propios bots." : "Ya no eres bot operator."); }
+        quien.sendMessage(args[0] + (dar ? (cambio ? " ahora es bot operator." : " ya era bot operator.") : (cambio ? " ya no es bot operator." : " no era bot operator.")));
+        return true;
+    }
+
+    private void guardarOperadores() {
+        try {
+            YamlConfiguration y = new YamlConfiguration();
+            y.set("operadores", new ArrayList<>(operadores));
+            getDataFolder().mkdirs();
+            y.save(ficheroOperadores);
+        } catch (Exception e) {
+            getLogger().warning("no puedo guardar " + ficheroOperadores + ": " + e.getMessage());
+        }
+    }
+
+    // Pone o quita a un jugador el permiso somaconnect.operator según esté en la lista (también al entrar)
+    private void aplicarRol(Player p) {
+        PermissionAttachment previo = permisos.remove(p.getUniqueId());
+        if (previo != null) { try { p.removeAttachment(previo); } catch (IllegalArgumentException ignorado) { } }
+        if (operadores.contains(p.getName().toLowerCase(Locale.ROOT))) {
+            PermissionAttachment a = p.addAttachment(this);
+            a.setPermission("somaconnect.operator", true);
+            permisos.put(p.getUniqueId(), a);
+        }
+        p.updateCommands();
+    }
+
+    @EventHandler
+    public void alSalir(PlayerQuitEvent ev) { permisos.remove(ev.getPlayer().getUniqueId()); }
 
     private List<String> ejecutar(List<String> args) {
         List<String> salida = new ArrayList<>();
@@ -130,11 +206,29 @@ public final class SomaConnect extends JavaPlugin implements Listener {
     @EventHandler
     public void alEntrar(PlayerJoinEvent ev) {
         Player p = ev.getPlayer();
+        aplicarRol(p);
         Bukkit.getScheduler().runTask(this, () -> colorear(p)); // un tick después: el jugador ya está en el mundo
+        Bukkit.getScheduler().runTaskLater(this, () -> mirarMarca(p, 1), 20L); // el brand llega al cabo de ~1 s
     }
 
-    private void colorear(Player p) {
-        if (!nombresDeBots().contains(p.getName())) return;
+    // El brand del cliente («soma-bot;dueno=NOMBRE», lo manda bot/io.js). Llega después de entrar: se mira a los 20 ticks y, si aún no está,
+    // dos veces más (cada 4 s). Se apunta en la consola con su texto, para ver a quién se reconoce y de quién es.
+    private void mirarMarca(Player p, int intento) {
+        String brand = p.getClientBrandName();
+        getLogger().info("brand de " + p.getName() + " (intento " + intento + "): " + (brand == null ? "aún no llegó" : "'" + brand + "'"));
+        if (brand != null && brand.startsWith("soma-bot")) {
+            String dueno = brand.contains("dueno=") ? brand.substring(brand.indexOf("dueno=") + 6) : "";
+            getLogger().info("  → " + p.getName() + " es un bot, dueño: " + (dueno.isEmpty() ? "(ninguno)" : dueno));
+            colorear(p, true);
+        } else if (brand == null && intento < 2) {
+            Bukkit.getScheduler().runTaskLater(this, () -> mirarMarca(p, intento + 1), 80L);
+        }
+    }
+
+    private void colorear(Player p) { colorear(p, false); }
+
+    private void colorear(Player p, boolean porMarca) {
+        if (!porMarca && !nombresDeBots().contains(p.getName())) return;
         int rgb = colorDelPuntero(p.getUniqueId());
         TextColor color = TextColor.color(rgb);
         p.displayName(Component.text(p.getName(), color));
