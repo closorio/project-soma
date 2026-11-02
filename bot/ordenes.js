@@ -72,6 +72,12 @@ function destinatario(texto, nombres) {
   return { a: null, resto: original }
 }
 
+// 2026-11-01: «ven a 120 64 -30», «sígueme en x y z»: dónde está quien habla si no se le ve (del original: normalizar quita el signo)
+function coords(texto) {
+  const m = String(texto).match(/\b(?:en|a)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/i)
+  return m ? { en: m.slice(1, 4).map(Number) } : {}
+}
+
 function interpretar(texto) {
   const t = normalizar(texto).replace(CORTESIA, '').trim()
   if (!t) return null
@@ -124,8 +130,8 @@ function interpretar(texto) {
   // 2026-11-01: guardaespaldas defensivo (le sigue y solo pelea con quien le pega a él o al bot); antes que «ataca»
   // «… agresivo»: también va a por los hostiles que tenga cerca el protegido; «pasivo» (o nada): solo a por quien pegue
   const modoEscolta = /\bagresiv[oa]s?\b/.test(t) ? 'agresivo' : 'pasivo'
-  if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta', modo: modoEscolta }
-  if ((m = t.match(/\b(?:defiende|defended|protege|proteged|escolta|escoltad) a (\w+)/))) return { tipo: 'escolta', a: m[1], modo: modoEscolta }
+  if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta', modo: modoEscolta, ...coords(texto) }
+  if ((m = t.match(/\b(?:defiende|defended|protege|proteged|escolta|escoltad) a (\w+)/))) return { tipo: 'escolta', a: m[1], modo: modoEscolta, ...coords(texto) }
   if ((m = t.match(/\b(?:ataca|atacad|atacar|mata|matad|matar|pelea|pelead|lucha|luchad|defiendete|defendeos|acaba con)\b(?: (?:a la |a los |a las |al |a |el |la |los |las |ese |esa |este |esta )?(\w+))?/)))
   {
     const en = String(texto).match(/\ben\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/i) // «ataca a X en x y z», del original (normalizar quita el signo)
@@ -177,8 +183,8 @@ function interpretar(texto) {
   if (/\b(?:guarda|guardar|guardad|guardalo|deposita|depositar|vacia)\b|\bal cofre\b/.test(t)) return { tipo: 'guarda' }
   if ((m = t.match(/\b(?:huye|huir|huid|escapa|escapad|alejate|alejaos)\b(?: del? (?:el |la |los |las )?(\w+))?/)))
     return { tipo: 'huye', de: (m[1] && !/^(?:aqui|ahi|alli|aca|este|esta)$/.test(m[1]) && (MOBS[m[1]] || m[1])) || null }
-  if (/\b(?:sigueme|seguidme|sigue ?me|ven conmigo|acompaname)\b/.test(t)) return { tipo: 'sigueme' }
-  if (/^(?:ven|venid|vente|acercate|acercaos|aqui|ven aqui|ven aca)\b/.test(t)) return { tipo: 'ven' }
+  if (/\b(?:sigueme|seguidme|sigue ?me|ven conmigo|acompaname)\b/.test(t)) return { tipo: 'sigueme', ...coords(texto) }
+  if (/^(?:ven|venid|vente|acercate|acercaos|aqui|ven aqui|ven aca)\b/.test(t)) return { tipo: 'ven', ...coords(texto) }
   return null
 }
 

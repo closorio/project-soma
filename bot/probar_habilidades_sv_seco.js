@@ -387,6 +387,22 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   { const j = require('./jugadores'), b = new (require('events'))(), e = { type: 'player', username: 'Pepe', position: new Vec3(5, 64, -7) }
     b.entity = { type: 'player' }; j.vigilar(b); b.emit('entityMoved', e); e.position = new Vec3(9, 64, 9)
     const v = j.ultimaVez(b, 'Pepe'); ok(v && v.pos.x === 5 && v.pos.z === -7 && !j.ultimaVez(b, 'Ana'), `jugadores: recuerda dónde le vio (${JSON.stringify(v)})`) }
+  // 2026-11-01: sin límite de distancia: coordenadas en «ven»/«sígueme»/«defiéndeme» y el viaje por tramos (viajeLargo)
+  for (const [t, tipo, en] of [['ven a 10 64 -5', 'ven', '[10,64,-5]'], ['Oqva, sígueme en 1 2 3', 'sigueme', '[1,2,3]'], ['defiéndeme en 5 6 -7', 'escolta', '[5,6,-7]'], ['ven', 'ven', undefined]]) {
+    const o = ordenes.interpretar(t); ok(o.tipo === tipo && JSON.stringify(o.en) === en, `«${t}» → ${JSON.stringify(o)}`)
+  }
+  {
+    const { viajeLargo } = require('./habilidades/comun'), b = { entity: { position: new Vec3(0, 64, 0) } }, tramos = []
+    const mover = async (bot, meta) => { tramos.push(meta); bot.entity.position = new Vec3(meta.x, meta.y != null ? meta.y : 64, meta.z); return 'listo' }
+    const r = await viajeLargo(b, new Vec3(200, 70, 0), () => false, { mover })
+    ok(r === 'llegué' && tramos.length >= 4 && tramos.every(m => Math.abs(m.x - (tramos[tramos.indexOf(m) - 1] || { x: 0 }).x) <= 64), `viajeLargo: 200 bloques en ${tramos.length} tramos de ≤ 64 → ${r}`)
+    const t2 = []; b.entity.position = new Vec3(0, 64, 0)
+    const r2 = await viajeLargo(b, new Vec3(300, 64, 0), () => b.entity.position.x >= 100, { mover: async (bot, meta) => { t2.push(meta); return mover(bot, meta) } })
+    ok(r2 === 'listo' && t2.length === 2, `viajeLargo: para en cuanto listo() (${t2.length} tramos, ${r2})`)
+    b.entity.position = new Vec3(0, 64, 0)
+    const r3 = await viajeLargo(b, new Vec3(300, 64, 0), () => false, { mover: async () => 'sin camino' })
+    ok(r3 === 'sin camino', `viajeLargo: sin avanzar → ${r3}`)
+  }
   { const o = ordenes.interpretar('ataca al zombi'); ok(o.de === 'zombie' && !o.nombre, `«ataca al zombi» no lleva nombre: ${JSON.stringify(o)}`) }
   {
     const yo = { id: 0, type: 'player' }, bx = { entity: yo }

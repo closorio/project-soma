@@ -55,7 +55,7 @@ const ordenes = require('./ordenes')
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
-const { esperar, moverHasta, jugadorCercano, prudentes } = require('./habilidades/comun')
+const { esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
@@ -766,7 +766,23 @@ class Personaje {
   // Quien dio la orden por el chat, si lo ve; si no (o por el puerto), el jugador humano más cercano.
   jugadorDe(quien) {
     const u = quien.startsWith('chat de ') ? quien.slice(8) : null
-    return (u && this.bot.players[u]?.entity) ? u : ''
+    return (u && this.bot.players[u]) ? u : '' // 2026-11-01: conectado basta; si no se le ve, acercarseA va a buscarle
+  }
+
+  // 2026-11-01: llegar hasta un jugador fuera de la vista (el server manda su posición a ~48 bloques; sin RCON ni /tp no hay más): a las
+  // coordenadas que diga («ven a x y z») o a donde le vi por última vez, por tramos (viajeLargo), hasta que aparece.
+  // null: ya le veo; '' : cancelado; si no, el texto del fallo.
+  async acercarseA(u, en, tarea, mov) {
+    const bot = this.bot
+    if (!u || bot.players[u]?.entity) return null
+    const visto = require('./jugadores').ultimaVez(bot, u)
+    const meta = en ? new (require('vec3').Vec3)(...en) : visto && visto.pos
+    if (!meta) return 'No te veo y no sé dónde estás: dime tus coordenadas (F3), p. ej. «ven a 120 64 -30».'
+    bot.chat(`Voy hacia ti (${Math.round(bot.entity.position.distanceTo(meta))} bloques${en ? '' : ', a donde te vi'}).`)
+    const r = await viajeLargo(bot, meta, () => !!bot.players[u]?.entity, { tarea, mov: mov || prudentes(bot) })
+    if (r === 'listo') return null
+    if (r === 'cancelado') return ''
+    return r === 'llegué' ? 'Llegué a donde estabas y no te veo: dime tus coordenadas (F3).' : `No llego hasta ti (${r}).`
   }
 
   async hacer(o, tarea, quien) {
@@ -781,6 +797,8 @@ class Personaje {
     switch (o.tipo) {
       case 'quedate': return { exito: true, texto: 'Me quedo aquí.' }
       case 'ven': {
+        const falta = await this.acercarseA(this.jugadorDe(quien), o.en, tarea)
+        if (falta !== null) return { exito: false, texto: falta || 'Dejo de buscarte.' }
         const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60']) // '' = el jugador humano más cercano
         const texto = r.causa === 'llegué' || r.causa === 'ya estaba' ? 'Aquí estoy.'
           : r.zona ? `Estás en ${r.zona}, que es zona protegida: te espero en el borde.` : `No llego: ${r.causa}.`
@@ -792,13 +810,22 @@ class Personaje {
         return { exito: !!r.exito, texto: r.exito ? `Toma: ${lista}.` : `No puedo darte nada: ${r.causa}.`, pasos: [d] }
       }
       case 'sigueme': {
-        const u = this.jugadorDe(quien)
-        const e = u ? bot.players[u].entity : jugadorCercano(bot)
-        if (!e) return { exito: false, texto: 'No te veo.' }
-        const meta = new GoalSeguirFuera(e, 2)
-        const marcha = moverHasta(bot, meta, () => false, { ms: SIGUEME_MAX, tarea, entidad: e })
-        this.ocupado = marcha
-        const r = await marcha
+        // 2026-11-01: desde donde esté (acercarseA) y, si le pierde de vista, a donde le vio por última vez, hasta «para» o SIGUEME_MAX
+        const u = this.jugadorDe(quien), t0 = Date.now()
+        let r = 'cancelado', en = o.en
+        while (!(tarea && tarea.cancelada)) {
+          const queda = SIGUEME_MAX - (Date.now() - t0)
+          if (queda <= 0) { r = 'tiempo agotado'; break }
+          const falta = await this.acercarseA(u, en, tarea)
+          if (falta !== null) return { exito: false, texto: falta || 'Dejo de seguirte.' }
+          const e = u ? bot.players[u].entity : jugadorCercano(bot)
+          if (!e) return { exito: false, texto: 'No te veo.' }
+          const marcha = moverHasta(bot, new GoalSeguirFuera(e, 2), () => false, { ms: queda, tarea, entidad: e })
+          this.ocupado = marcha
+          r = await marcha
+          if (r !== 'perdido' || !u) break
+          en = null
+        }
         const textos = { 'tiempo agotado': 'Llevo diez minutos siguiéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
@@ -807,7 +834,9 @@ class Personaje {
         // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Pasivo (por defecto): el mob que no pega no cuenta.
         // Agresivo («defiéndeme agresivo»): además, a por el hostil más cercano a ≤ 10 del protegido (sv.amenazaCerca).
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
-        const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
+        const vedadas = prudentes(bot, { pisarVedadas: true })
+        if (nombre) { const falta = await this.acercarseA(nombre, o.en, tarea, vedadas); if (falta !== null) return { exito: false, texto: falta || 'Dejo de cubrirte.' } }
+        let e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
         const agresivo = o.modo === 'agresivo' // también a por los hostiles a ≤ 10 del protegido, aunque no peguen
         let agresor = null, negado = false
@@ -839,6 +868,12 @@ class Personaje {
             const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => objetivo() !== null || sv.debeComerPorSalud(bot), { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
+            if (r === 'perdido' && nombre) { // se fue de la vista: a donde le vi por última vez, y sigo
+              const falta = await this.acercarseA(nombre, null, tarea, vedadas)
+              if (falta !== null || !bot.players[nombre]?.entity) break
+              e = bot.players[nombre].entity
+              continue
+            }
             if (r !== 'listo') break
             const id = objetivo()
             if (id === null) continue // (o le toca comer: lo hace al empezar la vuelta)
@@ -853,21 +888,21 @@ class Personaje {
       }
       case 'recupera': {
         // 2026-11-01 (A4 reducido): volver donde murió y recoger lo suyo. No lo intenta con lava, fuego o vacío, pasados 270 s (los objetos
-        // desaparecen a los 300), a > 150 bloques ni si murió ya recuperando. Corta con ≥ 3 hostiles a la vista o la vida < 10.
+        // desaparecen a los 300) (salvo si murió a ≥ 128 bloques: chunk sin cargar) ni si murió ya recuperando. Corta con ≥ 3 hostiles a la vista o la vida < 10.
         const m = this.ultimaMuerte
         if (!m) return { exito: false, texto: 'No he muerto desde que entré.' }
         const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
         if (m.segunda) return { exito: false, texto: `Morí recuperando mis cosas en ${donde}: no vuelvo.` }
         if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) return { exito: false, texto: `Morí en ${donde} (${m.causa}): no hay nada que recuperar.` }
-        if (edad > 270) return { exito: false, texto: `Morí hace ${Math.round(edad)} s: mis cosas ya habrán desaparecido.` }
-        if (d > 150) return { exito: false, texto: `Morí a ${Math.round(d)} bloques, en ${donde}: demasiado lejos.` }
-        this.decir(`He muerto en ${donde}${m.causa ? ` (${m.causa})` : ''}; voy a por mis cosas.`)
+        // los objetos solo envejecen con el chunk cargado: muerto lejos de donde reaparece (≥ 128), puede que sigan ahí aunque pase el tiempo
+        if (edad > 270 && d < 128) return { exito: false, texto: `Morí hace ${Math.round(edad)} s: mis cosas ya habrán desaparecido.` }
+        this.decir(`He muerto en ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques; voy a por mis cosas${edad > 270 ? ' (puede que sigan ahí)' : ''}.`)
         const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
         const antes = bot.inventory.items().reduce((a, i) => a + i.count, 0)
         this.recuperando = true
         try {
-          const r = await moverHasta(bot, new goals.GoalNear(m.pos.x, m.pos.y, m.pos.z, 2), () => bot.entity.position.distanceTo(m.pos) <= 3 || peligro(), { ms: Math.max(10000, (270 - edad) * 1000), tarea, mov: prudentes(bot) })
-          if (r !== 'listo') return { exito: false, texto: `No llego a donde morí (${r}).` }
+          const r = await viajeLargo(bot, m.pos, peligro, { tarea, mov: prudentes(bot), cerca: 2 }) // sin tope de distancia, por tramos
+          if (r !== 'listo' && r !== 'llegué') return { exito: false, texto: `No llego a donde morí (${r}).` }
           if (peligro()) return { exito: false, texto: 'Hay demasiado peligro donde morí: lo dejo.' }
           for (let k = 0; k < 4 && !tarea.cancelada && !peligro(); k++) {
             const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
@@ -956,8 +991,8 @@ class Personaje {
             const meta = o.en ? new (require('vec3').Vec3)(...o.en) : visto && visto.pos
             if (!meta) return { exito: false, texto: `No veo a ${jugador} y no sé dónde está: dime «ataca a ${jugador} en x y z» o llévame hacia él.` }
             bot.chat(o.en ? `Voy a buscar a ${jugador} a ${o.en.join(' ')}.` : `Voy a buscar a ${jugador} donde le vi hace ${Math.round((Date.now() - visto.t) / 1000)} s.`)
-            const r = await moverHasta(bot, new goals.GoalNear(meta.x, meta.y, meta.z, 3), () => !!bot.players[jugador]?.entity, { ms: 180000, tarea, mov: prudentes(bot) })
-            if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r}).` }
+            const r = await viajeLargo(bot, meta, () => !!bot.players[jugador]?.entity, { tarea, mov: prudentes(bot) })
+            if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r === 'llegué' ? 'no está allí' : r}).` }
           }
           const e = bot.players[jugador].entity
           const [r, d] = await paso('atacar', ['id:' + e.id, '30'])

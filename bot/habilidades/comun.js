@@ -1,6 +1,6 @@
 const { Vec3 } = require('vec3')
 // Utilidades compartidas por las habilidades.
-const { Movements } = require('mineflayer-pathfinder')
+const { Movements, goals } = require('mineflayer-pathfinder')
 const memoria = require('../memoria')
 const zonas = require('../zonas')
 const taxonomia = require('./taxonomia')
@@ -125,5 +125,35 @@ async function moverHasta(bot, meta, listo, { ms, tarea, entidad, mov }) {
   } finally { bot.removeListener('path_update', alCalcular) }
 }
 
+// Viaje a un punto lejano (2026-11-01, «ven» y «recupera» desde donde esté): el pathfinder no planea sobre chunks sin cargar, así que
+// va por tramos de ≤ 64 bloques hacia el destino (GoalNearXZ; el último, GoalNear con su Y), cada uno desde donde llegó el anterior;
+// si un tramo no acerca, prueba torcido (±45°, ±90°). Devuelve listo (listo() se cumplió) | llegué | cancelado | sin camino (4 tramos
+// seguidos sin acercarse) | tiempo agotado (por defecto 1,5 s por bloque + 30 s). `mover` es moverHasta (lo cambia la prueba en seco).
+const TRAMO = 64, GIROS = [0, 45, -45, 90, -90]
+async function viajeLargo(bot, destino, listo = () => false, { tarea, ms, mov, cerca = 3, mover = moverHasta } = {}) {
+  const aqui = () => bot.entity.position
+  const lejos = () => Math.hypot(destino.x - aqui().x, destino.z - aqui().z)
+  const t0 = Date.now(), limite = ms || (lejos() * 1.5 + 30) * 1000
+  let atascos = 0
+  for (;;) {
+    if (listo()) return 'listo'
+    const d = lejos()
+    if (d <= cerca && Math.abs(destino.y - aqui().y) <= cerca + 2) return 'llegué'
+    if (tarea && tarea.cancelada) return 'cancelado'
+    const queda = limite - (Date.now() - t0)
+    if (queda <= 0) return 'tiempo agotado'
+    let meta
+    if (d <= TRAMO && !atascos) meta = new goals.GoalNear(destino.x, destino.y, destino.z, cerca)
+    else {
+      const a = Math.atan2(destino.z - aqui().z, destino.x - aqui().x) + GIROS[atascos % GIROS.length] * Math.PI / 180, l = Math.min(TRAMO, d)
+      meta = new goals.GoalNearXZ(Math.round(aqui().x + Math.cos(a) * l), Math.round(aqui().z + Math.sin(a) * l), 4)
+    }
+    const r = await mover(bot, meta, () => listo() || meta.isEnd(aqui().floored()), { ms: Math.min(queda, 120000), tarea, mov })
+    if (r === 'cancelado' || (r === 'tiempo agotado' && Date.now() - t0 >= limite)) return r
+    atascos = lejos() < d - 4 ? 0 : atascos + 1
+    if (atascos >= 4) return 'sin camino'
+  }
+}
+
 module.exports = { esAmenaza, esperar, dist, conLimite, prudentes, prudentesSecos, conMovimientos, lejania, hayCamino, nodo, buscarEntidad, jugadorCercano,
-  companeroCercano, moverHasta, hostilCercano, hostiles, encerrado, pruebas, PERSONAJES, esBot, BOTS, companeros }
+  companeroCercano, moverHasta, viajeLargo, hostilCercano, hostiles, encerrado, pruebas, PERSONAJES, esBot, BOTS, companeros }
