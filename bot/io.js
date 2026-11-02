@@ -1733,6 +1733,32 @@ class Personaje {
         const texto = r.exito ? `Tengo comida (${r.comida[0]} → ${r.comida[1]}).` : r.causa === 'sin hambre' ? 'No tengo hambre.' : `No conseguí comida: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
       }
+      case 'carteles': { // 2026-11-02: zonas de obras temporales de carteles «[obras] NOMBRE» (carteles.js); se aceptan tras leerlas
+        const carteles = require('./carteles'), obras = require('./obras')
+        if (o.accion === 'olvidar') {
+          const n = obras.temporales().length
+          obras.ponerTemporales([])
+          return { exito: true, texto: n ? `Olvido las ${n} zonas de obras de los carteles.` : 'No tenía ninguna zona de obras de carteles.', pasos: [] }
+        }
+        if (o.accion === 'aceptar') {
+          if (!this.cartelesLeidos || !this.cartelesLeidos.length) return { exito: false, texto: 'Primero dime «lee los carteles»: acepto lo que te haya enseñado.', pasos: [] }
+          const nuevas = this.cartelesLeidos.map(z => ({ ...z, desde: new Date().toLocaleString('sv-SE').slice(0, 19) }))
+          obras.ponerTemporales([...obras.temporales().filter(z => !nuevas.some(n => n.nombre === z.nombre)), ...nuevas])
+          this.cartelesLeidos = null
+          return { exito: true, texto: `Construiré solo dentro de: ${nuevas.map(carteles.describir).join(', ')} (mientras sigan sus carteles).`, pasos: [] }
+        }
+        const quitadas = carteles.vigentes(bot)
+        const r = carteles.leer(bot)
+        this.cartelesLeidos = r.zonas
+        const activas = obras.temporales()
+        const partes = []
+        if (quitadas.length) partes.push(`Ya no valen (falta un cartel): ${quitadas.join(', ')}.`)
+        if (activas.length) partes.push(`En uso: ${activas.map(carteles.describir).join(', ')}.`)
+        if (r.zonas.length) partes.push(`Veo ${r.zonas.length === 1 ? 'una zona' : r.zonas.length + ' zonas'} de obras: ${r.zonas.map(carteles.describir).join(', ')}. Di «acepta los carteles» para usarla${r.zonas.length === 1 ? '' : 's'}.`)
+        if (r.sueltos.length) partes.push(`Sin pareja: ${r.sueltos.map(x => `${x.nombre} (${x.n} cartel${x.n === 1 ? '' : 'es'})`).join(', ')}.`)
+        if (!r.zonas.length && !r.sueltos.length) partes.push('No veo carteles de obras a 64 bloques (primera línea «[obras]», debajo el nombre, uno en cada esquina).')
+        return { exito: true, texto: partes.join(' '), pasos: [] }
+      }
       case 'estructuras': { // 2026-11-02: las del catálogo (make import-structure)
         const l = require('./estructuras').ids().map(id => { const e = require('./estructuras').cargar(id); return `${id} (${e.dim.join('×')}, ${e.bloques.length} bloques)` })
         return { exito: true, texto: l.length ? `Sé construir: ${l.join(', ')}.` : 'No tengo ninguna estructura en el catálogo.', pasos: [] }
@@ -1774,6 +1800,12 @@ class Personaje {
         if (b && b.name === estructuras.nombre(plano.paleta[i])) hechos.add(`${dx},${dy},${dz}`)
       }
       return hechos
+    }
+    // antes de ir a por material, que el sitio valga (dentro de las zonas de obras, vacío, con suelo)
+    if (!obra) {
+      const [rv, dv] = await paso('construir', [o.estructura, ...origen.map(String), 'comprobar'])
+      pasos.push(dv)
+      if (!rv.exito) return { exito: false, texto: `No puedo construir ${plano.nombre} en ${origen.join(' ')}: ${rv.causa}.`, pasos }
     }
     const total = estructuras.ordenar(plano).length
     let sinAvance = 0, antes = -1, r = null, mal = 0, pedir = {}, ronda = 0

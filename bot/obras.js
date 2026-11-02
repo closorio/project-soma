@@ -4,12 +4,13 @@
 //   { permitido: { x1, z1, x2, z2 } | null,   ← rectángulo de obras acordado con el usuario; sin él, construir y minar se niegan
 //     obras: [{ id, nombre, plano, personaje, materia, origen: [x, y, z], inicio, fin, estado, bloques: [[x, y, z, tipo], …],
 //              andamio: [[x, y, z, tipo], …], mal_orientado: [[x, y, z, estado], …] }],   ← andamio y mal_orientado: catálogo (2026-11-02)
-//     minados: [{ t, personaje, x, y, z, tipo, herramienta }] }
+//     minados: [{ t, personaje, x, y, z, tipo, herramienta }],
+//     temporales: [{ nombre, x1, z1, x2, z2, carteles: [[x, y, z], [x, y, z]], desde }] }   ← zonas de obras de carteles (carteles.js)
 // Se relee solo cuando el archivo cambia (como cofres.js y zonas.js); cada bloque puesto se escribe en el acto, no al final.
 const fs = require('fs')
 
 const RUTA = require('./mundo').obras
-const VACIO = () => ({ permitido: null, obras: [], minados: [] })
+const VACIO = () => ({ permitido: null, temporales: [], obras: [], minados: [] })
 const MAX_MINADOS = 2000
 let cache = { mtime: -1, datos: VACIO() }
 const fecha = () => new Date().toLocaleString('sv-SE').slice(0, 19)
@@ -31,6 +32,22 @@ const permitido = () => leer().permitido || null
 function enPermitido(x, z) {
   const p = permitido()
   return !!p && x >= Math.min(p.x1, p.x2) && x <= Math.max(p.x1, p.x2) && z >= Math.min(p.z1, p.z2) && z <= Math.max(p.z1, p.z2)
+}
+
+// Zonas de obras temporales (2026-11-02): las de dos carteles «[obras] NOMBRE», aceptadas por el dueño (carteles.js). Solo para construir.
+const temporales = () => leer().temporales || []
+function ponerTemporales(lista) { const d = leer(); d.temporales = lista; guardar(d) }
+const dentroDe = (r, x, z) => x >= Math.min(r.x1, r.x2) && x <= Math.max(r.x1, r.x2) && z >= Math.min(r.z1, r.z2) && z <= Math.max(r.z1, r.z2)
+// ¿Se puede construir con estas esquinas [[x, z]…]? null si sí; si no, la causa. Con zonas de carteles, solo entera dentro de una de
+// ellas (o del rectángulo de obras, en el mundo del usuario); sin ellas, como siempre: reglas libres o el rectángulo de obras.
+function obraPermitida(esquinas, reglasLibres) {
+  const t = temporales()
+  const enRect = !reglasLibres && !!permitido() && esquinas.every(([x, z]) => enPermitido(x, z))
+  if (t.length) {
+    if (t.some(r => esquinas.every(([x, z]) => dentroDe(r, x, z))) || enRect) return null
+    return `fuera de las zonas de obras de los carteles (${t.map(r => r.nombre).join(', ')})`
+  }
+  return reglasLibres || enRect ? null : 'fuera del rectángulo de obras'
 }
 
 function nueva(personaje, nombre, plano, origen, materia) {
@@ -74,4 +91,4 @@ const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: 
 // ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
 const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && [...o.bloques, ...(o.andamio || [])].some(b => b[0] === x && b[1] === y && b[2] === z))
 
-module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }
+module.exports = { leer, guardar, permitido, enPermitido, temporales, ponerTemporales, obraPermitida, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

@@ -78,7 +78,9 @@ function lejosDeProtegido(x, z, margen = 10) {
 // { mal: causa }. y = la altura del suelo más alto (a esa cota se nivela, solo rellenando: nunca cavando).
 function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax = 1, yRef = null, mov = null, camino = true } = {}) {
   const esquinas = [[x0, z0], [x0 + ancho - 1, z0], [x0, z0 + largo - 1], [x0 + ancho - 1, z0 + largo - 1]]
-  if (!require('./mundo').reglasLibres && !esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' } // F8.1: solo en el del usuario
+  // F8.1: el rectángulo, solo en el del usuario; 2026-11-02: con zonas de obras de carteles, solo dentro de ellas en cualquier mundo
+  const fuera = obras.obraPermitida(esquinas, require('./mundo').reglasLibres)
+  if (fuera) return { mal: fuera }
   if (esquinas.some(([x, z]) => zonas.fueraDeTrabajo(x, null, z))) return { mal: 'fuera de la zona de trabajo' }
   if (!esquinas.every(([x, z]) => lejosDeProtegido(x, z, margen))) return { mal: `a menos de ${margen} de una zona protegida o un cofre` }
   const y0 = yRef ?? bot.entity.position.y
@@ -107,13 +109,14 @@ function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax =
   return { x0, z0, y, desnivel, relleno, pie }
 }
 // Catálogo de estructuras (2026-11-02): la caja dim con la esquina mínima en (x0, y0, z0), tal como la da el usuario. Entera dentro del
-// rectángulo de obras (mundo del usuario) y de la zona de trabajo, sin pisar zonas vedadas ni cofres (sin el margen de 10 de evaluar:
+// rectángulo de obras (mundo del usuario) o de una zona de obras de carteles y de la zona de trabajo, sin pisar zonas vedadas ni cofres (sin el margen de 10 de evaluar:
 // la posición la ha elegido él). Lo que hay dentro: aire, bien; vegetación que se quita (hierba, flores, nieve…), a `quitar`; cualquier
 // otro bloque o líquido, ocupado (no empieza ni excava). Bajo cada columna con bloque en la capa 0, suelo sólido o `relleno` hasta 8
 // por debajo. `columnas`: las (dx, dz) con bloque en la capa 0. Devuelve { x0, z0, y: y0 − 1, desnivel, relleno, quitar, pie } o { mal }.
 function evaluarCaja(bot, x0, y0, z0, [ancho, alto, largo], columnas, { mov = null, camino = true } = {}) {
   const esquinas = [[x0, z0], [x0 + ancho - 1, z0], [x0, z0 + largo - 1], [x0 + ancho - 1, z0 + largo - 1]]
-  if (!require('./mundo').reglasLibres && !esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' }
+  const fuera = obras.obraPermitida(esquinas, require('./mundo').reglasLibres)
+  if (fuera) return { mal: fuera }
   if (esquinas.some(([x, z]) => zonas.fueraDeTrabajo(x, null, z))) return { mal: 'fuera de la zona de trabajo' }
   const ocupado = [], quitar = [], relleno = []
   for (let x = x0; x < x0 + ancho; x++) for (let z = z0; z < z0 + largo; z++) {

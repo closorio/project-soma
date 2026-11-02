@@ -1,4 +1,4 @@
-// construir PLANO [x z | x y z] [materia=tablones] [nombre=…] [parcial] (F6; catálogo 2026-11-02): levantar un plano pequeño
+// construir PLANO [x z | x y z] [materia=tablones] [nombre=…] [parcial] [comprobar] (F6; catálogo 2026-11-02): levantar un plano pequeño
 // (bot/planos.js: pilar, muro, plataforma, cabana, cabana_techada) o una estructura del catálogo (bot/estructuras/<id>.json,
 // importada de un .litematic) dentro del rectángulo de obras (obras.json: permitido), lejos de las zonas protegidas y de los cofres.
 // Con x z, es la esquina noroeste y la altura la pone el suelo; con x y z (catálogo), la esquina de x, y y z mínimos tal cual: la caja
@@ -109,7 +109,9 @@ module.exports = async function construir(bot, args, tarea) {
   const nombre = (palabras.find(a => a.startsWith('nombre=')) || '').slice(7) || nombrePlano
   if (!catalogo && !planos.PLANOS[nombrePlano]) return { exito: false, causa: `plano desconocido: ${nombrePlano} (hay: ${[...planos.nombres(), ...estructuras.ids()].join(', ')})` }
   // F8.1: el rectángulo de obras solo manda en el mundo del usuario (fuera, sv.puedeTocar y las zonas, como minar desde F8.0b)
-  if (!mundo.reglasLibres && !obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
+  // 2026-11-02: antes, fuera las zonas de obras de carteles a las que les falta un cartel (valen mientras sigan en pie)
+  require('../carteles').vigentes(bot)
+  if (!mundo.reglasLibres && !obras.permitido() && !obras.temporales().length) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido) ni carteles de obras' }
   if (obras.enCurso()) return { exito: false, causa: `hay una obra en curso (${obras.enCurso().id}): termínala o deshazla` }
   const plano = catalogo || adaptar(planos.PLANOS[nombrePlano](materia), materia)
   // parcela: x y z del catálogo (caja tal cual), x z (la altura la pone el suelo) o la que elija
@@ -122,6 +124,8 @@ module.exports = async function construir(bot, args, tarea) {
   }
   if (e.mal) return { exito: false, causa: (nums.length >= 2 ? 'parcela no válida: ' : 'sin parcela: ') + e.mal }
   const { x0, z0, y, relleno } = e
+  // «comprobar» (el bucle de abasto de io.js, antes de ir a por material): solo si el sitio vale, sin presupuesto ni obra
+  if (palabras.includes('comprobar')) return { exito: true, causa: 'parcela válida', plano: plano.id, origen: [x0, y + 1, z0] }
   // presupuesto, antes de poner nada
   let fabricados = 0
   if (catalogo) {

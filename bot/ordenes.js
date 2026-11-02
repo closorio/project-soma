@@ -6,6 +6,7 @@
 //   F7.2 (supervivencia): come · ataca [al zombi] · refúgiate · sal (del refugio) · duerme / espera al día · fabrica [una espada de
 //   piedra] · equípate · apártate · caza (busca comida)
 //   2026-11-02 (catálogo): construye ESTRUCTURA en x y z | aquí · qué falta para ESTRUCTURA · lista de estructuras · deshaz ESTRUCTURA
+//   2026-11-02 (carteles de obras): lee los carteles · acepta los carteles · olvida los carteles
 const NUMEROS = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
   once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
   veinticinco: 25, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, docena: 12 }
@@ -214,6 +215,12 @@ function interpretar(texto) {
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
     return { tipo: 'centinela', zona: (m[1] || m[2] || BASE).toUpperCase() }
+  // 2026-11-02: zonas de obras temporales con carteles «[obras] NOMBRE» en dos esquinas (carteles.js): leerlas, aceptarlas y olvidarlas
+  if (/\bcarteles?\b/.test(t)) {
+    if (/\b(?:acepta|aceptad|aceptalos|usa|usad|vale|confirma|confirmad)\b/.test(t)) return { tipo: 'carteles', accion: 'aceptar' }
+    if (/\b(?:olvida|olvidad|olvidalos|borra|borrad|quita|quitad|ignora|ignorad)\b/.test(t)) return { tipo: 'carteles', accion: 'olvidar' }
+    if (/\b(?:lee|leed|leer|mira|mirad|busca|buscad|que dicen|cuales)\b/.test(t)) return { tipo: 'carteles', accion: 'leer' }
+  }
   // 2026-11-02: el catálogo de estructuras, antes que «granja de piedra», «fabrica» y los planos de siempre (así «casa de roble» no
   // es una cabaña): «construye casa_roble en 300 64 -20» (la esquina de abajo) o «… aquí», «qué falta para casa_roble», «lista de estructuras»
   if (/^(?:lista de estructuras|estructuras|que estructuras (?:sabes|conoces)|que sabes construir|que puedes construir)$/.test(t)) return { tipo: 'estructuras' }
