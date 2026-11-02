@@ -827,6 +827,11 @@ class Personaje {
         for (let t0 = Date.now(); Date.now() - t0 < 15000 && !tarea.cancelada; await esperar(250)) {
           if (bot.game.dimension !== dim0) {
             await esperar(2000) // a que cargue el otro lado
+            // sale del portal de llegada (a ≥ 3 bloques y fuera de sus bloques): quieto dentro, el juego no le deja volver a cruzarlo
+            const llegada = bot.entity.position.clone()
+            const fuera = () => !dentro() && bot.entity.position.distanceTo(llegada) >= 3
+            await moverHasta(bot, new goals.GoalInvert(new goals.GoalNear(llegada.x, llegada.y, llegada.z, 3)), fuera, { ms: 15000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+            bot.pathfinder.setGoal(null); bot.clearControlStates()
             const DIM = { the_nether: 'el Nether', overworld: 'el mundo normal', the_end: 'el End' }
             return { exito: true, texto: `Ya estoy en ${DIM[String(bot.game.dimension).replace('minecraft:', '')] || bot.game.dimension}.` }
           }
