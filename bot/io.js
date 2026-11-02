@@ -823,6 +823,13 @@ class Personaje {
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
         const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
         if (!zona) return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] }
+        // antes de montar guardia se equipa, como con «equípate» (lo que falte de los armor stands; luego lo mejor que lleve). Idempotente.
+        const [rs] = await paso('equipar_soportes', ['24'])
+        if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+        const [re] = await paso('equipar', ['todo'])
+        if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+        else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
+        if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
         const aliado = (n) => esBot(n) || AMOS.has(n)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
