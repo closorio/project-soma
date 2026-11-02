@@ -125,6 +125,10 @@ const marcaDeBot = () => `soma-bot;dueno=${require('./alcance').duenoDe(AMOS)}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
 const leerCentinela = (n) => { try { const j = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')); return j.zona ? { zona: j.zona, patrulla: !!j.patrulla } : null } catch (_) { return null } }
 const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona, patrulla: !!c.patrulla }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
+// 2026-11-02: el oficio (tarea repetitiva, empezando por cosechar): sobrevive igual que el centinela. { oficio: 'cosechar', zona }
+const rutaOficio = (n) => path.join(mundo.carpetaDatos, `oficio_${n}.json`)
+const leerOficio = (n) => { try { const j = JSON.parse(fs.readFileSync(rutaOficio(n), 'utf8')); return j.oficio ? { oficio: j.oficio, zona: j.zona || '' } : null } catch (_) { return null } }
+const guardarOficio = (n, c) => { try { if (c) fs.writeFileSync(rutaOficio(n), JSON.stringify({ oficio: c.oficio, zona: c.zona }) + '\n'); else fs.rmSync(rutaOficio(n), { force: true }) } catch (_) {} }
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
@@ -154,6 +158,7 @@ const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiénde
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
 const RANGO_CAMA = { h: 8, v: 5 } // el mismo cuadro con el que el juego no deja dormir (monstruos a ≤ 8 en horizontal y ≤ 5 en vertical)
+const ESPERA_COSECHA = 90000 // oficio cosechar: sin nada maduro, espera esto antes de volver a mirar el campo
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
 const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
@@ -177,6 +182,7 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   centinela_off: () => 'Vale.', guardaespaldas_off: () => 'Vale.',
   guardaespaldas: (o) => `Modo guardaespaldas: no me separo de ${o.a || 'ti'}.`,
   centinela: (o) => (o.patrulla ? `Patrullo ${o.zona || 'el hogar'}.` : `Modo centinela: vigilo ${o.zona}.`),
+  oficio: (o) => `Mi oficio: ${o.oficio} en ${o.zona || 'el hogar'}.`, oficio_off: () => 'Vale, sin oficio.',
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
   saca: (o) => `Voy al cofre a por ${o.objeto || 'eso'}.`, desatascate: () => 'Busco por dónde salir.', sube: () => 'Subo a la superficie.',
@@ -206,6 +212,7 @@ class Personaje {
     setInterval(() => this.hambre().catch(e => this.ev('[hambre] error: ' + e.message)), 2000) // 2026-11-02: come siempre que tenga hambre y comida
     this.guardaespaldas = leerGuardaespaldas(nombre) // 2026-11-02: igual que el centinela (uno u otro, no los dos)
     this.centinela = this.guardaespaldas ? null : leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
+    this.oficio = leerOficio(nombre) // 2026-11-02: el oficio se retoma solo, como la guardia (que manda si hay las dos)
     setInterval(() => this.supervisarCentinela(), 3000)
     setInterval(() => this.vigilarSueno(), 1000) // 2026-11-02: dormir contra la guardia, según lo cerca que esté el enemigo
     VIVOS.set(nombre, this)
@@ -991,7 +998,7 @@ class Personaje {
           ultima = await this.vuelta(e) || ultima
         }
       } catch (err) { this.ev('[agenda] fallo: ' + err.message) } finally { this.supervisando = null }
-      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
+      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas && !this.oficio) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
     })()
     return this.supervisando
   }
@@ -1000,7 +1007,7 @@ class Personaje {
   // Devuelve la entrada si salió de la agenda terminada (para el «al terminar»).
   async vuelta(e) {
     const o = e.o, texto = e.texto
-    const guardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas' // los modos de guardia no se anuncian ni se anotan al retomarlos o dejarlos
+    const guardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas' || o.tipo === 'oficio' // los modos de guardia no se anuncian ni se anotan al retomarlos o dejarlos
     const previo = this.ocupado
     const tarea = this.nuevaTarea()
     this.enVuelta = e
@@ -1067,6 +1074,7 @@ class Personaje {
     guardarCentinela(this.nombre, this.centinela)
     if (zona && this.guardaespaldas) this.fijarGuardaespaldas(null) // un modo u otro
   }
+  fijarOficio(c) { this.oficio = c; guardarOficio(this.nombre, c) }
   fijarGuardaespaldas(a) {
     this.guardaespaldas = a ? { a } : null
     guardarGuardaespaldas(this.nombre, this.guardaespaldas)
@@ -1102,11 +1110,12 @@ class Personaje {
 
   supervisarCentinela() {
     const bot = this.bot
-    if (!(this.centinela || this.guardaespaldas) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!(this.centinela || this.guardaespaldas || this.oficio) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
-    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, patrulla: this.centinela.patrulla, reanuda: true }
-    this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : 'modo centinela', 'reanudar')
+    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : this.centinela ? { tipo: 'centinela', zona: this.centinela.zona, patrulla: this.centinela.patrulla, reanuda: true }
+      : { tipo: 'oficio', oficio: this.oficio.oficio, zona: this.oficio.zona, reanuda: true }
+    this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : this.centinela ? 'modo centinela' : 'oficio ' + this.oficio.oficio, 'reanudar')
       .catch(e => this.ev('[centinela] no pude retomar: ' + e.message)).finally(() => { this.reanudando = false })
   }
 
@@ -1307,6 +1316,39 @@ class Personaje {
           }
         } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
         return { exito: true, texto: '', pasos: [] }
+      }
+      case 'oficio_off': {
+        const antes = this.oficio
+        this.fijarOficio(null)
+        return { exito: true, texto: antes ? `Dejo el oficio (${antes.oficio}).` : 'No tenía oficio.', pasos: [] }
+      }
+      case 'oficio': {
+        // 2026-11-02: tarea repetitiva hasta «deja el oficio». Cosechar: va a la zona (HOGAR por defecto), cosecha y replanta lo maduro, lo guarda
+        // en el cofre del marco con comida y, sin nada maduro, espera ESPERA_COSECHA y vuelve a mirar. Sobrevive a órdenes, muertes y reinicios.
+        if (o.oficio !== 'cosechar') return { exito: false, texto: `No sé el oficio ${o.oficio}.`, pasos: [] }
+        const nombreZona = o.zona || baseZona()
+        if (!zonas.leer().zonas.some(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())) { if (o.reanuda) this.fijarOficio(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
+        this.fijarOficio({ oficio: 'cosechar', zona: o.zona || '' })
+        if (!o.reanuda) bot.chat(`Cosecho y replanto en ${nombreZona}; lo guardo en el cofre con comida en el marco.`)
+        let ultimoAviso = 0
+        while (!(tarea && tarea.cancelada)) {
+          try {
+            if (!bot.entity || !(bot.health > 0) || this.recuperando) { await esperar(1000); continue }
+            await require('./habilidades/hogar')(bot, tarea).catch(() => {}) // el campo del hogar: si está lejos, hasta allí
+            const [r] = await paso('cosechar', [nombreZona])
+            if (r.exito) {
+              const n = Object.entries(r.guardado || {}).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')
+              this.ev(`[oficio] cosechados ${r.cosechados}, replantados ${r.replantados}${r.sinSemilla ? `, sin semilla ${r.sinSemilla}` : ''}; guardado: ${n || 'nada'} (${r.causa})`)
+              if (Date.now() - ultimoAviso > 120000) { bot.chat(`Cosechados ${r.cosechados}${n ? `, guardo ${n}` : ''}${r.causa !== 'guardado' ? ` (${r.causa})` : ''}.`); ultimoAviso = Date.now() }
+              await esperar(5000)
+            } else {
+              if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${nombreZona}.`, pasos: [] }
+              const espera = r.causa === 'sin cultivos maduros' ? ESPERA_COSECHA : 8000 // nada maduro: a que crezca; un fallo (amenaza, sin camino…): poco
+              for (const t1 = Date.now(); Date.now() - t1 < espera && !(tarea && tarea.cancelada); ) await esperar(500)
+            }
+          } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
+        }
+        return { exito: true, texto: 'Dejo el trabajo un momento.', pasos: [] }
       }
       case 'centinela_off': {
         const antes = this.centinela

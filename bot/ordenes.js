@@ -195,6 +195,11 @@ function interpretar(texto) {
   // 2026-11-02: «modo guardaespaldas» (te sigue y ataca a quien se te acerque); «desactiva guardaespaldas» lo apaga
   if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?guardaespaldas\b|\bya no (?:seas|hagas de) guardaespaldas\b/.test(t)) return { tipo: 'guardaespaldas_off' }
   if ((m = t.match(/\bguardaespaldas\b(?: (?:de|a) (\w+))?/))) return { tipo: 'guardaespaldas', ...(m[1] ? { a: m[1] } : {}) }
+  // 2026-11-02: oficio (tarea repetitiva). Por ahora cosechar: «oficio cosechar», «cosecha el hogar», «ponte a cosechar», «sé granjero»;
+  // «deja el oficio» / «ya no coseches» lo quita. Antes de «caza» y de «recoge».
+  if (/\b(?:deja|dejar|quita|quitar|termina|terminar|cancela|cancelar|fin|sin|ya no)\b.*\b(?:oficio|cosech\w*|granj\w*)\b|\bya no (?:cosech\w*|seas granjero)\b/.test(t)) return { tipo: 'oficio_off' }
+  if ((m = t.match(/\b(?:oficio(?: de)? cosech\w*|cosecha\w*|ponte a cosechar|se(?: un)? granjero|granjero)\b(?: (?:en|de|del|por) (?:el |la )?(?:zona )?(\w+))?/)))
+    return { tipo: 'oficio', oficio: 'cosechar', zona: (m[1] && !/^(?:hogar|campo|cultivos|todo|aqui|ya)$/.test(m[1]) ? m[1] : '').toUpperCase() }
   // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela
   if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?(?:centinela\b|patru\w+)|\bya no (?:seas|hagas de) centinela\b|\bya no patru\w+/.test(t)) return { tipo: 'centinela_off' }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»

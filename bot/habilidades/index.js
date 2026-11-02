@@ -44,6 +44,8 @@ const HABILIDADES = {
   cazar: require('./cazar'),
   recoger_agua: require('./agua').recogerAgua,
   verter: require('./agua').verter,
+  // 2026-11-02: el primer oficio (cosechar y replantar, guardar en el cofre del marco con comida)
+  cosechar: require('./cosechar'),
   // F8.1: hasta una mena enterrada, cavando (la pide el capataz cuando minar no ve ninguna)
   ir_a_mena: require('./ir_a_mena'),
 }

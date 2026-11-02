@@ -64,7 +64,8 @@ async function conCerrojo(clave, fn) {
 // sitio y avisa de que está lleno. Devuelve lo que movió (pila a pila, por los clics; no «inventario antes − después», que pierde lo
 // que recoge al andar hasta el cofre) y lo que entró en el cofre (contado en la propia ventana): si coinciden, no se perdió nada.
 let Item = null
-async function guardarEn(bot, bloque, tarea) {
+// omitir(it): qué pilas no se tocan (por defecto, lo que se conserva: herramientas, armas, armadura y comida; cosechar pasa las suyas)
+async function guardarEn(bot, bloque, tarea, omitir = (it) => conservar(bot, it)) {
   Item = Item || require('prismarine-item')(bot.registry)
   const v = await conLimite(bot.openContainer(bloque), 8000)
   const fin = v.inventoryStart
@@ -73,7 +74,7 @@ async function guardarEn(bot, bloque, tarea) {
   try {
     for (let s = v.inventoryStart; s < v.inventoryEnd && !lleno && !(tarea && tarea.cancelada); s++) {
       const it = v.slots[s]
-      if (!it || conservar(bot, it)) continue
+      if (!it || omitir(it)) continue
       const { name, count } = it
       await bot.clickWindow(s, 0, 0) // coger la pila
       while (v.selectedItem) {
@@ -135,4 +136,4 @@ module.exports = async function depositar(bot, [modo], tarea) {
   if (!Object.keys(guardado).length) return { exito: false, causa: causa || (tarea && tarea.cancelada ? 'cancelado' : 'no guardé nada'), ...datos }
   return { exito: true, causa: Object.keys(quedan).length ? causa || 'guardado a medias' : 'guardado', ...datos }
 }
-Object.assign(module.exports, { necesita, ajustes, guardados, ocupacion, conservar, conCerrojo, ESPERA_FALLO, ESPERA_LLENOS })
+Object.assign(module.exports, { guardarEn, necesita, ajustes, guardados, ocupacion, conservar, conCerrojo, ESPERA_FALLO, ESPERA_LLENOS })
