@@ -17,7 +17,8 @@ Los seis pasos del plan están hechos y pasan en seco: importador, orientación,
 abasto por tandas y órdenes del chat (también por el LLM local). La lectura de `.litematic` está validada con archivos reales.
 En el server local (2026-11-02), `casita_prueba` (5×5×5: puerta, ventanas, antorcha de pared, tejado de escaleras y losas con
 andamio) quedó 99/99 bloques con su estado dos veces: con todo en la mochila y con el abasto desde un cofre de la base (sacar,
-fabricar, 7 tandas). `deshaz` la dejó vacía. Pendiente: `fabricar oak_planks N` a veces falla («no se pudo») y cuesta tandas.
+fabricar, 7 tandas). `deshaz` la dejó vacía. En el mundo del compañero (26.3), Oqva la terminó 98/98 en la zona de
+carteles «norte», dentro de la base, tras arreglar el paso por vedadas, la mesa, el pico, la madera y el andamio. Pendiente: `fabricar oak_planks N` a veces falla («no se pudo») y cuesta tandas.
 
 ## Siguiente paso
 Ver campo «siguiente». Después, una nota de experimento con bloques bien y mal orientados, tiempo y tandas.
