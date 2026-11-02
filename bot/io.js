@@ -1539,6 +1539,7 @@ class Personaje {
         return { exito: true, texto: `Faltan ${falta.length} materiales de ${Object.keys(plan.materiales).length}.`, pasos: [d] }
       }
       case 'construye': {
+        if (o.estructura) return this.construirCatalogo(o, tarea, paso) // 2026-11-02: del catálogo (bot/estructuras/), con abasto
         const aqui = o.aqui ? bot.entity.position.floored() : null
         const [r, d] = await paso('construir', o.retomar ? [`retomar=${o.retomar}`] : [o.plano, ...(aqui ? [String(aqui.x + 2), String(aqui.z + 2)] : [])])
         o.obra = r.obra // para «continúa»
@@ -1732,6 +1733,10 @@ class Personaje {
         const texto = r.exito ? `Tengo comida (${r.comida[0]} → ${r.comida[1]}).` : r.causa === 'sin hambre' ? 'No tengo hambre.' : `No conseguí comida: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
       }
+      case 'estructuras': { // 2026-11-02: las del catálogo (make import-structure)
+        const l = require('./estructuras').ids().map(id => { const e = require('./estructuras').cargar(id); return `${id} (${e.dim.join('×')}, ${e.bloques.length} bloques)` })
+        return { exito: true, texto: l.length ? `Sé construir: ${l.join(', ')}.` : 'No tengo ninguna estructura en el catálogo.', pasos: [] }
+      }
       case 'deshaz': {
         const [r, d] = await paso('deshacer', [o.obra || ''])
         const texto = r.exito ? `Deshecha: quité ${r.quitados} bloques${r.saltados ? ` (${r.saltados} ya no eran míos)` : ''}.` : `No pude deshacerlo: ${r.causa}${r.quitados ? ` (${r.quitados} quitados, quedan ${r.quedan})` : ''}.`
@@ -1739,6 +1744,79 @@ class Personaje {
       }
     }
     return { exito: false, texto: 'No sé hacer eso.' }
+  }
+
+  // 2026-11-02 (catálogo de estructuras): «construye casa_roble en x y z» (o «… aquí»: la esquina, a 2 de mis pies). Por tandas: los
+  // siguientes bloques que caben en la mochila, conseguidos con abastecer.planAbasto (cofres de la base, talar, minar, fundir, cazar,
+  // fabricar: las órdenes de siempre) y puestos con construir … parcial, que para en el primer bloque sin material. Hasta terminar, o
+  // 3 tandas sin avance, o cuando solo falta lo que hay que pedir (lo dice por el chat). Sin LLM. La obra queda en obras.json y
+  // «continúa» la retoma (o.obra). Lo que no saca de los cofres ni consigue lo pide: «déjalo en un cofre de HOGAR».
+  async construirCatalogo(o, tarea, paso) {
+    const bot = this.bot, estructuras = require('./estructuras'), abastecer = require('./abastecer'), { Vec3 } = require('vec3')
+    const plano = estructuras.cargar(o.estructura)
+    if (!plano) return { exito: false, texto: `No tengo la estructura ${o.estructura}.`, pasos: [] }
+    const frase = (m) => Object.entries(m).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
+    const pasos = []
+    let obra = o.retomar || null, origen = null
+    if (obra) { const ob = require('./obras').leer().obras.find(x => x.id === obra); origen = ob && ob.origen }
+    if (!origen) {
+      if (o.pos) origen = o.pos
+      else if (o.aqui) { const p = bot.entity.position.floored(); origen = [p.x + 2, p.y, p.z + 2] }
+      else return { exito: false, texto: `Dime dónde: «construye ${o.estructura} en x y z» (la esquina de abajo) o «… aquí».`, pasos }
+    }
+    const puestosEnMundo = () => {
+      const hechos = new Set()
+      for (const [dx, dy, dz, i] of plano.bloques) {
+        const b = bot.blockAt(new Vec3(origen[0] + dx, origen[1] + dy, origen[2] + dz))
+        if (b && b.name === estructuras.nombre(plano.paleta[i])) hechos.add(`${dx},${dy},${dz}`)
+      }
+      return hechos
+    }
+    const total = estructuras.ordenar(plano).length
+    let sinAvance = 0, antes = -1, r = null, mal = 0, pedir = {}, ronda = 0
+    while (++ronda <= 40 && !tarea.cancelada) {
+      const hechos = puestosEnMundo()
+      sinAvance = hechos.size === antes ? sinAvance + 1 : 0
+      antes = hechos.size
+      if (sinAvance >= 3) break
+      // la tanda: lo que cabe en los huecos de la mochila, más las ranuras que ya ocupa lo de la obra
+      const inv = {}
+      for (const it of bot.inventory.items()) inv[it.name] = (inv[it.name] || 0) + it.count
+      const deObra = bot.inventory.items().filter(it => plano.materiales[it.name]).length
+      const t = abastecer.tanda(bot.registry, plano, hechos, Math.max(4, bot.inventory.emptySlotCount() - 4 + deObra))
+      const falta = {}
+      for (const [k, n] of Object.entries(t.objetos)) if (n > (inv[k] || 0)) falta[k] = n - (inv[k] || 0)
+      if (Object.keys(falta).length) {
+        const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
+        const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })
+        const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno })
+        pedir = plan.pedir
+        if (Object.keys(pedir).length) bot.chat(`Para ${plano.nombre} necesito que me traigas ${frase(pedir)} (déjalo en un cofre de ${BASE_ZONA}).`)
+        if (!plan.pasos.length) break // solo queda lo que hay que pedir
+        bot.chat(`Tanda ${ronda} de ${plano.nombre} (${t.bloques} bloques): voy a por ${frase(falta)}.`)
+        for (const p of plan.pasos) { if (tarea.cancelada) break; pasos.push(...await this.pasoAbasto(p, tarea, paso)) }
+      }
+      if (tarea.cancelada) break
+      const [rr, d] = await paso('construir', obra ? [`retomar=${obra}`, 'parcial'] : [o.estructura, ...origen.map(String), 'parcial'])
+      pasos.push(d); r = rr; mal += r.mal || 0
+      if (r.obra) { obra = r.obra; o.obra = obra } // para «continúa»
+      if (r.exito) return { exito: true, texto: `Construido: ${plano.nombre} en ${r.origen.join(', ')} (${total} bloques en ${ronda} tanda${ronda === 1 ? '' : 's'}${mal ? `; ${mal} con otra orientación` : ''}).`, pasos }
+      if (!/^falta material/.test(r.causa || '')) break
+    }
+    const hechos = puestosEnMundo().size
+    const porque = tarea.cancelada ? 'me lo cortaste' : Object.keys(pedir).length ? `me falta ${frase(pedir)}` : sinAvance >= 3 ? 'tres tandas sin avanzar' : r ? r.causa : 'no empecé'
+    return { exito: false, texto: `No terminé ${plano.nombre}: ${porque} (${hechos} de ${plano.bloques.length} bloques en su sitio${obra ? '; «continúa» la retoma' : ''}).`, pasos }
+  }
+
+  // Un paso del abasto con la orden de siempre (tala, mina, funde, cazar) o la habilidad (saca y fabrica, con su cantidad)
+  async pasoAbasto(p, tarea, paso) {
+    if (p.tipo === 'saca') return [(await paso('sacar_del_cofre', [p.objeto, String(p.n)]))[1]]
+    if (p.tipo === 'fabrica') return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]]
+    const o = p.tipo === 'tala' ? { tipo: 'tala', n: Math.min(p.n, 64), pedido: p.n }
+      : p.tipo === 'mina' ? { tipo: 'mina', bloque: p.bloque, n: p.n }
+        : p.tipo === 'funde' ? { tipo: 'funde', entrada: p.entrada, n: p.n } : { tipo: 'cazar', animal: p.animal, n: p.n }
+    const res = await this.hacer(o, tarea)
+    return res.pasos || []
   }
 
   // «tala N troncos»: hasta tener N troncos más (en el inventario o guardados), con las habilidades de la red: recoger si hay troncos

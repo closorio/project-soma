@@ -14,6 +14,7 @@ const persistente = require('../memoria_persistente')
 const FUNDIR = {
   raw_iron: 'iron_ingot', raw_gold: 'gold_ingot', raw_copper: 'copper_ingot', sand: 'glass', red_sand: 'glass',
   cobblestone: 'stone', cobbled_deepslate: 'deepslate', clay_ball: 'brick', netherrack: 'nether_brick', oak_log: 'charcoal',
+  stone: 'smooth_stone', clay: 'terracotta', // 2026-11-02 (catálogo de estructuras)
   beef: 'cooked_beef', porkchop: 'cooked_porkchop', chicken: 'cooked_chicken', mutton: 'cooked_mutton', rabbit: 'cooked_rabbit',
   cod: 'cooked_cod', salmon: 'cooked_salmon', potato: 'baked_potato', kelp: 'dried_kelp',
 }

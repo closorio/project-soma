@@ -5,6 +5,7 @@
 //   modo libre · modo órdenes · al terminar quieto|libre · perfil NOMBRE · estado · ayuda
 //   F7.2 (supervivencia): come · ataca [al zombi] · refúgiate · sal (del refugio) · duerme / espera al día · fabrica [una espada de
 //   piedra] · equípate · apártate · caza (busca comida)
+//   2026-11-02 (catálogo): construye ESTRUCTURA en x y z | aquí · qué falta para ESTRUCTURA · lista de estructuras · deshaz ESTRUCTURA
 const NUMEROS = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
   once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
   veinticinco: 25, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, docena: 12 }
@@ -12,8 +13,9 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
   aranas: 'spider', creeper: 'creeper', creepers: 'creeper', bruja: 'witch', aldeano: 'villager', oveja: 'sheep', vaca: 'cow' }
 // La zona base del dueño (centinela sin zona, cofres y soportes de armadura): IO_BASE (local.mk) o HOGAR, la de count (2026-11-02)
 const BASE = (process.env.IO_BASE || 'HOGAR').toUpperCase()
+const estructuras = require('./estructuras') // 2026-11-02: el catálogo (ids y alias)
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
-const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
+const AYUDA = 'Puedo: ven, sígueme, entra al portal, construir del catálogo («construye casa_roble en x y z», «lista de estructuras»), encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela [en ZONA] (vigila tu base o esa zona y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, ármate (espada, pico y hacha de piedra, con lo que haga falta), equípate, apártate, caza, foto (los que estén cerca se quitan el casco y miran adonde miras); y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
@@ -76,6 +78,18 @@ function destinatario(texto, nombres) {
 }
 
 // 2026-11-01: «ven a 120 64 -30», «sígueme en x y z»: dónde está quien habla si no se le ve (del original: normalizar quita el signo)
+// 2026-11-02: la estructura del catálogo (bot/estructuras/) que nombra la frase, por su id o un alias: el trozo de palabras seguidas
+// más largo que sea uno de ellos («construye la casa de roble en …» → casa_roble si «casa de roble» es su alias), o null
+function deCatalogo(t) {
+  if (!estructuras.ids().length) return null
+  const w = t.replace(/\b(?:en|a) \d+ \d+ \d+$/, '').split(' ').filter(Boolean)
+  for (let n = Math.min(w.length, 6); n >= 1; n--) for (let i = 0; i + n <= w.length; i++) {
+    const id = estructuras.porAlias(w.slice(i, i + n).join(' '))
+    if (id) return id
+  }
+  return null
+}
+
 function coords(texto) {
   const m = String(texto).match(/\b(?:en|a)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/i)
   return m ? { en: m.slice(1, 4).map(Number) } : {}
@@ -200,6 +214,15 @@ function interpretar(texto) {
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
     return { tipo: 'centinela', zona: (m[1] || m[2] || BASE).toUpperCase() }
+  // 2026-11-02: el catálogo de estructuras, antes que «granja de piedra», «fabrica» y los planos de siempre (así «casa de roble» no
+  // es una cabaña): «construye casa_roble en 300 64 -20» (la esquina de abajo) o «… aquí», «qué falta para casa_roble», «lista de estructuras»
+  if (/^(?:lista de estructuras|estructuras|que estructuras (?:sabes|conoces)|que sabes construir|que puedes construir)$/.test(t)) return { tipo: 'estructuras' }
+  const deCat = /\b(?:construye|construir|construid|levanta|levantar|edifica|monta|haz(?:me)?|hacer|falta|faltan|materiales|necesitas)\b/.test(t) && deCatalogo(t)
+  if (deCat) {
+    if (/\b(?:que (?:te |le )?falta|que faltan?|materiales|que necesitas)\b/.test(t)) return { tipo: 'materiales', plano: deCat, zona: BASE }
+    const c = coords(texto)
+    return { tipo: 'construye', estructura: deCat, plano: deCat, ...(c.en ? { pos: c.en } : {}), aqui: /\baqui\b/.test(t) }
+  }
   // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
   if (/\bgranja de piedra\b|\bstone farm\b|\bgenerador de piedra\b/.test(t) && /\b(?:haz(?:me)?|hacer|construye|construir|monta|necesito|materiales|que (?:te )?falta|prepara)\b/.test(t))
     return { tipo: 'materiales', plano: 'granja_piedra', zona: BASE }
@@ -232,6 +255,8 @@ function interpretar(texto) {
     return { tipo: 'construye', plano: cab, aqui: /\baqui\b/.test(t) }
   }
   if ((m = t.match(/\b(?:deshaz|deshacer|deshaced|desmonta|desmontar|derriba|derribar|quita|quitar)\b(?: (?:la |el |esa |ese |esta |este )?(\w+))?/))) {
+    const c = deCatalogo(t)
+    if (c) return { tipo: 'deshaz', obra: c } // 2026-11-02: una del catálogo, por su id o alias
     const p = (m[1] && PLANOS[m[1]]) || null
     return { tipo: 'deshaz', obra: p === 'cabana' && /\bgrande\b/.test(t) ? 'cabana_grande' : p || m[1] || null }
   }

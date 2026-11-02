@@ -133,8 +133,16 @@ ok(/a mano/.test(pisa) && JSON.parse(fs.readFileSync(path.join(tmp, 'casita.json
 imp.escribir({ estructura: e, materiales: m }, estructuras.DIR, tmp, true)
 imp.escribir({ estructura: e, materiales: m }, estructuras.DIR, tmp)
 ok(JSON.parse(fs.readFileSync(path.join(tmp, 'casita.json'), 'utf8')).importado === true, 'con forzar o sobre una importada, se escribe')
+// las órdenes del chat con el catálogo (ordenes.js usa este mismo módulo, con DIR en el temporal): alias «la casita»
+const ordenes = require('./ordenes')
+const io = (t) => JSON.stringify(ordenes.interpretar(t))
+ok(io('construye casita en 300 64 -20') === JSON.stringify({ tipo: 'construye', estructura: 'casita', plano: 'casita', pos: [300, 64, -20], aqui: false }), `orden con x y z: ${io('construye casita en 300 64 -20')}`)
+ok(ordenes.interpretar('levanta la casita aquí').estructura === 'casita' && ordenes.interpretar('levanta la casita aquí').aqui, 'orden por alias, aquí')
+ok(ordenes.interpretar('qué te falta para la casita').tipo === 'materiales' && ordenes.interpretar('qué te falta para la casita').plano === 'casita', 'qué falta para')
+ok(ordenes.interpretar('lista de estructuras').tipo === 'estructuras' && ordenes.interpretar('deshaz la casita').obra === 'casita', 'lista y deshaz')
+ok(ordenes.interpretar('construye una casa').plano === 'cabana_techada' && !ordenes.interpretar('construye una casa').estructura, '«casa» a secas sigue siendo la cabaña')
 fs.rmSync(tmp, { recursive: true, force: true })
-console.log('  catálogo: error con la lista, escribir sin pisar lo hecho a mano, cargar con caché, ids, alias y listar')
+console.log('  catálogo: error con la lista, escribir sin pisar lo hecho a mano, cargar con caché, ids, alias, listar y órdenes del chat')
 
 // --- 6. .litematic reales (catalogo/pruebas/, de schematic4j) -------------------------------------------------------------------
 const REAL = path.join(__dirname, '..', 'catalogo', 'pruebas')
