@@ -395,6 +395,19 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     for (const [v, f, quiero, txt, al] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo, al) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
   }
 
+  { // «modo centinela»: quién cuenta como intruso en la zona
+    const { Vec3 } = require('vec3'), sv = require('./habilidades/sv')
+    const mk = (id, type, name, x, extra = {}) => ({ id, type, name, position: new Vec3(x, 64, 5), isValid: true, ...extra })
+    const bx = { entity: mk(0, 'player', 'player', 0, { username: 'Trivino' }), entities: {} }
+    for (const e of [mk(1, 'hostile', 'zombie', 5), mk(2, 'player', 'player', 6, { username: 'Ana' }), mk(3, 'player', 'player', 7, { username: '__Count' }),
+      mk(4, 'player', 'player', 8, { username: 'Oqva' }), mk(5, 'hostile', 'zombie', 50), mk(6, 'hostile', 'creeper', 9), mk(7, 'animal', 'cow', 9)]) bx.entities[e.id] = e
+    const zona = { x1: 10, z1: 0, x2: 0, z2: 10 } // esquinas al revés a propósito
+    const quien = sv.intrusos(bx, zona, (n) => n === '__Count' || n === 'Oqva').map(e => e.id)
+    ok(JSON.stringify(quien) === '[1,2]', `centinela: zombi y jugador desconocido sí; dueño, bot, zombi fuera, creeper y vaca no (${JSON.stringify(quien)})`)
+    const o = require('./ordenes').interpretar('modo centinela')
+    ok(o.tipo === 'centinela' && o.zona === 'HOGAR', `«modo centinela» → ${JSON.stringify(o)}`)
+  }
+
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
   process.exit(fallos ? 1 : 0)
 }

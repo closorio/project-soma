@@ -106,6 +106,7 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (
   construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
   // F8.0b
   cazar: (o) => `Voy a cazar ${o.n} ${o.animal}.`, agua: () => 'Voy a llenar el cubo.', vierte: (o) => `Vierto el ${o.que}.`,
+  centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
   saca: (o) => `Voy al cofre a por ${o.objeto || 'eso'}.`, desatascate: () => 'Busco por dónde salir.', sube: () => 'Subo a la superficie.',
@@ -816,6 +817,44 @@ class Personaje {
         const r = await marcha
         const textos = { 'tiempo agotado': 'Llevo diez minutos siguiéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
+      }
+      case 'centinela': {
+        // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
+        // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
+        const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
+        if (!zona) return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] }
+        const aliado = (n) => esBot(n) || AMOS.has(n)
+        const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
+        const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
+        const p0 = bot.entity.position
+        const fuera = Math.floor(p0.x) < Math.min(zona.x1, zona.x2) || Math.floor(p0.x) > Math.max(zona.x1, zona.x2) || Math.floor(p0.z) < Math.min(zona.z1, zona.z2) || Math.floor(p0.z) > Math.max(zona.z1, zona.z2)
+        if (fuera) { // a la zona, a su centro
+          const r = await moverHasta(bot, new goals.GoalNearXZ(cx, cz, 4), () => false, { ms: 180000, tarea, mov: mov() })
+          if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
+        }
+        const puesto = bot.entity.position.clone()
+        let golpeador = null
+        const alGolpe = (victima, fuente) => { if (sv.esAgresor(bot, victima, fuente, null, aliado)) golpeador = { id: fuente.id, t: Date.now() } }
+        bot.on('entityHurt', alGolpe)
+        this.escoltando = true // los golpes los atiende esta guardia, no alGolpear
+        bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los nuestros.`)
+        try {
+          while (!(tarea && tarea.cancelada)) {
+            const g = golpeador && bot.entities[golpeador.id]
+            const x = (g && g.isValid !== false && Date.now() - golpeador.t < AGRESOR_ESCOLTA_MS ? g : null) || sv.intrusos(bot, zona, aliado, ignorar)[0]
+            if (!x) { await esperar(500); continue }
+            if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Alto! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')} en ${zona.nombre}.`) }
+            if (x.position.distanceTo(bot.entity.position) > 12) // lejos: acercarse antes (atacar solo ve a ≤ 16)
+              await moverHasta(bot, new goals.GoalNear(x.position.x, x.position.y, x.position.z, 4), () => x.isValid === false || x.position.distanceTo(bot.entity.position) <= 10,
+                { ms: 30000, tarea, entidad: x, mov: mov() })
+            const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'acorralado', 'puno', 'vedadas'], tarea)
+            if (!p || !p.exito) ignorar.set(x.id, Date.now() + 8000) // sin camino, huyó…: no insistir al momento
+            golpeador = null
+            if (!(tarea && tarea.cancelada) && bot.entity.position.distanceTo(puesto) > 6)
+              await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => false, { ms: 30000, tarea, mov: mov() })
+          }
+        } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
+        return { exito: true, texto: 'Dejo la guardia.', pasos: [] }
       }
       case 'escolta': {
         // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y vigila: si un monstruo hostil se le acerca

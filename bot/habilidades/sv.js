@@ -170,6 +170,17 @@ function amenazaCerca(bot, protegido, radio = 12, ignorar = new Map()) {
     .sort((a, b) => d(a, bot.entity) - d(b, bot.entity))[0] || null
 }
 
+// «modo centinela»: los que han entrado en la zona (rectángulo x/z de zonas.json) y hay que echar: monstruos hostiles (o neutrales que ya han
+// pegado) y jugadores que no sean aliados (`aliado(nombre)`: dueños y otros personajes). Sin los de NUNCA_ATACAR (creeper…) ni los de
+// `ignorar` (id → hasta cuándo). Los más cercanos al bot primero.
+function intrusos(bot, zona, aliado = () => false, ignorar = new Map()) {
+  const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
+  const dentro = (p) => { const x = Math.floor(p.x), z = Math.floor(p.z); return x >= x1 && x <= x2 && z >= z1 && z <= z2 }
+  return Object.values(bot.entities).filter(e => e !== bot.entity && vivo(bot, e) && !((ignorar.get(e.id) || 0) > Date.now()) && dentro(e.position)
+    && (e.type === 'player' ? !!e.username && !aliado(e.username) : esAmenaza(bot, e) && !NUNCA_ATACAR.has(e.name)))
+    .sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))
+}
+
 // ---- el refugio en la memoria del personaje ----
 // refugio: la casilla de los pies dentro de la celda (la usan los sentidos: refugio_dist); refugioInfo: cómo se hizo (modo, salida,
 // bloques puestos y picados, para salir y para que el banco de pruebas reponga el terreno).
@@ -199,5 +210,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, anotarRefugio, refugioInfo,
   centrar }

@@ -13,7 +13,7 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
-  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme (o defiende a X: solo a quien ataque), refúgiate, ' +
+  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme (o defiende a X: solo a quien ataque), modo centinela (vigila HOGAR y ataca a quien entre), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; y continúa (sigue con lo que dejaste a medias).'
@@ -133,6 +133,9 @@ function interpretar(texto) {
   if (/\b(?:equipate|equipaos|equipar|equipa|armate|armaos|ponte la armadura|coge el arma|coge la espada)\b/.test(t)) return { tipo: 'equipate' }
   if (/\b(?:apartate|apartaos|apartarse|quitate de ahi|sal de la lava|alejate de la lava|alejate del borde|alejate del agua)\b/.test(t)) return { tipo: 'apartate' }
   if (/\b(?:caza|cazad|cazar|busca comida|buscad comida|consigue comida|trae comida|recoge comida)\b/.test(t)) return { tipo: 'caza' }
+  // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
+  if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
+    return { tipo: 'centinela', zona: (m[1] || m[2] || 'hogar').toUpperCase() }
   // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
   if (/\bgranja de piedra\b|\bstone farm\b|\bgenerador de piedra\b/.test(t) && /\b(?:haz(?:me)?|hacer|construye|construir|monta|necesito|materiales|que (?:te )?falta|prepara)\b/.test(t))
     return { tipo: 'materiales', plano: 'granja_piedra', zona: 'HOGAR' }
