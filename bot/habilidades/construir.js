@@ -218,6 +218,7 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
     puestos++
   }
   const andamio = await quitarAndamio(cx, tarea)
+  if (!plano.viejo && !(tarea && tarea.cancelada)) await cerrarComoPlantilla(cx, lista, tarea)
   const pendientes = lista.length - puestos
   const estado = pendientes === 0 ? 'terminada' : causa && causa.startsWith('falta material') ? 'falta material' : 'a medias'
   obras.cerrar(id, estado)
@@ -226,6 +227,20 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
   if (!plano.viejo && pendientes) datos.faltan = faltanCatalogo(bot, plano, x0, y + 1, z0, [])
   if (pendientes === 0) return { exito: true, causa: 'construido', ...datos }
   return { exito: false, causa: causa || 'a medias', ...datos }
+}
+
+// Al acabar: puertas, trampillas y puertas de valla abiertas o cerradas como en la plantilla (el bot abre la puerta para salir de la
+// obra y la dejaba abierta: 2026-11-02, casita_prueba)
+async function cerrarComoPlantilla({ bot, mov }, lista, tarea) {
+  for (const { dest, estado } of lista) {
+    if (!estado || tarea && tarea.cancelada) continue
+    const quiero = estructuras.props(estado).open, b = bot.blockAt(dest)
+    if (quiero === undefined || !b || b.name !== estructuras.nombre(estado) || String(real(b).props.open) === quiero) continue
+    if (bot.entity.position.distanceTo(dest.offset(0.5, 0.5, 0.5)) > ALCANCE) {
+      await moverHasta(bot, new goals.GoalNear(dest.x, dest.y, dest.z, 2), () => bot.entity.position.distanceTo(dest.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms: 15000, tarea, mov })
+    }
+    try { await bot.activateBlock(bot.blockAt(dest)); await esperar(250) } catch (_) {}
+  }
 }
 
 // El objeto del inventario para un bloque: el relleno (la materia del plano viejo; tierra o adoquín en el catálogo), el del estado
@@ -251,7 +266,9 @@ async function ponerUno(cx, ent, item, tarea) {
   // muy alto (más de 3 por encima de los pies desde el suelo): andamio, solo en las del catálogo
   if (cx.catalogo && dest.y > y + 4) return ponerDesdeAndamio(cx, ent, item, o, tarea)
   let error = null
-  const alto = dest.y >= y + 3 // por encima de los ojos desde el suelo (3.ª capa, techo): saltando primero, sin buscar desde dónde verlo
+  // por encima de los ojos desde el suelo (3.ª capa, techo): saltando primero, sin buscar desde dónde verlo. En el catálogo no: el bot
+  // puede estar dentro, sobre el suelo de la plantilla, con el bloque a la altura de los ojos (2026-11-02, casita_prueba); el salto, al final
+  const alto = !cx.catalogo && dest.y >= y + 3
   if (alto) {
     const r = await ponerSaltando(bot, dest, item, mov, tarea, cx.catalogo ? o : null)
     if (r.nombre) { const v = await comprobar(cx, ent, o, 0); if (v.bien || v.mal) return v; error = v.error }
@@ -261,7 +278,9 @@ async function ponerUno(cx, ent, item, tarea) {
   let rotos = 0 // con otra orientación se rompe una vez para probar otro apoyo; a la segunda se deja con aviso
   for (let k = 0; k < apoyos.length; k++) {
     const a = apoyos[k], ref = bot.blockAt(new Vec3(...a.ref))
-    const meta = new goals.GoalPlaceBlock(dest, bot.world, { range: ALCANCE, LOS: true, faces: [new Vec3(-a.cara[0], -a.cara[1], -a.cara[2])] })
+    // catálogo: sin pedir verla (el servidor solo mira la distancia): el suelo se pone del borde hacia dentro y el borde ya puesto tapa
+    // la cara de arriba del interior desde fuera (2026-11-02, casita_prueba: «no llego a 3001,100,3001»)
+    const meta = new goals.GoalPlaceBlock(dest, bot.world, { range: ALCANCE, LOS: !cx.catalogo, faces: [new Vec3(-a.cara[0], -a.cara[1], -a.cara[2])] })
     const r = await moverHasta(bot, meta, () => meta.isEnd(nodo(bot)), { ms: 20000, tarea, mov })
     if (r !== 'listo') { error = `no llego a ${dest.x},${dest.y},${dest.z} (${r})`; if (r === 'cancelado') break; continue }
     try { await clic(bot, item, ref, a, o, dest) } catch (e2) { error = e2.message }

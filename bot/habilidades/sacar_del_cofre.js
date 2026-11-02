@@ -1,4 +1,4 @@
-// sacar_del_cofre OBJETO [n=1] (F8.0b, C6): va a los cofres de cofres.json (el más cercano primero), los abre y saca hasta n de ese
+// sacar_del_cofre OBJETO [n=1] [zona=NOMBRE] (F8.0b, C6): va a los cofres de cofres.json (el más cercano primero), los abre y saca hasta n de ese
 // objeto (nombre del juego, o «troncos», «tablones», «piedra», «comida»…: cualquiera de ese grupo). Sigue con el siguiente cofre
 // hasta juntar n. Sin romper ni poner bloques y sin pisar zonas vedadas (los movimientos de depositar), con el mismo cerrojo por
 // cofre. Lo sacado de troncos se descuenta de lo guardado (la observación cuenta los ganados: sacar no es talar).
@@ -6,7 +6,7 @@
 const { goals } = require('mineflayer-pathfinder')
 const zonas = require('../zonas')
 const cofres = require('../cofres')
-const { conLimite, moverHasta, esperar } = require('./comun')
+const { conLimite, moverHasta, esperar, prudentes } = require('./comun')
 const depositar = require('./depositar')
 
 const GRUPOS = { troncos: /_log$/, tablones: /_planks$/, piedra: /^(cobblestone|cobbled_deepslate|blackstone)$/, lana: /_wool$/,
@@ -33,10 +33,17 @@ async function sacarDe(bot, bloque, patron, quiero) {
   return sacado
 }
 
-module.exports = async function sacarDelCofre(bot, [objeto, cantidad], tarea) {
+module.exports = async function sacarDelCofre(bot, [objeto, cantidad, ...resto], tarea) {
   if (!objeto) return { exito: false, causa: 'falta el objeto' }
   const n = Math.max(1, parseInt(cantidad) || 1), patron = patronDe(bot, objeto)
-  const lista = cofres.lista().filter(c => !zonas.pasoVedado(...c.bloques[0]))
+  // 2026-11-02 (abasto del catálogo): con zona=NOMBRE, de los contenedores de esa zona (los que cuenta revisar_cofres), pisándola
+  // aunque sea vedada como revisar_cofres; sin ella, los de cofres.json fuera de las vedadas, como siempre
+  const enZona = (resto.find(a => String(a).startsWith('zona=')) || '').slice(5)
+  const deZona = enZona && require('./revisar_cofres').contenedoresDe(bot, enZona)
+  if (enZona && !deZona) return { exito: false, causa: `sin zona ${enZona}` }
+  const lista = deZona ? deZona.pos.map(p => ({ nombre: `${deZona.zona.nombre}:${p.x},${p.y},${p.z}`, bloques: [[p.x, p.y, p.z]] }))
+    : cofres.lista().filter(c => !zonas.pasoVedado(...c.bloques[0]))
+  const mov = deZona ? prudentes(bot, { pisarVedadas: true }) : undefined
   if (!lista.length) return { exito: false, causa: 'sin cofre' }
   const p0 = bot.entity.position
   const centro = (c) => p0.clone().set(c.bloques[0][0] + 0.5, c.bloques[0][1] + 0.5, c.bloques[0][2] + 0.5)
@@ -48,7 +55,7 @@ module.exports = async function sacarDelCofre(bot, [objeto, cantidad], tarea) {
     if (total() >= n || lleno || (tarea && tarea.cancelada)) break
     const [x, y, z] = c.bloques[0], meta = centro(c)
     const ojo = () => bot.entity.position.offset(0, 1.62, 0).distanceTo(meta)
-    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 2), () => ojo() <= 4, { ms: (15 + meta.distanceTo(bot.entity.position)) * 1000, tarea })
+    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 2), () => ojo() <= 4, { ms: (15 + meta.distanceTo(bot.entity.position)) * 1000, tarea, mov })
     if (r !== 'listo') { causa = 'no llego: ' + r; continue }
     const b = bot.blockAt(meta)
     if (!b || !CONTENEDORES.has(b.name)) { causa = `no hay cofre en ${x},${y},${z}`; continue }

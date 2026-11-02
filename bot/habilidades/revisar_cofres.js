@@ -8,9 +8,11 @@ const { conLimite, moverHasta, esperar, prudentes } = require('./comun')
 const CONTENEDORES = new Set(['chest', 'trapped_chest', 'barrel'])
 const VECINOS = [[1, 0, 0], [-1, 0, 0], [0, 0, 1], [0, 0, -1]]
 
-module.exports = async function revisarCofres(bot, [nombre], tarea) {
+// Los contenedores de dentro de una zona, los más cercanos primero: { zona, pos: [Vec3…] } o null si no hay zona. También la usa
+// sacar_del_cofre con zona=NOMBRE (2026-11-02, abasto del catálogo: saca de los mismos cofres que cuenta esta habilidad)
+function contenedoresDe(bot, nombre) {
   const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombre || 'HOGAR').toLowerCase())
-  if (!zona) return { exito: false, causa: 'sin zona', zona: nombre || 'HOGAR', cofres: 0, items: {} }
+  if (!zona) return null
   const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
   const dentro = (p) => p.x >= x1 && p.x <= x2 && p.z >= z1 && p.z <= z2 && (zona.y1 == null || (p.y >= zona.y1 && p.y <= zona.y2))
   const centro = bot.entity.position.clone().set((x1 + x2) / 2, bot.entity.position.y, (z1 + z2) / 2)
@@ -18,6 +20,13 @@ module.exports = async function revisarCofres(bot, [nombre], tarea) {
   // desde donde está, los más cercanos primero; solo los de dentro de la zona
   const pos = bot.findBlocks({ matching: (b) => CONTENEDORES.has(b.name), point: centro, maxDistance: radio, count: 200 }).filter(dentro)
     .sort((a, b) => a.distanceTo(bot.entity.position) - b.distanceTo(bot.entity.position))
+  return { zona, pos }
+}
+
+module.exports = async function revisarCofres(bot, [nombre], tarea) {
+  const c = contenedoresDe(bot, nombre)
+  if (!c) return { exito: false, causa: 'sin zona', zona: nombre || 'HOGAR', cofres: 0, items: {} }
+  const { zona, pos } = c
   if (!pos.length) return { exito: false, causa: 'sin cofres', zona: zona.nombre, cofres: 0, items: {} }
   const visto = new Set(), items = {}
   let abiertos = 0, noAbiertos = 0
@@ -43,3 +52,4 @@ module.exports = async function revisarCofres(bot, [nombre], tarea) {
   }
   return { exito: abiertos > 0, causa: abiertos ? 'revisado' : 'no abrí ninguno', zona: zona.nombre, cofres: abiertos, noAbiertos, items }
 }
+module.exports.contenedoresDe = contenedoresDe

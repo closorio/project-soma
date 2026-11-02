@@ -1763,6 +1763,9 @@ class Personaje {
       if (o.pos) origen = o.pos
       else if (o.aqui) { const p = bot.entity.position.floored(); origen = [p.x + 2, p.y, p.z + 2] }
       else return { exito: false, texto: `Dime dónde: «construye ${o.estructura} en x y z» (la esquina de abajo) o «… aquí».`, pasos }
+      // la misma estructura en el mismo sitio, a medias (el reintento de la agenda o la orden repetida): se retoma, no se empieza otra
+      const previa = [...require('./obras').leer().obras].reverse().find(x => x.plano === o.estructura && String(x.origen) === String(origen))
+      if (previa && !['terminada', 'deshecha'].includes(previa.estado)) obra = previa.id // la última en ese sitio; si se deshizo, otra nueva
     }
     const puestosEnMundo = () => {
       const hechos = new Set()
@@ -1788,6 +1791,7 @@ class Personaje {
       for (const [k, n] of Object.entries(t.objetos)) if (n > (inv[k] || 0)) falta[k] = n - (inv[k] || 0)
       if (Object.keys(falta).length) {
         const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
+        await this.salirDeVedada(tarea)
         const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })
         const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno })
         pedir = plan.pedir
@@ -1808,9 +1812,22 @@ class Personaje {
     return { exito: false, texto: `No terminé ${plano.nombre}: ${porque} (${hechos} de ${plano.bloques.length} bloques en su sitio${obra ? '; «continúa» la retoma' : ''}).`, pasos }
   }
 
+  // Si está dentro de una zona vedada (la base, tras abrir sus cofres), salir al punto de fuera más cercano pisándola
+  async salirDeVedada(tarea) {
+    const bot = this.bot, zonas = require('./zonas'), p = bot.entity.position.floored()
+    if (!zonas.pasoVedado(p.x, p.y, p.z)) return
+    const f = zonas.puntoFuera(p.x, p.z)
+    const fuera = () => { const q = bot.entity.position.floored(); return !zonas.pasoVedado(q.x, q.y, q.z) }
+    await moverHasta(bot, new goals.GoalNearXZ(f.x, f.z, 1), fuera, { ms: 30000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+  }
+
   // Un paso del abasto con la orden de siempre (tala, mina, funde, cazar) o la habilidad (saca y fabrica, con su cantidad)
   async pasoAbasto(p, tarea, paso) {
-    if (p.tipo === 'saca') return [(await paso('sacar_del_cofre', [p.objeto, String(p.n)]))[1]]
+    if (p.tipo === 'saca') { // de los cofres que contó revisar_cofres; luego fuera de la zona (si es vedada, desde dentro no se fabrica ni se va a la obra)
+      const d = (await paso('sacar_del_cofre', [p.objeto, String(p.n), `zona=${BASE_ZONA}`]))[1]
+      await this.salirDeVedada(tarea)
+      return [d]
+    }
     if (p.tipo === 'fabrica') return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]]
     const o = p.tipo === 'tala' ? { tipo: 'tala', n: Math.min(p.n, 64), pedido: p.n }
       : p.tipo === 'mina' ? { tipo: 'mina', bloque: p.bloque, n: p.n }
