@@ -105,7 +105,8 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
-const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase() // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase()
+const RELLENO_OBRA = require('./habilidades/construir').RELLENO // tierra o adoquín: el andamio de las obras del catálogo // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
 // Nombres de jugador sin distinguir mayúsculas: el server puede decir «Seppuq» aunque en local.mk ponga «seppuq» (2026-11-02)
 class NombresSinMayus extends Set {
   constructor(it) { super(); this.orig = []; for (const x of it || []) this.add(x) }
@@ -1825,6 +1826,9 @@ class Personaje {
       const deObra = bot.inventory.items().filter(it => Object.keys(plano.materiales).some(k => estructuras.mismoMaterial(k, it.name))).length
       const t = abastecer.tanda(bot.registry, plano, hechos, Math.max(4, bot.inventory.emptySlotCount() - 4 + deObra))
       const falta = estructuras.faltaCon(t.objetos, inv) // la madera, de cualquier tipo
+      // el andamio (más de 4 de alto): tierra o adoquín, una columna como mucho de la altura de la obra (Oqva dejó sin tejado la casita)
+      const relleno = Object.entries(inv).filter(([k]) => RELLENO_OBRA.test(k)).reduce((a, [, n]) => a + n, 0)
+      if (plano.dim[1] > 4 && relleno < plano.dim[1]) falta.dirt = (falta.dirt || 0) + plano.dim[1] - relleno
       if (Object.keys(falta).length) {
         const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
         await this.salirDeVedada(tarea)
