@@ -531,6 +531,9 @@ class Personaje {
     if (!bot || !bot.entity || this.defendiendo || this.escoltando || g.tipo === 'creeper') return
     if (sv.activos(bot) && !(this.enHabilidad || this.reflejando || this.enCurso || this.enIr)) return this.reposo()
     this.defendiendo = (async () => {
+      // 2026-11-02: una obra del catálogo no se pierde por una pelea: queda en pausa (agenda: interrumpida) y se retoma al acabar
+      const ev = this.enVuelta
+      if (ev && ev.o.tipo === 'construye' && ev.o.estructura) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
       if (this.tareaReflejo) this.tareaReflejo.cancelada = true
       try { bot.pathfinder.setGoal(null); bot.stopDigging() } catch (_) {}
@@ -983,6 +986,7 @@ class Personaje {
       try {
         for (;;) {
           if (this.agenda.pausada) { await esperar(500); continue } // muerto: hasta reaparecer
+          if (this.defendiendo) { await Promise.race([this.defendiendo, esperar(30000)]).catch(() => {}); continue } // peleando: nada se retoma a medias
           const e = this.agenda.siguiente()
           if (!e) break
           ultima = await this.vuelta(e) || ultima
