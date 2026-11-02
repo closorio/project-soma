@@ -98,6 +98,9 @@ Cómo está hecho un rol: el perfil v2 (`perfiles/v2/<rol>.json`, con su catálo
 - **Tu server**: ahí los bots pican y construyen en cualquier sitio que no esté protegido. Pon tus zonas en
   `mundos/companero/zonas.json` o crea zonas de trabajo (`!zona fin NOMBRE trabajo`).
 - Commits: conventional commits en inglés, en la rama `develop`.
+- **Versionado** (`herramientas/version.sh`, o `make version` / `make publicar`): semver con etiquetas `vX.Y.Z` calculadas de los
+  commits (`feat` sube el minor, `fix` y el resto el parche, `!` o `BREAKING CHANGE` el major). Línea base `v1.0.0`. Por eso importa
+  escribir bien el tipo del commit. Cada versión major se publica con una PR hacia el `main` del fork de Count.
 
 ## Dónde leer más
 
