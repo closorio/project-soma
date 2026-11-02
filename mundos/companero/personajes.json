@@ -3,6 +3,7 @@
  "mundo": "companero",
  "amos": ["__Count"],
  "externos": ["Oqva"],
+  "bots_de": {"seppuq": ["Oqva"]},
  "personajes": [
   { "nombre": "Trivino", "puerto": 3011, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "trivino" },
   { "nombre": "Nico",    "puerto": 3012, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" },

@@ -339,3 +339,20 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 02:26:33 · Nico · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
 - 02:26:33 · Teo · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
 - 02:26:33 · Trivino · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:59 · Nico · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:59 · Trivino · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:59 · Lola · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:59 · Teo · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:27:23 · Lola · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:27:23 · Teo · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:27:23 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:27:23 · Nico · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:32:41 · Teo · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (24.4 s) · al terminar: otra orden
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:34 · Teo
+- 02:34:50 · Teo · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:34 · Nico
+- 02:34:50 · Nico · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:34 · Lola
+- 02:34:50 · Lola · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:34 · Trivino
+- 02:34:50 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)

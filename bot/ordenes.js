@@ -181,6 +181,8 @@ function interpretar(texto) {
   if (/\b(?:apartate|apartaos|apartarse|quitate de ahi|sal de la lava|alejate de la lava|alejate del borde|alejate del agua)\b/.test(t)) return { tipo: 'apartate' }
   if (/\b(?:caza|cazad|cazar|busca comida|buscad comida|consigue comida|trae comida|recoge comida)\b/.test(t)) return { tipo: 'caza' }
   // 2026-11-02: aliados («Oqva es aliado», «Oqva no es aliado», «quiénes son tus aliados»); antes que cualquier otra cosa con «es»
+  // «los bots de seppuq son aliados» / «no son aliados»: todos los personajes de ese jugador de una vez (io.js sabe cuáles son)
+  if ((m = t.match(/\bbots? de (\w+) (no son|ya no son|dejan de ser|son) (?:los |mis |tus )?aliad[oa]s?\b/))) return { tipo: 'aliado', bots_de: m[1], valor: m[2] === 'son' }
   if ((m = t.match(/\b(\w+) (no es|ya no es|deja de ser) (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: false }
   if ((m = t.match(/\b(\w+) es (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: true }
   if (/^(?:quienes son (?:tus )?aliados|aliados|lista de aliados)$/.test(t)) return { tipo: 'aliado', lista: true }

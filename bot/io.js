@@ -42,23 +42,6 @@ function pendienteDe(o, r) {
   return { ...o }
 }
 const textoDe = (p, texto) => (p.tipo === 'tala' ? `tala ${p.n} troncos` : p.tipo === 'mina' ? texto.replace(/\d+/, String(p.n)) : texto)
-// Color de la marca de cada bot en la barra de localización (2026-11-02, pedido del usuario): `colores` de mundos/<mundo>/mundo.json
-// ({ nombre: color }) o estos por defecto. Al entrar, el bot se lo pone con /waypoint; solo vale si es operador en ese server (si no,
-// el server dice que no tiene permiso y lo pone a mano un operador: `waypoint modify NOMBRE color COLOR`). Colores: los de los equipos
-// (red, blue, green, yellow, aqua, light_purple, gold, white…) o un hex (FF8800).
-const COLORES = { Oqva: 'red', Soma: 'blue', Iris: 'green', Eco: 'yellow', Alma: 'light_purple' }
-function colorDe(nombre) {
-  try { const c = JSON.parse(fs.readFileSync(mundo.ruta('mundo.json'), 'utf8')).colores; if (c && c[nombre]) return c[nombre] } catch (_) {}
-  return COLORES[nombre] || null
-}
-function ponerColor(bot, ev) {
-  const color = colorDe(bot.username)
-  if (!color) return
-  const arg = /^[0-9a-f]{6}$/i.test(color) ? `hex ${color}` : color
-  const oir = (m) => { const t = String(m); if (/waypoint|permission|permiso|unknown|desconocid/i.test(t)) { ev(`[color] ${color}: ${t.slice(0, 80)}`); bot.removeListener('messagestr', oir) } }
-  bot.on('messagestr', oir); setTimeout(() => bot.removeListener('messagestr', oir), 5000)
-  setTimeout(() => { try { bot.chat(`/waypoint modify ${bot.username} color ${arg}`) } catch (_) {} }, 1500)
-}
 // Formación del modo guardaespaldas (2026-11-02, pedido del usuario: «en triángulo conmigo al centro»): los guardaespaldas del mismo
 // protegido en este proceso se reparten en un polígono alrededor de él (3: triángulo; 2, uno a cada lado; 4+, en círculo), a RADIO
 // bloques. Orientado al mundo (el primero al norte), no a donde mira el protegido: si girase con su cámara, correrían a cada vistazo.
@@ -143,6 +126,9 @@ const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
+// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
+const BOTS_DE = new Map((process.env.IO_BOTS_DE || '').split(';').filter(Boolean).map(x => { const [j, b = ''] = x.split('='); return [j.trim().toLowerCase(), b.split(',').map(y => y.trim()).filter(Boolean)] }))
+const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
@@ -296,7 +282,6 @@ class Personaje {
       }, 2500)
     })
     bot.once('spawn', () => {
-      ponerColor(bot, (t) => this.ev(t))
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
       if (SKIN) bot.chat('/skin set ' + SKIN) // IO_SKIN: una skin del server (SkinsRestorer, p. ej. «sr createcustom»), a cada conexión
@@ -657,7 +642,7 @@ class Personaje {
   // y, dentro del refugio, sale antes si la habilidad elegida lo necesita (como el simulador); con la del usuario, como siempre.
   async bucleLibre() {
     try { this.decisor.preparar() } catch (e) {
-      this.decir(`No puedo decidir solo: ${e.message}. Sigo en modo órdenes.`); this.ponerModo('ordenes', 'sin red'); return
+      this.decirAlDueno(`No puedo decidir solo: ${e.message}. Sigo en modo órdenes.`, 'puerto'); this.ponerModo('ordenes', 'sin red'); return
     }
     const tarea = this.nuevaTarea(true)
     await Promise.race([this.ocupado, esperar(3000)]).catch(() => {})
@@ -793,6 +778,15 @@ class Personaje {
   decir(t) {
     for (const trozo of String(t).match(/.{1,240}(?:\s|$)/g) || []) try { this.bot.chat(trozo.trim()) } catch (_) {}
   }
+  // 2026-11-02 (pedido del usuario): lo que sale mal («No pude recoger: …», «No te veo.», «No reconozco…») va solo al dueño, por privado (/msg),
+  // para no saturar el chat público. Se queda público el aviso de que acepta la orden y el de que la cumple. `quien`: «chat de NOMBRE» (le
+  // contesta a él) o cualquier otro origen (puerto, mente…): al primer dueño conectado. Sin ninguno a la vista, solo al registro.
+  decirAlDueno(t, quien) {
+    const bot = this.bot, u = quien && String(quien).startsWith('chat de ') ? String(quien).slice(8) : null
+    const nombre = u || Object.keys(bot.players).find(n => n !== bot.username && AMOS.has(n))
+    if (!nombre) { this.ev(`[privado] ${t}`); return }
+    for (const trozo of String(t).match(/.{1,200}(?:\s|$)/g) || []) try { bot.chat(`/msg ${nombre} ${trozo.trim()}`) } catch (_) {}
+  }
 
   textoEstado() {
     const bot = this.bot, p = bot.entity.position.floored()
@@ -823,12 +817,12 @@ class Personaje {
     if (!o) {
       // corto (pedido del usuario, 2026-10-31): la lista entera solo con «ayuda»
       const t = texto.trim() ? `No reconozco «${texto}».` : '¿Qué hago? Di «ayuda» para ver las órdenes.'
-      if (origen.via === 'chat') this.decir(t)
+      if (origen.via === 'chat') this.decirAlDueno(t, quien)
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
     }
     const responder = (t, exito = true) => {
-      if (origen.via === 'chat') this.decir(t)
+      if (origen.via === 'chat') exito ? this.decir(t) : this.decirAlDueno(t, quien)
       this.anotarOrden({ texto, quien, modo: this.modo, exito, resultado: t, s: 0 })
       return t
     }
@@ -855,7 +849,7 @@ class Personaje {
       }
       if (!this.pendiente) {
         const t = 'No tengo nada a medias.'
-        if (origen.via === 'chat') this.decir(t)
+        if (origen.via === 'chat') this.decirAlDueno(t, quien)
         this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: t, s: 0 })
         return t
       }
@@ -876,7 +870,7 @@ class Personaje {
     if (inmediata[o.tipo]) {
       const modoAntes = this.modo
       const r = this.ordenInmediata(o)
-      if (origen.via === 'chat') this.decir(r.texto)
+      if (origen.via === 'chat') r.exito === false ? this.decirAlDueno(r.texto, quien) : this.decir(r.texto)
       const resumen = { estado: 'dije mi estado', ayuda: 'dije lo que sé hacer' }[o.tipo] || r.texto
       this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: resumen, s: 0 })
       return r.texto
@@ -1014,7 +1008,7 @@ class Personaje {
         const p = pendienteDe(o, r)
         if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
         const t = `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' && r.texto ? ' ' + r.texto : ''}`
-        if (!guardia) { this.decir(t); anotar(false, t, 'otra orden') }
+        if (!guardia) { this.decirAlDueno(t, e.quien); anotar(false, t, 'otra orden') }
         this.soltar(e, { ...r, exito: false, texto: t })
       } else { if (!guardia) anotar(false, `cortada (${motivo})`, 'quieto'); this.soltar(e, { ...r, exito: false, texto: r.texto || `Dejo «${texto}».` }) }
       return null
@@ -1024,7 +1018,7 @@ class Personaje {
     if (clase === 'reintentar') {
       const aux = agenda.recuperar(r.texto)
       this.ev(`[agenda] «${texto}» falló (${r.texto}); reintento ${e.fallosSeguidos} en ${ms / 1000} s${aux ? `, antes ${aux.tipo}` : ''}`)
-      if (e.fallosSeguidos === 1) this.decir(`${r.texto} Lo vuelvo a intentar.`)
+      if (e.fallosSeguidos === 1) this.decirAlDueno(`${r.texto} Lo vuelvo a intentar.`, e.quien)
       if (aux) { const x = this.agenda.entrada(aux, aux.tipo, 'agenda', { tipo: 'una' }); x.fallosSeguidos = agenda.REINTENTOS.una; this.agenda.interrumpir(x) }
       for (const t1 = Date.now(); Date.now() - t1 < ms && !this.tarea.cancelada; ) await esperar(250) // la espera la corta cualquier orden
       if (this.tarea.cancelada && this.tarea.motivo !== 'interrupcion' && !this.agenda.cola.includes(e) && !this.agenda.pila.includes(e)) this.soltar(e, { exito: false, texto: `Dejo «${texto}».` })
@@ -1033,7 +1027,7 @@ class Personaje {
     // hecha o definitiva: fuera
     const t = clase === 'definitiva' && e.fallosSeguidos ? `${r.texto} (lo dejo tras ${e.fallosSeguidos + 1} intentos)` : r.texto
     if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null
-    if (t && !(guardia && o.reanuda)) this.decir(t)
+    if (t && !(guardia && o.reanuda)) { if (r.exito) this.decir(t); else this.decirAlDueno(t, e.quien) } // el fallo, solo al dueño
     if (!(guardia && o.reanuda)) anotar(!!r.exito, t, this.despues)
     this.soltar(e, { ...r, texto: t })
     return e.quien === 'auto' || e.quien === 'agenda' ? null : e
@@ -1198,6 +1192,13 @@ class Personaje {
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
       case 'aliado': {
+        if (o.bots_de) { // los bots de un jugador, todos a la vez (o todos fuera)
+          const bs = botsDe(o.bots_de).filter(x => x !== this.nombre && !AMOS.has(x))
+          if (!bs.length) return { exito: false, texto: `No sé qué bots son de ${o.bots_de}: faltan en bots_de de personajes.json.`, pasos: [] }
+          for (const b of bs) { if (o.valor) ALIADOS.add(b.toLowerCase()); else ALIADOS.delete(b.toLowerCase()) }
+          guardarAliados()
+          return { exito: true, texto: o.valor ? `Los bots de ${o.bots_de} son aliados: ${bs.join(', ')}.` : `Los bots de ${o.bots_de} ya no son aliados: ${bs.join(', ')}.`, pasos: [] }
+        }
         if (o.lista) return { exito: true, texto: ALIADOS.size ? `Aliados, además de ti: ${[...ALIADOS].join(', ')}.` : 'No tengo más aliados que tú.', pasos: [] }
         const n = o.nombre.toLowerCase()
         if (AMOS.has(Object.keys(bot.players).find(x => x.toLowerCase() === n) || o.nombre)) return { exito: true, texto: `${o.nombre} ya es de los míos: es mi dueño.`, pasos: [] }
@@ -1371,7 +1372,7 @@ class Personaje {
             if (id === null) continue // (o le toca comer: lo hace al empezar la vuelta)
             const p = await this.ejecutarHabilidad('atacar', ['id:' + id, '20', 'vedadas'], tarea)
             if (p && !p.exito) ignorar.set(id, Date.now() + 5000)
-            if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
+            if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; this.decirAlDueno(`No peleo: ${p.causa}.`, quien) }
             if (agresor && agresor.id === id) agresor = null
           }
         } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
