@@ -224,7 +224,8 @@ class Personaje {
     bot.on('playerJoined', (p) => { if (p.username !== bot.username) this.ev(`[mc] ${p.username} entró`) })
     bot.on('playerLeft', (p) => this.ev(`[mc] ${p.username} salió`))
     bot.on('death', () => {
-      if (bot.entity) this.muerte = { pos: bot.entity.position.clone(), t: Date.now() } // para ir a por sus cosas al reaparecer
+      // para ir a por sus cosas al reaparecer, solo si llevaba algo (inventario, armadura o mano izquierda)
+      if (bot.entity) this.muerte = { pos: bot.entity.position.clone(), t: Date.now(), tenia: bot.inventory.slots.filter((it, i) => it && i !== 0).length }
       this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
       try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
     })
@@ -406,6 +407,8 @@ class Personaje {
     const m = this.muerte, bot = this.bot
     this.muerte = null
     if (!m || !bot || !bot.entity || Date.now() - m.t > 270000) return
+    if (!m.tenia) { this.ev('[muerte] no llevaba nada: no hay nada que recuperar'); return }
+    this.recuperando = true
     const tarea = this.tareaReflejo = { cancelada: false }
     const antes = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
     const n0 = antes()
@@ -422,7 +425,7 @@ class Personaje {
       const n = antes() - n0
       bot.chat(n > 0 ? `Recuperé ${n} cosa${n === 1 ? '' : 's'}.` : 'No encontré mis cosas.')
       this.ev(`[muerte] recuperé ${n} cosas de ${m.pos.floored().toArray()}`)
-    } finally { if (this.tareaReflejo === tarea) this.tareaReflejo = null }
+    } finally { this.recuperando = false; if (this.tareaReflejo === tarea) this.tareaReflejo = null }
   }
 
   // En reposo (ninguna habilidad, orden ni reflejo en marcha; en modo libre, entre dos decisiones: el bucle espera a que acabe):
@@ -852,42 +855,54 @@ class Personaje {
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
         const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
         if (!zona) return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] }
-        // antes de montar guardia se equipa, como con «equípate» (lo que falte de los armor stands; luego lo mejor que lleve). Idempotente.
-        const [rs] = await paso('equipar_soportes', ['24'])
-        if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
-        const [re] = await paso('equipar', ['todo'])
-        if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
-        else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
-        if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
         const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
-        const p0 = bot.entity.position
-        const fuera = Math.floor(p0.x) < Math.min(zona.x1, zona.x2) || Math.floor(p0.x) > Math.max(zona.x1, zona.x2) || Math.floor(p0.z) < Math.min(zona.z1, zona.z2) || Math.floor(p0.z) > Math.max(zona.z1, zona.z2)
-        if (fuera) { // a la zona, a su centro
-          const r = await moverHasta(bot, new goals.GoalNearXZ(cx, cz, 4), () => false, { ms: 180000, tarea, mov: mov() })
-          if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
-        }
-        const puesto = bot.entity.position.clone()
         let golpeador = null
         const alGolpe = (victima, fuente) => { if (sv.esAgresor(bot, victima, fuente, null, esDueno)) golpeador = { id: fuente.id, t: Date.now() } }
+        // 2026-11-02: los golpes los atiende esta guardia (no alGolpear, que cancelaría la orden) desde el primer momento, también mientras
+        // se equipa y va a la zona; un golpe interrumpe esos preparativos y pasa a la guardia
         bot.on('entityHurt', alGolpe)
-        this.escoltando = true // los golpes los atiende esta guardia, no alGolpear
-        bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los nuestros.`)
+        this.escoltando = true
+        let puesto = null
         try {
+          // antes de montar guardia se equipa, como con «equípate» (lo que falte de los armor stands; luego lo mejor que lleve). Idempotente.
+          const [rs] = await paso('equipar_soportes', ['24'])
+          if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+          const [re] = await paso('equipar', ['todo'])
+          if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+          else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
+          if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
+          const p0 = bot.entity.position
+          const fuera = Math.floor(p0.x) < Math.min(zona.x1, zona.x2) || Math.floor(p0.x) > Math.max(zona.x1, zona.x2) || Math.floor(p0.z) < Math.min(zona.z1, zona.z2) || Math.floor(p0.z) > Math.max(zona.z1, zona.z2)
+          if (fuera) { // a la zona, a su centro
+            const r = await moverHasta(bot, new goals.GoalNearXZ(cx, cz, 4), () => !!golpeador, { ms: 180000, tarea, mov: mov() })
+            if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
+          }
+          puesto = bot.entity.position.clone()
+          bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
           while (!(tarea && tarea.cancelada)) {
-            const g = golpeador && bot.entities[golpeador.id]
-            const x = (g && g.isValid !== false && Date.now() - golpeador.t < AGRESOR_ESCOLTA_MS ? g : null) || sv.intrusos(bot, zona, aliado, ignorar, { y: puesto.y, dy: CENTINELA_DY })[0]
-            if (!x) { await esperar(500); continue }
-            if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Alto! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')} en ${zona.nombre}.`) }
-            if (x.position.distanceTo(bot.entity.position) > 12) // lejos: acercarse antes (atacar solo ve a ≤ 16)
-              await moverHasta(bot, new goals.GoalNear(x.position.x, x.position.y, x.position.z, 4), () => x.isValid === false || x.position.distanceTo(bot.entity.position) <= 10,
-                { ms: 30000, tarea, entidad: x, mov: mov() })
-            const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'acorralado', 'puno', 'vedadas'], tarea)
-            if (!p || !p.exito) ignorar.set(x.id, Date.now() + 8000) // sin camino, huyó…: no insistir al momento
-            golpeador = null
-            if (!(tarea && tarea.cancelada) && bot.entity.position.distanceTo(puesto) > 6)
-              await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => false, { ms: 30000, tarea, mov: mov() })
+            try {
+              // muerto, o yendo a por sus cosas: la guardia espera; luego vuelve a su puesto
+              if (!bot.entity || !(bot.health > 0) || this.recuperando) { await esperar(500); continue }
+              const g = golpeador && bot.entities[golpeador.id]
+              const intruso = () => sv.intrusos(bot, zona, aliado, ignorar, { y: puesto.y, dy: CENTINELA_DY })[0]
+              const x = (g && g.isValid !== false && Date.now() - golpeador.t < AGRESOR_ESCOLTA_MS ? g : null) || intruso()
+              if (!x) {
+                if (bot.entity.position.distanceTo(puesto) > 6) { // desplazado (reaparecer, una pelea…): de vuelta al puesto
+                  const r = await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => !!golpeador || !!intruso(), { ms: 60000, tarea, mov: mov() })
+                  if (r !== 'listo') await esperar(1500)
+                } else await esperar(500)
+                continue
+              }
+              if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Alto! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')} en ${zona.nombre}.`) }
+              if (x.position.distanceTo(bot.entity.position) > 12) // lejos: acercarse antes (atacar solo ve a ≤ 16)
+                await moverHasta(bot, new goals.GoalNear(x.position.x, x.position.y, x.position.z, 4), () => x.isValid === false || x.position.distanceTo(bot.entity.position) <= 10,
+                  { ms: 30000, tarea, entidad: x, mov: mov() })
+              const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'acorralado', 'puno', 'vedadas'], tarea)
+              if (!p || !p.exito) ignorar.set(x.id, Date.now() + 8000) // sin camino, huyó…: no insistir al momento
+              golpeador = null
+            } catch (e) { this.ev('[centinela] error (sigo de guardia): ' + e.message); await esperar(1000) }
           }
         } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
         return { exito: true, texto: 'Dejo la guardia.', pasos: [] }
