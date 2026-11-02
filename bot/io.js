@@ -173,6 +173,12 @@ class Personaje {
       if (!(this.enCurso || this.enHabilidad || this.libre) || r === 'goal_updated' || r === 'goal_moved' || Date.now() - rehechas.t < 2000) return
       rehechas.t = Date.now(); this.ev(`[mov] ruta rehecha: ${r} en ${bot.entity.position.floored()}`)
     })
+    this.muestrasInventario = []
+    clearInterval(this.relojInventario) // al reconectar, uno solo
+    this.relojInventario = setInterval(() => { // cada 0,5 s, cuánto lleva (las 5 últimas), para saber qué tenía al morir
+      if (!bot.entity || bot.health <= 0) return
+      this.muestrasInventario = [...this.muestrasInventario, bot.inventory.items().reduce((a, i) => a + i.count, 0)].slice(-5)
+    }, 500)
     bot.on('messagestr', (m) => { // la causa de la muerte: el mensaje del server que me nombra, en los 3 s siguientes
       const u = this.ultimaMuerte
       if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username)) u.causa = m
@@ -180,9 +186,14 @@ class Personaje {
     bot.on('spawn', () => {
       if (!this.recuperarPendiente) return
       this.recuperarPendiente = false
-      const lleva = bot.inventory.items().reduce((a, i) => a + i.count, 0) // con keepInventory reaparece con todo: no vuelve
-      if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) return
-      setTimeout(() => this.ordenar('recupera tus cosas', { de: 'auto' }).catch(e => this.ev('[recupera] fallo: ' + e.message)), 2000)
+      // a los 2 s, cuando ya llegó el inventario nuevo (al reaparecer, el cliente aún enseña el viejo un momento): con keepInventory
+      // reaparece con todo y no vuelve
+      setTimeout(() => {
+        const lleva = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) { this.ev(`[recupera] reaparezco con ${lleva} objetos: no hace falta`); return }
+        this.ev('[recupera] reaparezco: voy a por mis cosas')
+        this.ordenar('recupera tus cosas', { de: 'auto' }).catch(e => this.ev('[recupera] fallo: ' + e.message))
+      }, 2500)
     })
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
@@ -220,9 +231,11 @@ class Personaje {
     bot.on('death', () => {
       this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
       // 2026-11-01: recuperar las cosas al reaparecer (case 'recupera'); IO_RECUPERAR=no lo apaga. Muerto recuperando: no vuelve.
-      const objetos = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+      // el server vacía el inventario antes de mandar la vida a 0: lo que llevaba es lo máximo de los últimos 2,5 s
+      const objetos = Math.max(0, ...(this.muestrasInventario || []))
       this.ultimaMuerte = { pos: bot.entity.position.clone(), t: Date.now(), causa: null, objetos, segunda: !!this.recuperando }
       this.recuperarPendiente = process.env.IO_RECUPERAR !== 'no' && !this.recuperando && objetos > 0
+      this.ev(`[recupera] muerto con ${objetos} objetos en ${this.ultimaMuerte.pos.floored()}${this.recuperarPendiente ? '' : ' (no volveré)'}`)
       try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
     })
     bot.on('health', () => {
@@ -857,7 +870,7 @@ class Personaje {
           if (r !== 'listo') return { exito: false, texto: `No llego a donde morí (${r}).` }
           if (peligro()) return { exito: false, texto: 'Hay demasiado peligro donde morí: lo dejo.' }
           for (let k = 0; k < 4 && !tarea.cancelada && !peligro(); k++) {
-            const q = await this.ejecutarHabilidad('recoger', ['8', '-', 'max:40', 'otra_vez'], tarea)
+            const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
             if (!q.exito || !q.quedan) break
           }
         } finally { this.recuperando = false }
