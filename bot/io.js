@@ -233,8 +233,12 @@ class Personaje {
       // 2026-11-01: recuperar las cosas al reaparecer (case 'recupera'); IO_RECUPERAR=no lo apaga. Muerto recuperando: no vuelve.
       // el server vacía el inventario antes de mandar la vida a 0: lo que llevaba es lo máximo de los últimos 2,5 s
       const objetos = Math.max(0, ...(this.muestrasInventario || []))
-      this.ultimaMuerte = { pos: bot.entity.position.clone(), t: Date.now(), causa: null, objetos, segunda: !!this.recuperando }
-      this.recuperarPendiente = process.env.IO_RECUPERAR !== 'no' && !this.recuperando && objetos > 0
+      // 2026-11-01 (pedido del usuario): recuperar es prioridad. Muerto recuperando, vuelve también (a los dos sitios: lo que llevaba
+      // encima y lo que quedó en el primero), salvo tras 3 muertes seguidas recuperando (bucle de muertes)
+      this.muertesRecuperando = this.recuperando ? (this.muertesRecuperando || 0) + 1 : 0
+      this.ultimaMuerte = { pos: bot.entity.position.clone(), t: Date.now(), causa: null, objetos, segunda: this.muertesRecuperando >= 3 }
+      this.sitiosMuerte = [this.ultimaMuerte, ...(this.recuperando ? this.sitiosMuerte || [] : [])].slice(0, 3)
+      this.recuperarPendiente = process.env.IO_RECUPERAR !== 'no' && !this.ultimaMuerte.segunda && this.sitiosMuerte.some(x => x.objetos > 0)
       this.ev(`[recupera] muerto con ${objetos} objetos en ${this.ultimaMuerte.pos.floored()}${this.recuperarPendiente ? '' : ' (no volveré)'}`)
       try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
     })
@@ -887,30 +891,49 @@ class Personaje {
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de cubrirte.' }
       }
       case 'recupera': {
-        // 2026-11-01 (A4 reducido): volver donde murió y recoger lo suyo. No lo intenta con lava, fuego o vacío, pasados 270 s (los objetos
-        // desaparecen a los 300) (salvo si murió a ≥ 128 bloques: chunk sin cargar) ni si murió ya recuperando. Corta con ≥ 3 hostiles a la vista o la vida < 10.
-        const m = this.ultimaMuerte
-        if (!m) return { exito: false, texto: 'No he muerto desde que entré.' }
-        const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
-        if (m.segunda) return { exito: false, texto: `Morí recuperando mis cosas en ${donde}: no vuelvo.` }
-        if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) return { exito: false, texto: `Morí en ${donde} (${m.causa}): no hay nada que recuperar.` }
-        // los objetos solo envejecen con el chunk cargado: muerto lejos de donde reaparece (≥ 128), puede que sigan ahí aunque pase el tiempo
-        if (edad > 270 && d < 128) return { exito: false, texto: `Morí hace ${Math.round(edad)} s: mis cosas ya habrán desaparecido.` }
-        this.decir(`He muerto en ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques; voy a por mis cosas${edad > 270 ? ' (puede que sigan ahí)' : ''}.`)
+        // 2026-11-01 (A4 reducido): volver donde murió (los últimos sitios, si murió recuperando) y recoger lo suyo. No con lava, fuego o
+        // vacío, ni pasados 290 s (los objetos desaparecen a los 300) salvo a ≥ 128 bloques (chunk sin cargar: no envejecen).
+        // 2026-11-01 (pedido del usuario): es prioridad y no se detiene por peligro: con poca vida come (si lleva) y sigue; al acabar, si
+        // hay peligro (≥ 3 hostiles a ≤ 12 o vida < 10), vuelve a casa (el campamento; sin él, se refugia)
+        const sitios = (this.sitiosMuerte || []).slice()
+        if (!sitios.length) return { exito: false, texto: 'No he muerto desde que entré.' }
+        if (sitios[0].segunda) return { exito: false, texto: `He muerto 3 veces seguidas recuperando mis cosas: lo dejo.` }
         const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
-        const antes = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        const contar = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = []
         this.recuperando = true
         try {
-          const r = await viajeLargo(bot, m.pos, peligro, { tarea, mov: prudentes(bot), cerca: 2 }) // sin tope de distancia, por tramos
-          if (r !== 'listo' && r !== 'llegué') return { exito: false, texto: `No llego a donde morí (${r}).` }
-          if (peligro()) return { exito: false, texto: 'Hay demasiado peligro donde morí: lo dejo.' }
-          for (let k = 0; k < 4 && !tarea.cancelada && !peligro(); k++) {
-            const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
-            if (!q.exito || !q.quedan) break
+          for (const m of sitios) {
+            if (tarea.cancelada) break
+            const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
+            if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) { fallos.push(`en ${donde} (${m.causa}) no queda nada`); continue }
+            // los objetos solo envejecen con el chunk cargado: muerto lejos de donde está (≥ 128), puede que sigan ahí aunque pase el tiempo
+            if (edad > 290 && d < 128) { fallos.push(`lo de ${donde} ya habrá desaparecido`); continue }
+            this.decir(`Voy a por mis cosas a ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques.`)
+            let r
+            for (let k = 0; k < 6 && !tarea.cancelada; k++) { // sin tope de distancia, por tramos; con poca vida come y sigue
+              r = await viajeLargo(bot, m.pos, () => sv.debeComerPorSalud(bot), { tarea, mov: prudentes(bot), cerca: 2 })
+              if (r !== 'listo') break
+              await this.ejecutarHabilidad('comer', ['20'], tarea)
+            }
+            if (r !== 'llegué') { fallos.push(`no llego a ${donde} (${r})`); continue }
+            for (let k = 0; k < 5 && !tarea.cancelada; k++) {
+              if (sv.debeComerPorSalud(bot)) await this.ejecutarHabilidad('comer', ['20'], tarea)
+              const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
+              if (!q.exito || !q.quedan) break
+            }
           }
         } finally { this.recuperando = false }
-        const n = bot.inventory.items().reduce((a, i) => a + i.count, 0) - antes
-        return { exito: n > 0, texto: n > 0 ? `Recuperé ${Math.min(n, m.objetos)}/${m.objetos}.` : 'No encontré mis cosas.' }
+        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x)) // los de una muerte nueva, para la próxima vuelta
+        const n = contar() - antes
+        const texto = (n > 0 ? `Recuperé ${Math.min(n, total)}/${total}.` : 'No encontré mis cosas.') + (fallos.length ? ` (${fallos.join('; ')})` : '')
+        if (!tarea.cancelada && peligro()) {
+          this.decir(texto + ' Hay peligro: vuelvo a casa.')
+          const v = await this.ejecutarHabilidad('explorar', ['volver', '120', '150'], tarea)
+          if (!v.exito && !tarea.cancelada) await this.ejecutarHabilidad('refugiarse', ['auto'], tarea)
+          return { exito: n > 0, texto: v.exito ? 'Ya estoy en casa.' : 'No llego a casa: me refugio aquí.' }
+        }
+        return { exito: n > 0, texto }
       }
       case 'tala': return this.talarN(o, tarea, paso)
       case 'recoge': {
