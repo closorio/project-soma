@@ -233,7 +233,16 @@ function interpretar(texto) {
   }
   // 2026-11-02: el catálogo de estructuras, antes que «granja de piedra», «fabrica» y los planos de siempre (así «casa de roble» no
   // es una cabaña): «construye casa_roble en 300 64 -20» (la esquina de abajo) o «… aquí», «qué falta para casa_roble», «lista de estructuras»
-  if (/^(?:lista de estructuras|estructuras|que estructuras (?:sabes|conoces)|que sabes construir|que puedes construir)$/.test(t)) return { tipo: 'estructuras' }
+  if (/^(?:lista de estructuras|lista las estructuras|estructuras|que estructuras (?:sabes|conoces|hay)|que sabes construir|que puedes construir)$/.test(t)) return { tipo: 'estructuras' }
+  // 2026-11-02: los recursos primarios de una, por su número en la lista o por su nombre: «recursos de la 2», «qué necesito para casita_prueba»
+  if (/\b(?:recursos|materias? primas?|que necesito|que hace falta|que se necesita|que necesitas)\b/.test(t)) {
+    const n = t.match(/\b(?:la|el|numero|n)?\s*(\d{1,3})\s*$/)
+    const id = n ? estructuras.ids()[parseInt(n[1]) - 1] : deCatalogo(t)
+    if (id || n) return { tipo: 'recursos', estructura: id || null, numero: n ? parseInt(n[1]) : null }
+  }
+  // 2026-11-02: de dónde saca los materiales de una obra del catálogo: solo de los cofres (los pones tú) o también talando, minando y cazando
+  if (/\bsolo (?:de|del|de los|con lo de los|con los) cofres?\b|\b(?:usa|coge|saca) solo (?:de )?(?:los |el )?cofres?\b/.test(t)) return { tipo: 'abasto', modo: 'cofres' }
+  if (/\b(?:consigue|busca|consigues|buscas) (?:tu |tu mismo )?(?:los )?materiales\b/.test(t)) return { tipo: 'abasto', modo: 'todo' }
   const deCat = /\b(?:construye|construir|construid|levanta|levantar|edifica|monta|haz(?:me)?|hacer|falta|faltan|materiales|necesitas)\b/.test(t) && deCatalogo(t)
   if (deCat) {
     if (/\b(?:que (?:te |le )?falta|que faltan?|materiales|que necesitas)\b/.test(t)) return { tipo: 'materiales', plano: deCat, zona: BASE }

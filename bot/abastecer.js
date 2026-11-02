@@ -32,6 +32,9 @@ function hoja(item, n) {
   if (item === 'feather') return [{ tipo: 'cazar', animal: 'chicken', n }]
   return null
 }
+// lo que da minar cada bloque y cazar cada animal (para sacarlo de los cofres en «solo de los cofres» y para los recursos primarios)
+const DA_MINA = { stone: 'cobblestone', clay: 'clay_ball', coal_ore: 'coal', iron_ore: 'raw_iron', gold_ore: 'raw_gold', copper_ore: 'raw_copper' }
+const DA_CAZA = { sheep: 'white_wool', cow: 'leather', chicken: 'feather' }
 const fundidos = (pasos) => pasos.filter(p => p.tipo === 'funde').reduce((a, p) => a + p.n, 0)
 
 // evitar: { hoja: n } que ya no se encontró cerca (arena, ovejas…): va a pedir en vez de a minar o cazar otra vez
@@ -45,7 +48,8 @@ function maderaPreferida(inv, cofre) {
   return Object.entries(cuenta).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 }
 
-function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, evitar = {}, conPico = false } = {}) {
+// soloCofres (2026-11-02, «solo de los cofres»): ni talar, ni minar, ni cazar: lo que eso daría se saca de los cofres o se pide
+function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, evitar = {}, conPico = false, soloCofres = false } = {}) {
   const pasos = [], pedir = {}
   const cofre = { ...(enCofres || {}) }
   // la madera da igual (estructuras.familia): lo de madera que falte, en la que más haya, para no talar ni pedir otra
@@ -119,8 +123,23 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
   // minar piedra o menas pide pico: si no lleva ninguno, uno de madera antes de minar (Oqva, 2026-11-02: cavó hasta el carbón sin pico)
   // (otra vez el plan entero con el pico: los troncos y los cofres se cuentan una vez para todo)
   const minaDura = conseguir.some(p => p.tipo === 'mina' && /stone|_ore$/.test(p.bloque))
-  if (minaDura && !conPico && !Object.keys(inv).some(k => /_pickaxe$/.test(k))) {
+  if (minaDura && !conPico && !soloCofres && !Object.keys(inv).some(k => /_pickaxe$/.test(k))) {
     return planAbasto(registry, { wooden_pickaxe: 1, ...faltanPedidas }, inv, enCofres, { hayHorno, evitar, conPico: true })
+  }
+  if (soloCofres) {
+    // lo que daría cada paso de talar, minar o cazar, sacado de los cofres (cualquier madera); lo que no esté, a pedir, y lo que se iba a
+    // fundir con ello se queda sin fundir (el combustible: carbón antes que troncos)
+    const sinEntrada = new Set(), quedan = []
+    for (const p of conseguir) {
+      if (p.tipo === 'funde') { quedan.push(p); continue }
+      if (p.para === 'combustible' && sacar('coal', Math.ceil(p.n * 6 / 8)) > 0) continue
+      const item = p.tipo === 'tala' ? 'oak_log' : p.tipo === 'mina' ? DA_MINA[p.bloque] || p.bloque : DA_CAZA[p.animal] || p.animal
+      const n = p.tipo === 'mina' && p.bloque === 'clay' ? p.n * 4 : p.n
+      const k = sacar(item, n)
+      if (k < n) { const clave = p.tipo === 'tala' ? 'troncos' : item; pedir[clave] = (pedir[clave] || 0) + n - k; sinEntrada.add(p.para) }
+    }
+    conseguir.length = 0
+    conseguir.push(...quedan.filter(p => !sinEntrada.has(p.para)))
   }
   // juntar lo repetido (dos «tala» o dos «mina stone») y ordenar: sacar, talar, el pico, minar y cazar, fundir, fabricar
   const junta = (lista) => {
@@ -153,4 +172,17 @@ function tanda(registry, plano, colocados, huecos) {
   return { bloques, objetos }
 }
 
-module.exports = { planAbasto, tanda, hoja, maderaPreferida }
+// Los recursos primarios de una lista de materiales (2026-11-02, «recursos de la 2»): lo que habría que talar, minar o cazar partiendo de
+// cero (troncos de cualquier madera, adoquín, arena, carbón…, con el combustible de lo que se funde) y lo que no se consigue
+function primarios(registry, materiales) {
+  const r = planAbasto(registry, materiales, {}, {}, { hayHorno: true, conPico: true })
+  const p = {}
+  for (const x of r.pasos) {
+    if (x.tipo === 'tala') p.troncos = (p.troncos || 0) + x.n
+    else if (x.tipo === 'mina') { const it = DA_MINA[x.bloque] || x.bloque; p[it] = (p[it] || 0) + (x.bloque === 'clay' ? x.n * 4 : x.n) }
+    else if (x.tipo === 'cazar') { const it = DA_CAZA[x.animal] || x.animal; p[it] = (p[it] || 0) + x.n }
+  }
+  return { primarios: p, noSeConsigue: r.pedir }
+}
+
+module.exports = { planAbasto, tanda, hoja, maderaPreferida, primarios }

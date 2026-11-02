@@ -2,6 +2,8 @@
 
 Guía para que un bot construya una plantilla (`.litematic` o `.nbt`) donde tú digas, mirando hacia donde quieras y consiguiendo
 él los materiales. Las órdenes se escriben en el chat del juego empezando por el nombre del bot («Oqva, …»).
+Chuleta de una hoja con todos los comandos: [comandos_construccion.pdf](comandos_construccion.pdf) (se regenera con
+`herramientas/comandos_construccion_pdf.py`).
 
 ## 1. Conseguir la plantilla
 
@@ -12,7 +14,19 @@ Vale cualquiera de estos dos formatos:
 | `.litematic` | Litematica (mod de cliente): selecciona la zona y guárdala. También las que se descargan de webs de esquemas. |
 | `.nbt` | El **bloque de estructura** del juego (modo «Guardar»: quedan en `<mundo>/generated/minecraft/structures/`), o las de los datapacks y del propio juego (aldeas, etc.). |
 
-Otros formatos (`.schem` de WorldEdit, `.schematic` antiguo) no se leen: ábrelos en Litematica y guárdalos como `.litematic`.
+Otros formatos (`.schem` de WorldEdit, `.schematic` antiguo, `.mcstructure` de Bedrock) no se leen: ábrelos en Litematica y
+guárdalos como `.litematic`.
+
+Webs donde descargar construcciones (busca las que den `.litematic` o `.nbt`):
+
+| Web | Qué tiene |
+|---|---|
+| [Planet Minecraft](https://www.planetminecraft.com/) | La mayor comunidad: proyectos con descarga de esquemas, muchos en `.litematic`. Gratis. |
+| [Minecraft Maps](https://www.minecraftmaps.com/schematics) | Esquemas en `.litematic`, `.schem`, `.nbt` y `.mcstructure`, con vista 3D y lista de materiales. Gratis. |
+| [Donut Build](https://www.donut.build/how-to-use-litematic-files) | Construcciones en `.litematic`. |
+| [Abfielder](https://store.abfielder.com/) | Granjas y construcciones en `.litematic` (de pago; la granja de piedra del catálogo es de aquí). |
+
+Antes de importar, mira el tamaño: tiene que caber en tu zona de obras, y cuanto más grande, más materiales y más tiempo.
 
 ## 2. Ponerla en `catalogo/` e importarla
 
@@ -51,11 +65,18 @@ alrededor sigue protegido. Las zonas de `!zona` no cambian.
 
 ## 4. Dejar los materiales
 
-El bot lleva la cuenta de lo que necesita y lo consigue solo, por tandas (lo que le cabe en la mochila):
+**Qué hace falta**: «Oqva, lista de estructuras» las enumera (`1. casita_prueba (5×5×5, 99 bloques) · 2. …`) y **«Oqva, recursos de
+la 2»** (o «qué necesito para casita_prueba») dice los recursos primarios partiendo de cero (para la casita: 27 troncos de cualquier
+madera, 2 de arena y 1 de carbón) y, aparte, las piezas ya hechas que también valen (tablones, losas, escaleras…).
+
+**De dónde los saca**: con `export IO_ABASTO = cofres` en tu `local.mk`, o diciendo **«Oqva, solo de los cofres»**, el bot solo usa
+lo que dejes en los cofres de tu base: saca, fabrica (tablones, escaleras, puertas…), funde (arena → cristal, con el carbón o los
+troncos que haya) y construye; lo que no esté te lo pide. **«Oqva, consigue tú los materiales»** vuelve al modo en que también tala,
+mina y caza lo que falte. Paso a paso:
 
 1. Mira los **cofres de tu zona base** (la de `IO_BASE` en tu `local.mk`, o tu zona de hogar) y saca lo que haya.
 2. Fabrica lo que se fabrica (tablones, losas, escaleras, puertas, antorchas…), con la mesa a su lado.
-3. Tala, mina, funde y caza lo que falte (troncos, piedra, arena para cristal, lana…).
+3. Solo si no está en «solo de los cofres»: tala, mina, funde y caza lo que falte (troncos, piedra, arena para cristal, lana…).
 4. Lo que no puede conseguir te lo pide por el chat: «necesito que me traigas … (déjalo en un cofre de CASASOMA)».
 
 Para que vaya rápido, deja todo en esos cofres. **La madera da igual**: si la plantilla pide roble y tienes abeto, usa abeto. Para
@@ -98,7 +119,9 @@ Otras órdenes:
 
 | Orden | Qué hace |
 |---|---|
-| «Oqva, lista de estructuras» | las del catálogo |
+| «Oqva, lista de estructuras» | las del catálogo, numeradas |
+| «Oqva, recursos de la 2» | los recursos primarios de la número 2 (y las piezas que también valen) |
+| «Oqva, solo de los cofres» / «Oqva, consigue tú los materiales» | solo usa lo de tus cofres / también tala, mina y caza |
 | «Oqva, qué falta para casa_roble» | los materiales que faltan (mochila y cofres de tu base) |
 | «Oqva, continúa» | retoma la última obra a medias, en el mismo sitio y con el mismo giro |
 | «Oqva, deshaz casa_roble» | quita los bloques que puso él (y el andamio si quedó) |

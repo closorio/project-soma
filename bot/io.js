@@ -1856,9 +1856,27 @@ class Personaje {
         if (!r.zonas.length && !r.sueltos.length) partes.push('No veo carteles de obras a 64 bloques (primera línea «[obras]», debajo el nombre, uno en cada esquina).')
         return { exito: true, texto: partes.join(' '), pasos: [] }
       }
-      case 'estructuras': { // 2026-11-02: las del catálogo (make import-structure)
-        const l = require('./estructuras').ids().map(id => { const e = require('./estructuras').cargar(id); return `${id} (${e.dim.join('×')}, ${e.bloques.length} bloques)` })
-        return { exito: true, texto: l.length ? `Sé construir: ${l.join(', ')}.` : 'No tengo ninguna estructura en el catálogo.', pasos: [] }
+      case 'estructuras': { // 2026-11-02: las del catálogo (make import-structure), numeradas para «recursos de la 2»
+        const l = require('./estructuras').ids().map((id, i) => { const e = require('./estructuras').cargar(id); return `${i + 1}. ${id} (${e.dim.join('×')}, ${e.bloques.length} bloques)` })
+        return { exito: true, texto: l.length ? `Sé construir: ${l.join(' · ')}. Di «recursos de la N» para saber qué hace falta.` : 'No tengo ninguna estructura en el catálogo.', pasos: [] }
+      }
+      case 'recursos': { // 2026-11-02: los recursos primarios de una estructura (abastecer.primarios) y las piezas ya hechas que también valen
+        const est = require('./estructuras'), e = o.estructura && est.cargar(o.estructura)
+        if (!e) return { exito: false, texto: o.numero ? `No hay estructura número ${o.numero}: di «lista de estructuras».` : 'No sé cuál: di «lista de estructuras» y «recursos de la N».', pasos: [] }
+        const ES = { troncos: 'troncos (cualquier madera)', cobblestone: 'de adoquín', sand: 'de arena', red_sand: 'de arena roja', gravel: 'de grava', dirt: 'de tierra',
+          coal: 'de carbón', clay_ball: 'bolas de arcilla', raw_iron: 'de hierro en bruto', raw_gold: 'de oro en bruto', raw_copper: 'de cobre en bruto',
+          white_wool: 'de lana blanca', leather: 'de cuero', feather: 'plumas' }
+        const lista = (m, nombres = {}) => Object.entries(m).map(([k, n]) => `${n} ${nombres[k] || k.replace(/_/g, ' ')}`).join(', ')
+        const { primarios, noSeConsigue } = require('./abastecer').primarios(bot.registry, e.materiales)
+        bot.chat(`${e.nombre} (${e.dim.join('×')}, ${e.bloques.length} bloques), partiendo de cero: ${lista(primarios, ES) || 'nada'}.`)
+        bot.chat(`O ya hechas (la madera da igual): ${lista(e.materiales)}.`)
+        if (Object.keys(noSeConsigue).length) bot.chat(`No se consigue en supervivencia temprana: ${lista(noSeConsigue)}.`)
+        const fuente = (this.abasto || process.env.IO_ABASTO || 'todo') === 'cofres' ? 'Déjalo en un cofre de ' + baseZona() + ': solo uso lo de los cofres.' : 'Lo que no esté en los cofres de ' + baseZona() + ' lo consigo yo.'
+        return { exito: true, texto: fuente, pasos: [] }
+      }
+      case 'abasto': { // 2026-11-02: de dónde saca los materiales de las obras del catálogo
+        this.abasto = o.modo
+        return { exito: true, texto: o.modo === 'cofres' ? `Para construir solo usaré lo de los cofres de ${baseZona()}; lo que falte te lo pido.` : 'Lo que no haya en los cofres lo consigo yo (talar, minar, cazar).', pasos: [] }
       }
       case 'deshaz': {
         const [r, d] = await paso('deshacer', [o.obra || ''])
@@ -1928,7 +1946,8 @@ class Personaje {
         const [rc, dc] = await paso('revisar_cofres', [baseZona()]); pasos.push(dc)
         await this.salirDeVedada(tarea)
         const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })
-        const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno, evitar: sinHallar })
+        const soloCofres = (this.abasto || process.env.IO_ABASTO || 'todo') === 'cofres' // «solo de los cofres» (o IO_ABASTO=cofres en local.mk)
+        const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno, evitar: sinHallar, soloCofres })
         pedir = plan.pedir
         if (Object.keys(pedir).length) bot.chat(`Para ${plano.nombre} necesito que me traigas ${frase(pedir)} (déjalo en un cofre de ${baseZona()}).`)
         if (!plan.pasos.length) break // solo queda lo que hay que pedir

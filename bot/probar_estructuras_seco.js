@@ -209,6 +209,10 @@ ok(estructuras.girar(cas, 1).dim.join() === cas.dim.join() && estructuras.girar(
 estructuras.DIR = path.join(__dirname, 'estructuras') // el catálogo de verdad (casita_prueba): el temporal ya se borró
 const ord = require('./ordenes').interpretar('construye casita_prueba en 300 64 -20 mirando al este')
 ok(ord.dir === 'east' && ord.pos.join() === '300,64,-20' && require('./ordenes').interpretar('construye casita_prueba aquí girada 90').giro === 90, `órdenes: mirando al este, girada 90 (${JSON.stringify(ord)})`)
+const O = require('./ordenes')
+ok(O.interpretar('recursos de la 1').estructura === estructuras.ids()[0] && O.interpretar('qué necesito para casita_prueba').tipo === 'recursos', 'órdenes: recursos de la N o por nombre')
+ok(O.interpretar('solo de los cofres').modo === 'cofres' && O.interpretar('consigue tú los materiales').modo === 'todo', 'órdenes: solo de los cofres / consigue tú los materiales')
+ok(O.interpretar('qué falta para casita_prueba').tipo === 'materiales' && O.interpretar('tala 5 troncos').tipo === 'tala', '«qué falta» y «tala» siguen igual')
 console.log('  girar: puerta, antorcha, troncos, vallas, carteles y raíles en las 4 direcciones; órdenes con dirección')
 
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
