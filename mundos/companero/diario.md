@@ -413,3 +413,11 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 03:04:34 · Lola · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (5.8 s; pasos: jugador✓) · al terminar: quieto
 - 03:04:35 · Teo · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (6.4 s; pasos: jugador✓) · al terminar: quieto
 - 03:04:46 · Trivino · modo órdenes · «que puedes hacer» (chat de __Count) → ✓ dije lo que sé hacer (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:22 · Lola
+- 03:22:47 · Lola · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:22 · Trivino
+- 03:22:47 · Trivino · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:22 · Teo
+- 03:22:47 · Teo · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:22 · Nico
+- 03:22:47 · Nico · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
