@@ -115,26 +115,24 @@ class NombresSinMayus extends Set {
 }
 const AMOS = new NombresSinMayus((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
 // 2026-11-02: aliados a la hora de pelear (centinela, «protégeme», defensa por defecto): solo los dueños (IO_AMOS) y los que el dueño declare con
-// «Oqva es aliado» / «Oqva no es aliado» (se guardan en mundos/<mundo>/aliados.json). Los demás personajes, aunque sean bots tuyos, no.
-const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
-const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_ALIADOS, 'utf8')).aliados || [] } catch (_) { return [] } })().map(x => String(x).toLowerCase()))
-const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
+// «Oqva es aliado» / «Oqva no es aliado» (se guardan por dueño en mundos/<mundo>/aliados_<dueño>.json, bot/alcance.js). Los demás personajes, aunque sean bots tuyos, no.
+const ALIADOS = require('./alcance').aliados(mundo.carpetaDatos, require('./alcance').duenoDe(AMOS), { heredado: path.join(mundo.carpetaDatos, 'aliados.json') })
 // IO_PROPIOS=Nombre1,Nombre2: los bots del usuario (de otros procesos de esta misma máquina). Con los de este proceso (VIVOS), cuentan como dueños.
 const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.trim()).filter(Boolean))
 // El brand del cliente (lo que todo cliente le dice al server al conectar): «soma-bot;dueno=NOMBRE». ASCII, sin espacios.
-const marcaDeBot = () => `soma-bot;dueno=${[...AMOS][0] || ''}`
+const marcaDeBot = () => `soma-bot;dueno=${require('./alcance').duenoDe(AMOS)}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
 const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
 const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
-// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
+// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json; respaldo del canal soma:duenos): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
 const BOTS_DE = new Map((process.env.IO_BOTS_DE || '').split(';').filter(Boolean).map(x => { const [j, b = ''] = x.split('='); return [j.trim().toLowerCase(), b.split(',').map(y => y.trim()).filter(Boolean)] }))
-const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
+const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(require('./alcance').botsDelCanal(k) || BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
-const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
-const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
+const esAliado = (n) => esDueno(n) || ALIADOS.tiene(n) // el que puede entrar en la zona del centinela
+const esDeclarado = (n) => ALIADOS.tiene(n) // aliado «por orden»: si pega, «modo diablo»
 const SKIN = (process.env.IO_SKIN || '').trim()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
@@ -154,6 +152,7 @@ const AVISADOS = new Map() // a quién ya le dijo que no le obedece (una vez por
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
+const RANGO_CAMA = { h: 8, v: 5 } // el mismo cuadro con el que el juego no deja dormir (monstruos a ≤ 8 en horizontal y ≤ 5 en vertical)
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
 const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
@@ -207,6 +206,7 @@ class Personaje {
     this.guardaespaldas = leerGuardaespaldas(nombre) // 2026-11-02: igual que el centinela (uno u otro, no los dos)
     this.centinela = this.guardaespaldas ? null : leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
     setInterval(() => this.supervisarCentinela(), 3000)
+    setInterval(() => this.vigilarSueno(), 1000) // 2026-11-02: dormir contra la guardia, según lo cerca que esté el enemigo
     VIVOS.set(nombre, this)
     this.conectar()
     observacion.ponerPerfil(this.bot, perfil)
@@ -235,6 +235,8 @@ class Personaje {
     // 2026-11-02: si un dueño se acuesta de noche, el bot hace lo de «duerme» sin que se lo pidan (el juego solo pasa la noche si duermen todos)
     require('./dormir_con_dueno').vigilar(bot, { esAmo: (u) => (AMOS.size ? AMOS.has(u) : !esBot(u)),
       dormir: () => this.ordenar('duerme', { via: 'puerto', de: 'sueño' }), decir: (t) => this.decir(t) })
+    // 2026-11-02: canal del plugin SomaConnect con «dueño → sus bots» (principal; personajes.json bots_de queda de respaldo)
+    bot.once('login', () => { try { bot._client.registerChannel('soma:duenos', 'restBuffer', true); bot._client.on('soma:duenos', (d) => require('./alcance').aplicarCanal(d)) } catch (_) {} })
     bot.once('login', () => require('./velocidad').instalar(bot)) // tras los plugins de mineflayer: su oyente va antes que el nuestro
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
@@ -1067,6 +1069,34 @@ class Personaje {
     guardarGuardaespaldas(this.nombre, this.guardaespaldas)
     if (a && this.centinela) this.fijarCentinela(null)
   }
+  // 2026-11-02 (pedido del usuario): al ir a dormir con un modo de guardia activo, manda lo cerca que esté el enemigo. Lejos (fuera del cuadro con el
+  // que el juego no deja dormir: 8 en horizontal y 5 en vertical de la cama), sigue hacia la cama. Cerca, la guardia primero: corta el sueño
+  // (queda en la agenda, 'interrumpida'), pone una urgencia de guardia de una vez y, cuando acaba (3 s sin enemigos), vuelve a dormir.
+  //  · centinela: el intruso de la zona a ≤ RANGO_CAMA del bot.
+  //  · guardaespaldas: lo que cuenta es el protegido: un hostil a ≤ GUARDIA_MOBS de él o un jugador no aliado a ≤ GUARDIA_JUGADORES.
+  vigilarSueno() {
+    const bot = this.bot, actual = this.enVuelta
+    if (!bot || !bot.entity || !(bot.health > 0) || !(this.centinela || this.guardaespaldas)) return
+    if (!actual || actual.o.tipo !== 'duerme' || this.agenda.pila.length || Date.now() - (this.ultimaUrgenciaSueno || 0) < 5000) return
+    let urgencia = null
+    if (this.guardaespaldas) {
+      const nombre = this.guardaespaldas.a, e = bot.players[nombre] && bot.players[nombre].entity
+      if (e && (sv.amenazaCerca(bot, e, GUARDIA_MOBS) || sv.jugadoresCerca(bot, e, GUARDIA_JUGADORES, esAliado)[0])) urgencia = { tipo: 'guardaespaldas', a: nombre, una: true, reanuda: true }
+    } else {
+      const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(this.centinela.zona).toLowerCase())
+      const yo = bot.entity.position
+      const x = zona && sv.intrusos(bot, zona, esAliado, new Map(), { y: yo.y, dy: RANGO_CAMA.v })[0]
+      if (x && Math.hypot(x.position.x - yo.x, x.position.z - yo.z) <= RANGO_CAMA.h) urgencia = { tipo: 'centinela', zona: zona.nombre, una: true, reanuda: true }
+    }
+    if (!urgencia) return
+    this.ultimaUrgenciaSueno = Date.now()
+    const e = this.agenda.entrada(urgencia, 'guardia antes de dormir', 'agenda', { tipo: 'una' })
+    e.fallosSeguidos = agenda.REINTENTOS.una
+    this.agenda.interrumpir(e)
+    this.cortar('interrupcion')
+    this.ev(`[sueño] enemigo cerca: primero la guardia (${urgencia.tipo}), luego a dormir`)
+  }
+
   supervisarCentinela() {
     const bot = this.bot
     if (!(this.centinela || this.guardaespaldas) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
@@ -1207,15 +1237,13 @@ class Personaje {
         if (o.bots_de) { // los bots de un jugador, todos a la vez (o todos fuera)
           const bs = botsDe(o.bots_de).filter(x => x !== this.nombre && !AMOS.has(x))
           if (!bs.length) return { exito: false, texto: `No sé qué bots son de ${o.bots_de}: faltan en bots_de de personajes.json.`, pasos: [] }
-          for (const b of bs) { if (o.valor) ALIADOS.add(b.toLowerCase()); else ALIADOS.delete(b.toLowerCase()) }
-          guardarAliados()
+          ALIADOS.poner(bs, o.valor)
           return { exito: true, texto: o.valor ? `Los bots de ${o.bots_de} son aliados: ${bs.join(', ')}.` : `Los bots de ${o.bots_de} ya no son aliados: ${bs.join(', ')}.`, pasos: [] }
         }
-        if (o.lista) return { exito: true, texto: ALIADOS.size ? `Aliados, además de ti: ${[...ALIADOS].join(', ')}.` : 'No tengo más aliados que tú.', pasos: [] }
+        if (o.lista) return { exito: true, texto: ALIADOS.lista().length ? `Aliados, además de ti: ${ALIADOS.lista().join(', ')}.` : 'No tengo más aliados que tú.', pasos: [] }
         const n = o.nombre.toLowerCase()
         if (AMOS.has(Object.keys(bot.players).find(x => x.toLowerCase() === n) || o.nombre)) return { exito: true, texto: `${o.nombre} ya es de los míos: es mi dueño.`, pasos: [] }
-        if (o.valor) ALIADOS.add(n); else ALIADOS.delete(n)
-        guardarAliados()
+        ALIADOS.poner(n, o.valor)
         return { exito: true, texto: o.valor ? `${o.nombre} es aliado: puede entrar a la zona. Si me pega, me defiendo.` : `${o.nombre} ya no es aliado.`, pasos: [] }
       }
       case 'guardaespaldas_off': {
@@ -1239,8 +1267,9 @@ class Personaje {
         }
         bot.on('entityHurt', alGolpe)
         this.escoltando = true // los golpes los atiende este modo, no alGolpear (que cancelaría la orden)
+        let libreDesde = null
         try {
-          await this.equiparAntes(paso)
+          if (!o.una) await this.equiparAntes(paso)
           if (tarea && tarea.cancelada) return { exito: false, texto: '', pasos: [] }
           const protegido = () => bot.players[nombre] && bot.players[nombre].entity
           const objetivo = () => {
@@ -1255,6 +1284,8 @@ class Personaje {
               if (!bot.entity || !(bot.health > 0) || this.recuperando) { await esperar(500); continue }
               const e = protegido()
               const x = objetivo()
+              // una vez (urgencia sobre dormir): sin amenazas durante 3 s y junto al protegido, vuelve a lo que estaba (la cama)
+              if (o.una && !x) { if (!e || bot.entity.position.distanceTo(e.position) <= 8) { libreDesde = libreDesde || Date.now(); if (Date.now() - libreDesde > 3000) break; await esperar(500); continue } } else libreDesde = null
               if (x) {
                 if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Atrás! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')}.`) }
                 const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'acorralado', 'puno', 'vedadas'], tarea)
@@ -1266,7 +1297,7 @@ class Personaje {
               // en formación (triángulo con 3) alrededor del protegido; si no se llega a mi vértice (dentro de un bloque), detrás de él a 2
               const { k, n } = puestoEnFormacion(this.nombre, nombre)
               const meta = n > 1 ? new GoalFormacion(e, k, n) : new goals.GoalFollow(e, 2)
-              let r = await moverHasta(bot, meta, () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              let r = await moverHasta(bot, meta, () => !!objetivo() || (o.una && bot.entity.position.distanceTo(e.position) <= 8), { ms: 60000, tarea, entidad: e, mov: mov() })
               if (r === 'sin camino' && n > 1) r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 10000, tarea, entidad: e, mov: mov() })
               if (r === 'sin camino' || r === 'perdido') await esperar(1500)
             } catch (err) { this.ev('[guardaespaldas] error (sigo): ' + err.message); await esperar(1000) }
@@ -1294,13 +1325,13 @@ class Personaje {
         // se equipa y va a la zona; un golpe interrumpe esos preparativos y pasa a la guardia
         bot.on('entityHurt', alGolpe)
         this.escoltando = true
-        let puesto = null
+        let puesto = null, libreDesde = null
         try {
-          await this.equiparAntes(paso) // antes de montar guardia se equipa, como con «equípate»
+          if (!o.una) await this.equiparAntes(paso) // antes de montar guardia se equipa, como con «equípate» (la urgencia sobre dormir no: ya va equipado)
           if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           const p0 = bot.entity.position
           const fuera = Math.floor(p0.x) < Math.min(zona.x1, zona.x2) || Math.floor(p0.x) > Math.max(zona.x1, zona.x2) || Math.floor(p0.z) < Math.min(zona.z1, zona.z2) || Math.floor(p0.z) > Math.max(zona.z1, zona.z2)
-          if (fuera) { // a la zona, a su centro
+          if (fuera && !o.una) { // a la zona, a su centro
             const r = await moverHasta(bot, new goals.GoalNearXZ(cx, cz, 4), () => !!golpeador, { ms: 180000, tarea, mov: mov() })
             if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           }
@@ -1314,12 +1345,15 @@ class Personaje {
               const intruso = () => sv.intrusos(bot, zona, aliado, ignorar, { y: puesto.y, dy: CENTINELA_DY })[0]
               const x = (g && g.isValid !== false && Date.now() - golpeador.t < AGRESOR_ESCOLTA_MS ? g : null) || intruso()
               if (!x) {
+                // una vez (urgencia sobre dormir): sin intrusos durante 3 s, vuelve a lo que estaba (la cama)
+                if (o.una) { libreDesde = libreDesde || Date.now(); if (Date.now() - libreDesde > 3000) break; await esperar(500); continue }
                 if (bot.entity.position.distanceTo(puesto) > 6) { // desplazado (reaparecer, una pelea…): de vuelta al puesto
                   const r = await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => !!golpeador || !!intruso(), { ms: 60000, tarea, mov: mov() })
                   if (r !== 'listo') await esperar(1500)
                 } else await esperar(500)
                 continue
               }
+              libreDesde = null
               if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Alto! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')} en ${zona.nombre}.`) }
               if (x.position.distanceTo(bot.entity.position) > 12) // lejos: acercarse antes (atacar solo ve a ≤ 16)
                 await moverHasta(bot, new goals.GoalNear(x.position.x, x.position.y, x.position.z, 4), () => x.isValid === false || x.position.distanceTo(bot.entity.position) <= 10,

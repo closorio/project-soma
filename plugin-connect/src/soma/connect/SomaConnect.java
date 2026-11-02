@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.Set;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -48,6 +51,10 @@ public final class SomaConnect extends JavaPlugin implements Listener {
     private File ficheroOperadores;
     private final Set<String> operadores = new HashSet<>(); // nombres en minúsculas
     private final Map<java.util.UUID, PermissionAttachment> permisos = new HashMap<>();
+    // Canal «soma:duenos» (2026-11-02): bot conectado → su dueño (del brand). Se empuja a cada bot como JSON {"dueno":["Bot",...]}; el bot
+    // se registra en el canal al entrar (bot/io.js). La lista de personajes.json queda de respaldo en el bot.
+    private static final String CANAL = "soma:duenos";
+    private final Map<String, String> duenos = new LinkedHashMap<>();
 
     @Override
     public void onEnable() {
@@ -58,6 +65,7 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         ficheroOperadores = new File(getDataFolder(), "operadores.yml");
         operadores.addAll(YamlConfiguration.loadConfiguration(ficheroOperadores).getStringList("operadores"));
         getServer().getPluginManager().registerEvents(this, this);
+        getServer().getMessenger().registerOutgoingPluginChannel(this, CANAL);
         Bukkit.getOnlinePlayers().forEach(this::aplicarRol);
         Bukkit.getOnlinePlayers().forEach(this::colorear); // tras un /reload ya están dentro
         if (!script.isFile()) getLogger().warning("no encuentro " + script + ": cambia «proyecto» en plugins/SomaConnect/config.yml");
@@ -151,7 +159,34 @@ public final class SomaConnect extends JavaPlugin implements Listener {
     }
 
     @EventHandler
-    public void alSalir(PlayerQuitEvent ev) { permisos.remove(ev.getPlayer().getUniqueId()); }
+    public void alSalir(PlayerQuitEvent ev) {
+        permisos.remove(ev.getPlayer().getUniqueId());
+        if (duenos.remove(ev.getPlayer().getName()) != null) difundirDuenos();
+    }
+
+    // El brand lo pone el cliente, así que no es de fiar: del dueño solo se admiten letras, cifras y «_» (hasta 16, como un nombre de
+    // Minecraft); con otra cosa cuenta como sin dueño. Así tampoco se cuela nada raro en el JSON.
+    private static String limpiarDueno(String d) { return d != null && d.matches("[A-Za-z0-9_]{1,16}") ? d : ""; }
+
+    // Manda a cada bot conectado el mapa completo dueño → bots (en minúsculas el dueño). Cada vez que entra o sale un bot.
+    private void difundirDuenos() {
+        Map<String, List<String>> porDueno = new TreeMap<>();
+        for (Entry<String, String> e : duenos.entrySet())
+            if (!e.getValue().isEmpty()) porDueno.computeIfAbsent(e.getValue().toLowerCase(Locale.ROOT), k -> new ArrayList<>()).add(e.getKey());
+        StringBuilder sb = new StringBuilder("{");
+        for (Entry<String, List<String>> e : porDueno.entrySet()) {
+            if (sb.length() > 1) sb.append(',');
+            sb.append('"').append(e.getKey()).append("\":[");
+            for (int i = 0; i < e.getValue().size(); i++) sb.append(i > 0 ? "," : "").append('"').append(e.getValue().get(i)).append('"');
+            sb.append(']');
+        }
+        byte[] datos = sb.append('}').toString().getBytes(StandardCharsets.UTF_8);
+        for (String bot : duenos.keySet()) {
+            Player p = Bukkit.getPlayerExact(bot);
+            if (p != null) p.sendPluginMessage(this, CANAL, datos);
+        }
+        getLogger().info("canal " + CANAL + ": " + new String(datos, StandardCharsets.UTF_8));
+    }
 
     private List<String> ejecutar(List<String> args) {
         List<String> salida = new ArrayList<>();
@@ -217,7 +252,9 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         String brand = p.getClientBrandName();
         getLogger().info("brand de " + p.getName() + " (intento " + intento + "): " + (brand == null ? "aún no llegó" : "'" + brand + "'"));
         if (brand != null && brand.startsWith("soma-bot")) {
-            String dueno = brand.contains("dueno=") ? brand.substring(brand.indexOf("dueno=") + 6) : "";
+            String dueno = limpiarDueno(brand.contains("dueno=") ? brand.substring(brand.indexOf("dueno=") + 6) : "");
+            duenos.put(p.getName(), dueno);
+            difundirDuenos();
             getLogger().info("  → " + p.getName() + " es un bot, dueño: " + (dueno.isEmpty() ? "(ninguno)" : dueno));
             colorear(p, true);
         } else if (brand == null && intento < 2) {

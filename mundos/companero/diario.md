@@ -421,3 +421,47 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 03:22:47 · Teo · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
 ## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:22 · Nico
 - 03:22:47 · Nico · modo órdenes · «duerman» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:30 · Nico
+- 03:30:40 · Nico · modo órdenes · «duerman» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:36 · Trivino
+- 03:36:20 · Trivino · modo órdenes · «duerman» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (340.6 s; pasos: usar_cama✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:36 · Lola
+- 03:36:20 · Lola · modo órdenes · «duerman» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (340.2 s; pasos: usar_cama✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:36 · Teo
+- 03:36:20 · Teo · modo órdenes · «duerman» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (341.1 s; pasos: usar_cama✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:37 · Teo
+- 03:37:26 · Teo · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 730, 72, -937. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:37 · Trivino
+- 03:37:26 · Trivino · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 732, 71, -937. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:37 · Lola
+- 03:37:26 · Lola · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 732, 71, -937. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:37 · Nico
+- 03:37:27 · Nico · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 732, 66, -956. (0.0 s)
+- 03:37:41 · Teo · modo órdenes · «foto» (chat de __Count) → ✓ Mirando contigo: foto. (0.0 s)
+- 03:37:41 · Trivino · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+- 03:37:41 · Lola · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+- 03:37:41 · Nico · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+- 03:38:25 · Trivino · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (56.1 s) · al terminar: otra orden
+- 03:38:25 · Trivino · modo órdenes · «oqva es aliado» (chat de __Count) → ✓ oqva es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 03:39:31 · Trivino · modo órdenes · «quiénes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:39:45 · Lola · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (134.9 s) · al terminar: otra orden
+- 03:39:45 · Lola · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:39:55 · Nico · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (145.3 s) · al terminar: otra orden
+- 03:39:55 · Nico · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:39:55 · Teo · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (145.5 s) · al terminar: otra orden
+- 03:39:55 · Teo · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:39:55 · Lola · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:39:55 · Trivino · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:40:05 · Nico · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✓ Los bots de seppuq son aliados: Oqva. (0.0 s) · al terminar: quieto
+- 03:40:05 · Teo · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✓ Los bots de seppuq son aliados: Oqva. (0.0 s) · al terminar: quieto
+- 03:40:05 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✓ Los bots de seppuq son aliados: Oqva. (0.0 s) · al terminar: quieto
+- 03:40:05 · Lola · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✓ Los bots de seppuq son aliados: Oqva. (0.0 s) · al terminar: quieto
+- 03:40:12 · Trivino · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva. (0.0 s) · al terminar: quieto
+- 03:40:44 · Lola · modo órdenes · «soma es tu aliado» (chat de __Count) → ✗ no entendida (0.0 s)
+- 03:40:49 · Lola · modo órdenes · «soma es aliado» (chat de __Count) → ✓ soma es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 03:41:00 · Lola · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva, soma. (0.0 s) · al terminar: quieto
+- 03:41:18 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✓ Los bots de seppuq son aliados: Oqva. (0.0 s) · al terminar: quieto
+- 03:41:24 · Lola · modo órdenes · «quienes son tus aliados» (chat de __Count) → ✓ Aliados, además de ti: oqva, soma. (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:53 · Teo
+- 03:53:39 · Teo · modo órdenes · «quienes son los bots de seppuq?» (chat de __Count) → ✗ no entendida (0.0 s)
+- 03:53:47 · Teo · modo órdenes · «cuales son los bots de seppuq?» (chat de __Count) → ✗ no entendida (0.0 s)

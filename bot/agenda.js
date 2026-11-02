@@ -12,8 +12,9 @@
 //   repetir       terminó bien y es veces/bucle (o hasta, sin cumplirse): otra vuelta
 //   reintentar    falló por algo pasajero (sin camino, perdido, no veo…): espera (ESPERAS) y otra vuelta, tras la recuperación de RECUPERAR
 //   definitiva    falló por algo que no cambia (zona protegida, no sé, falta material) o agotó los reintentos: fuera
-const PASAJERO = /sin camino|perdid|tiempo agotado|no (?:te |le |lo )?veo|no llego|no alcanzo|no encuentro|huy[oó]|se (?:me )?(?:fue|escapa)|salud baja|muy herido|demasiad|atascad|peligro/i
+const PASAJERO = /sin camino|perdid|tiempo agotado|no (?:te |le |lo )?veo|no llego|no alcanzo|no encuentro|huy[oó]|se (?:me )?(?:fue|escapa)|salud baja|muy herido|demasiad|atascad|peligro|monstruos cerca|cama: amenaza/i
 const REINTENTOS = { una: 2, veces: 5, hasta: 30, bucle: 30 } // fallos seguidos antes de rendirse
+const REINTENTOS_MONSTRUOS = 6 // para «monstruos cerca» al dormir
 const ESPERAS = [2000, 5000, 15000, 30000] // antes de cada reintento (el último se repite)
 const TOPE_VUELTAS = 500 // bucle: tope de seguridad
 
@@ -22,6 +23,8 @@ function recuperar(texto) {
   const t = String(texto || '')
   if (/sin camino|atascad/i.test(t)) return { tipo: 'desatascate' }
   if (/demasiad|peligro/i.test(t)) return { tipo: 'huye', de: null }
+  // 2026-11-02: no se duerme con monstruos cerca: antes de reintentar, a por el más cercano (va a la pila); luego vuelve a la cama
+  if (/monstruos cerca|cama: amenaza/i.test(t)) return { tipo: 'ataca', de: null }
   if (/salud baja|muy herido/i.test(t)) return { tipo: 'come' }
   return null
 }
@@ -37,7 +40,9 @@ function clasificar(e, r, motivo) {
   }
   const texto = (r && (r.texto || r.causa)) || ''
   if (!PASAJERO.test(texto)) return tipo === 'bucle' ? 'reintentar' : 'definitiva' // en bucle todo cuenta como pasajero, con su tope
-  return e.fallosSeguidos + 1 >= REINTENTOS[tipo] ? 'definitiva' : 'reintentar'
+  // con monstruos cerca de la cama, más paciencia: de noche salen varios, uno tras otro, y se les mata antes de volver a intentarlo
+  const limite = /monstruos cerca|cama: amenaza/i.test(texto) ? Math.max(REINTENTOS[tipo], REINTENTOS_MONSTRUOS) : REINTENTOS[tipo]
+  return e.fallosSeguidos + 1 >= limite ? 'definitiva' : 'reintentar'
 }
 const espera = (fallos) => ESPERAS[Math.min(Math.max(fallos - 1, 0), ESPERAS.length - 1)]
 
