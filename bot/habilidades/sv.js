@@ -9,7 +9,7 @@ const zonas = require('../zonas')
 const cofres = require('../cofres')
 const obras = require('../obras')
 const observacion = require('../observacion')
-const { hostiles, esperar, esAmenaza } = require('./comun')
+const { hostiles, esperar, esAmenaza, conLimite } = require('./comun')
 const { anotarAgresor, NUNCA_ATACAR } = require('./taxonomia')
 const { tipoHostil, COMIDA_MALA, esColocable, valorArma, PUNTOS_ARMADURA, PIEZAS, NOCHE } = observacion
 
@@ -117,6 +117,16 @@ function mejorHerramienta(bot, k) {
     if (t < ms) { ms = t; mejor = it }
   }
   return { item: mejor, ms }
+}
+// Equiparse lo que antes pica este bloque (2026-11-02, pedido del usuario: pala para la tierra, pico para la roca, hacha para la
+// madera…). Si ninguna herramienta acelera (mejorHerramienta empata con la mano), no saca nada: no gasta el pico ni la espada.
+async function equiparPara(bot, k) {
+  if (!k) return null
+  const { item } = mejorHerramienta(bot, k)
+  if (item && (!bot.heldItem || bot.heldItem.type !== item.type)) {
+    try { await conLimite(bot.equip(item, 'hand'), 3000); await esperar(60) } catch (_) {}
+  }
+  return item
 }
 
 // ---- reflejos: estado por personaje ----
@@ -229,7 +239,7 @@ async function centrar(bot, ms = 1500) {
   return lejos() <= 0.25
 }
 
-module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
+module.exports = { equiparPara, RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
   NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

@@ -43,6 +43,7 @@ module.exports = async function picarTronco(bot, args, tarea) {
 async function picar(bot, b, datos, tarea, quedan) {
   // en el aire Mineflayer tarda ×5 en picar (justo tras subir un escalón): esperar a pisar suelo
   for (let w = 0; w < 20 && !bot.entity.onGround; w++) await esperar(50)
+  await require('./sv').equiparPara(bot, b) // la herramienta de ese bloque (hacha para la madera…); aquí, no al cargar: sv también carga esto
   for (let intento = 1; ; intento++) { // un reintento si otro movimiento aborta el picado (visto 1 de 52)
     try { await conLimite(bot.dig(b), bot.digTime(b) + 3000, () => bot.stopDigging()); break } catch (e) {
       if (intento >= 2 || e.message !== 'Digging aborted' || (tarea && tarea.cancelada)) return { exito: false, causa: 'no se rompió: ' + e.message, ...datos }

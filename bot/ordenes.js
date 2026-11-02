@@ -101,6 +101,12 @@ function interpretarVarias(texto) {
   const entera = interpretar(texto)
   if (entera && entera.tipo === 'despues') return [entera] // «luego quédate quieto» es el ajuste «al terminar»
   const partes = String(texto || '').split(/\s*,?\s*\b(?:y\s+)?(?:luego|despu[eé]s)\b\s*,?\s*/i).map(x => x.trim()).filter(Boolean)
+    // 2026-11-02: «tala 10 troncos y mina 10 de tierra» también encadena, si cada trozo con «y» es por sí solo una orden (si no, la frase
+    // va entera, como «mina 10 de tierra y piedra»)
+    .flatMap(p => {
+      const trozos = p.split(/\s+y\s+/i).map(x => x.trim()).filter(Boolean)
+      return trozos.length > 1 && trozos.every(x => { const o = conRepeticion(x); return o && o.tipo !== 'despues' }) ? trozos : [p]
+    })
   const lista = partes.map(conRepeticion)
   return lista.length && lista.every(Boolean) ? lista : null
 }
