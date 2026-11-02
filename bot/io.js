@@ -969,6 +969,8 @@ class Personaje {
     const vieja = this.agenda.reemplazar(e)
     if (vieja && vieja !== this.enVuelta) this.soltar(vieja, { exito: false, texto: `Dejo «${vieja.texto}» por la orden nueva.` })
     this.cortar('reemplazo')
+    // 2026-11-02: acostado, una orden de moverse («ven») respondía «voy» y seguía en la cama: se despierta antes (no con «duerme» ni al reanudar guardias)
+    if (this.bot.isSleeping && o.tipo !== 'duerme' && !o.reanuda) this.bot.wake().catch(() => {})
     this.supervisar()
     return e.fin
   }
