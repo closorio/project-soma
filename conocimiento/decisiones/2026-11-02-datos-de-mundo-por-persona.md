@@ -2,7 +2,7 @@
 tipo: decision
 fecha: "2026-11-02"
 autor: "seppuq"
-estado: vigente
+estado: sustituida
 fases: [F8]
 ---
 # Los datos de cada mundo son de cada persona y no van a git
