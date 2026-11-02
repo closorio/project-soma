@@ -194,7 +194,7 @@ async function bucleObjetivo(bot, m, pasos, hasta, tarea, excluir) {
       for (let dy = -1; dy <= 9; dy++) { // troncos altos: el nivel exacto no lo sabe la observación
         const b = bot.blockAt(p.offset(fx, dy, fy))
         // desde el borde de una zona protegida el tronco de enfrente puede estar dentro: ese no se pica (picar al aire)
-        if (b && b.name.endsWith('_log') && !zonas.talaProtegida(b.position.x, b.position.y, b.position.z)) { await bot.dig(b); log.push('picó ' + b.name + '@' + b.position.x + ',' + b.position.y + ',' + b.position.z); picado = true; break }
+        if (b && b.name.endsWith('_log') && !zonas.talaProtegida(b.position.x, b.position.y, b.position.z)) { await require('./habilidades/sv').equiparPara(bot, b); await bot.dig(b); log.push('picó ' + b.name + '@' + b.position.x + ',' + b.position.y + ',' + b.position.z); picado = true; break }
       }
       // como en el simulador: picar al aire no termina el episodio (solo gasta un paso)
       if (picado) { log.push('fin en ' + (i + 1) + ' pasos'); fin = 'picó'; break }

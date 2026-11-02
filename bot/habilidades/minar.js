@@ -20,9 +20,11 @@ const parcela = require('../parcela')
 const { picar } = require('./picar_tronco')
 const recoger = require('./recoger')
 const { moverHasta, lejania, esperar, nodo, hayCamino, prudentes } = require('./comun')
+const sv = require('./sv')
 
 const ALCANCE = 4.5, MAX_N = 32, MAX_RADIO = 12, Y_MIN = 50, MAX_MS = 300000
 const NUNCA = /^(bedrock|chest|trapped_chest|barrel|ender_chest|shulker_box|spawner|crafting_table|furnace|bed|.*_bed|.*_door|.*_sign)$/
+const GRUPOS = { dirt: /^(dirt|grass_block|coarse_dirt|rooted_dirt|podzol|mycelium)$/, stone: /^(stone|deepslate)$/ }
 const SV = mundo.reglasLibres // F7.7: las reglas nuevas, solo fuera del mundo del usuario (allí, como antes)
 const CARAS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
 const MAX_CAIDA = 3
@@ -79,7 +81,10 @@ module.exports = async function minar(bot, args, tarea) {
   const yMin = yArg ? parseInt(yArg.slice(2)) : Y_MIN
   const [bloque = 'stone', n0, radio0] = palabras.filter(a => a !== 'forzar' && !/^y=/.test(a))
   const n = Math.min(MAX_N, parseInt(n0) || 8), radio = Math.min(MAX_RADIO, parseFloat(radio0) || 6)
-  const quiero = bloque === 'mineral' ? (nombre) => nombre.endsWith('_ore') : (nombre) => nombre === bloque
+  // 2026-11-02: «tierra» y «piedra» son familias: en la superficie la tierra es hierba (grass_block, que suelta tierra) y bajo y=0 la
+  // piedra es deepslate (suelta cobbled_deepslate, que también vale para las herramientas de piedra). Antes solo el nombre exacto
+  const grupo = GRUPOS[bloque]
+  const quiero = bloque === 'mineral' ? (nombre) => nombre.endsWith('_ore') : grupo ? (nombre) => grupo.test(nombre) : (nombre) => nombre === bloque
   // F8.0b: el rectángulo de obras solo manda en el mundo del usuario; fuera, sv.puedeTocar (zonas, cofres y obras) como las demás
   if (!SV && !obras.permitido()) return { exito: false, causa: 'sin rectángulo de obras (obras.json: permitido)' }
   if (bloque !== 'mineral' && !bot.registry.blocksByName[bloque]) return { exito: false, causa: 'bloque desconocido: ' + bloque }
@@ -119,7 +124,7 @@ module.exports = async function minar(bot, args, tarea) {
     if (!ps.length) { causa = rotos.length ? 'no quedan bloques que valgan' : 'nada que minar aquí'; break }
     let v = ps[0], b = bot.blockAt(v)
     // herramienta: la que más rinda; si el bloque exige pico y no hay, no se pica (no soltaría nada)
-    const h = bot.pathfinder.bestHarvestTool(b)
+    const h = sv.mejorHerramienta(bot, b).item // 2026-11-02: con la mano en el empate (bestHarvestTool gastaba el pico en la tierra)
     if (b.harvestTools && !(h && b.canHarvest(h.type)) && !forzar) { descartados.sin_pico++; causa = `sin pico para ${b.name}`; break }
     if (SV) { // F7.7: a dónde caerá, camino a pie hasta un sitio desde el que se pica y se recoge y, ya allí, que se vea
       const L = aterrizaje(bot, v)

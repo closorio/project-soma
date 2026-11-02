@@ -283,6 +283,8 @@ class Personaje {
     })
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
+      // 2026-11-02: cuando el navegador rompe un bloque al moverse, la herramienta de ese bloque (o la mano si ninguna acelera)
+      bot.pathfinder.bestHarvestTool = (k) => sv.mejorHerramienta(bot, k).item
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
       if (SKIN) bot.chat('/skin set ' + SKIN) // IO_SKIN: una skin del server (SkinsRestorer, p. ej. «sr createcustom»), a cada conexión
       if (this.conectado) informe.evento(bot, 'reconectado', bot.entity.position.floored().toArray())
@@ -406,6 +408,7 @@ class Personaje {
     if (zonas.talaProtegida(x, y, z) || cofres.esCofre(x, y, z)) { // zonas.json se relee solo: pudo cambiar mientras andaba
       const t = zonas.talaProtegida(x, y, z) ? noTalo([zonas.protegidoPor(x, y, z)]) : 'No talo en el cofre: es zona protegida.'; bot.chat(t); return t
     }
+    await sv.equiparPara(bot, b)
     await bot.dig(b)
     const r = await habilidades.ejecutar(bot, 'recoger', ['6', '_log'], tarea)
     return `tronco de ${b.name} picado en ${x},${y},${z}` + (antes.size ? ` (no talé en ${cuales})` : '') +
