@@ -84,6 +84,10 @@ const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
+// IO_DUENOS=seppuq[,otro] (2026-11-01): solo esos jugadores mandan por el chat (sin la variable, todos). El puerto local manda siempre.
+const DUENOS = new Set((process.env.IO_DUENOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const obedece = (u) => DUENOS.size === 0 || [...DUENOS].some(d => d.toLowerCase() === String(u).toLowerCase())
+const AVISADOS = new Map() // a quién ya le dijo que no le obedece (una vez por minuto)
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
 const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s ya no pide pelea
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
@@ -181,6 +185,10 @@ class Personaje {
       this.ev(`[mc] <${u}> ${m}`)
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
+      if (!obedece(u)) { // 2026-11-01: con IO_DUENOS, solo atiende por el chat a esos jugadores (órdenes y !zona)
+        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...DUENOS].join(', ')}.`) }
+        return
+      }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
         const { a } = ordenes.destinatario(t, [...VIVOS.keys()])
         const clave = u + '|' + t // varios personajes oyen el mismo chat: la atiende el primero que la ve, para todos los destinatarios

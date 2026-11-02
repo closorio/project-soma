@@ -6,6 +6,8 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 RAIZ := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+# ajustes de esta máquina, sin versionar (p. ej. «export IO_DUENOS = seppuq»: los bots solo obedecen por el chat a ese jugador)
+-include $(RAIZ)/local.mk
 
 # node va por nvm y numpy por el venv: sin `source`, desde make
 NVM_BIN := $(lastword $(sort $(wildcard $(HOME)/.nvm/versions/node/*/bin)))
