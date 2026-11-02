@@ -13,7 +13,7 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
-  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme (o defiende a X: solo a quien ataque), modo centinela (vigila HOGAR y ataca a quien entre), refúgiate, ' +
+  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme (o defiende a X: solo a quien ataque), modo centinela (vigila HOGAR y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; y continúa (sigue con lo que dejaste a medias).'
@@ -137,6 +137,9 @@ function interpretar(texto) {
   if ((m = t.match(/\b(\w+) (no es|ya no es|deja de ser) (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: false }
   if ((m = t.match(/\b(\w+) es (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: true }
   if (/^(?:quienes son (?:tus )?aliados|aliados|lista de aliados)$/.test(t)) return { tipo: 'aliado', lista: true }
+  // 2026-11-02: «modo guardaespaldas» (te sigue y ataca a quien se te acerque); «desactiva guardaespaldas» lo apaga
+  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?guardaespaldas\b|\bya no (?:seas|hagas de) guardaespaldas\b/.test(t)) return { tipo: 'guardaespaldas_off' }
+  if ((m = t.match(/\bguardaespaldas\b(?: (?:de|a) (\w+))?/))) return { tipo: 'guardaespaldas', ...(m[1] ? { a: m[1] } : {}) }
   // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela
   if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?centinela\b|\bya no (?:seas|hagas de) centinela\b/.test(t)) return { tipo: 'centinela_off' }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»

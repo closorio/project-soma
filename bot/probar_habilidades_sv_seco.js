@@ -407,6 +407,17 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     bx.entities[8] = { ...mk(8, 'hostile', 'zombie', 5), position: new Vec3(5, 40, 5) } // en una cueva, 24 bloques más abajo
     const alto = sv.intrusos(bx, zona, () => false, new Map(), { y: 64, dy: 8 }).map(e => e.id)
     ok(!alto.includes(8) && alto.includes(1), `centinela: el zombi de la cueva (y 40) no cuenta con ±8 sobre y 64 (${JSON.stringify(alto)})`)
+    { // «modo guardaespaldas»: jugadores no aliados a rango de golpe del protegido
+      const prot = mk(20, 'player', 'player', 0, { username: 'Count' }); prot.position = new Vec3(100, 64, 100)
+      const cerca = mk(21, 'player', 'player', 0, { username: 'Ana' }); cerca.position = new Vec3(103, 64, 100)
+      const lejos = mk(22, 'player', 'player', 0, { username: 'Beto' }); lejos.position = new Vec3(110, 64, 100)
+      const amigo = mk(23, 'player', 'player', 0, { username: 'Oqva' }); amigo.position = new Vec3(101, 64, 100)
+      bx.entities = { 20: prot, 21: cerca, 22: lejos, 23: amigo }
+      const q = sv.jugadoresCerca(bx, prot, 5, (n) => n === 'Oqva').map(e => e.username)
+      ok(JSON.stringify(q) === '["Ana"]', `guardaespaldas: solo el jugador no aliado a ≤ 5 del protegido (${JSON.stringify(q)})`)
+      const o2 = require('./ordenes').interpretar('modo guardaespaldas')
+      ok(o2.tipo === 'guardaespaldas', `«modo guardaespaldas» → ${JSON.stringify(o2)}`)
+    }
     const o = require('./ordenes').interpretar('modo centinela')
     ok(o.tipo === 'centinela' && o.zona === 'HOGAR', `«modo centinela» → ${JSON.stringify(o)}`)
   }

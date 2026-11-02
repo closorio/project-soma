@@ -187,6 +187,13 @@ function intrusos(bot, zona, aliado = () => false, ignorar = new Map(), altura =
     .sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))
 }
 
+// «modo guardaespaldas»: los jugadores no aliados (`aliado(nombre)`) a ≤ `radio` del protegido, el más cercano a él primero, sin los de `ignorar`.
+function jugadoresCerca(bot, protegido, radio = 5, aliado = () => false, ignorar = new Map()) {
+  return Object.values(bot.entities).filter(e => e.type === 'player' && e !== bot.entity && e !== protegido && !!e.username && !aliado(e.username) && vivo(bot, e)
+    && !((ignorar.get(e.id) || 0) > Date.now()) && e.position.distanceTo(protegido.position) <= radio)
+    .sort((a, b) => a.position.distanceTo(protegido.position) - b.position.distanceTo(protegido.position))
+}
+
 // ---- el refugio en la memoria del personaje ----
 // refugio: la casilla de los pies dentro de la celda (la usan los sentidos: refugio_dist); refugioInfo: cómo se hizo (modo, salida,
 // bloques puestos y picados, para salir y para que el banco de pruebas reponga el terreno).
@@ -216,5 +223,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, anotarRefugio, refugioInfo,
   centrar }

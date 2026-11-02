@@ -84,6 +84,9 @@ const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.tri
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
 const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
 const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
+const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
+const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
+const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
@@ -101,6 +104,7 @@ const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia 
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
+const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
 const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
@@ -121,7 +125,8 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (
   // F8.0b
   cazar: (o) => `Voy a cazar ${o.n} ${o.animal}.`, agua: () => 'Voy a llenar el cubo.', vierte: (o) => `Vierto el ${o.que}.`,
   aliado: () => 'Entendido.',
-  centinela_off: () => 'Vale.',
+  centinela_off: () => 'Vale.', guardaespaldas_off: () => 'Vale.',
+  guardaespaldas: (o) => `Modo guardaespaldas: no me separo de ${o.a || 'ti'}.`,
   centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
@@ -149,7 +154,8 @@ class Personaje {
     Object.assign(this, { enHabilidad: 0, reflejando: null, tareaReflejo: null })
     setInterval(() => this.reposo(), REPOSO_MS)
     setInterval(() => this.hambre().catch(e => this.ev('[hambre] error: ' + e.message)), 2000) // 2026-11-02: come siempre que tenga hambre y comida
-    this.centinela = leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
+    this.guardaespaldas = leerGuardaespaldas(nombre) // 2026-11-02: igual que el centinela (uno u otro, no los dos)
+    this.centinela = this.guardaespaldas ? null : leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
     setInterval(() => this.supervisarCentinela(), 3000)
     VIVOS.set(nombre, this)
     this.conectar()
@@ -792,15 +798,16 @@ class Personaje {
     let r
     try { r = await this.hacer(o, tarea, quien) } catch (e) { r = { exito: false, texto: 'No pude: ' + e.message } }
     const interrumpida = tarea.cancelada && o.tipo !== 'quedate'
-    const guardia = o.tipo === 'centinela' && (o.reanuda || interrumpida) // la guardia que se retoma o se deja por otra orden no se anuncia ni se anota
-    if (interrumpida && o.tipo === 'centinela') r = { ...r, exito: false, texto: '' }
+    const modoGuardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas'
+    const guardia = modoGuardia && (o.reanuda || interrumpida) // la guardia que se retoma o se deja por otra orden no se anuncia ni se anota
+    if (interrumpida && modoGuardia) r = { ...r, exito: false, texto: '' }
     else if (interrumpida) {
       r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
       const p = pendienteDe(o, r)
       if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
     } else if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null // terminada: ya no hay nada a medias
     if (this.enCurso && this.enCurso.t0 === t0) this.enCurso = null
-    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre' && !this.centinela
+    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre' && !this.centinela && !this.guardaespaldas
     if (r.texto) this.decir(r.texto)
     if (!guardia) this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: r.texto, s: (Date.now() - t0) / 1000, pasos: r.pasos,
       despues: o.tipo === 'quedate' ? 'quieto' : interrumpida ? 'otra orden' : this.despues })
@@ -808,18 +815,35 @@ class Personaje {
     return r
   }
 
+  // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
+  async equiparAntes(paso) {
+    const bot = this.bot
+    const [rs] = await paso('equipar_soportes', ['HOGAR'])
+    if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+    const [re] = await paso('equipar', ['todo'])
+    if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
+    else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
+  }
+
   // 2026-11-02: el modo centinela no se apaga solo: tras cualquier orden (cumplida o interrumpida), tras morir, reconectar o reiniciar, vuelve a
   // montar guardia. Solo «desactiva centinela» lo quita. Cada 3 s: si hay centinela y no hay orden ni habilidad en marcha, lo retoma.
   fijarCentinela(zona) {
     this.centinela = zona ? { zona } : null
     guardarCentinela(this.nombre, this.centinela)
+    if (zona && this.guardaespaldas) this.fijarGuardaespaldas(null) // un modo u otro
+  }
+  fijarGuardaespaldas(a) {
+    this.guardaespaldas = a ? { a } : null
+    guardarGuardaespaldas(this.nombre, this.guardaespaldas)
+    if (a && this.centinela) this.fijarCentinela(null)
   }
   supervisarCentinela() {
     const bot = this.bot
-    if (!this.centinela || this.reanudando || this.ordenes || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!(this.centinela || this.guardaespaldas) || this.reanudando || this.ordenes || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
-    this.ordenAccion({ tipo: 'centinela', zona: this.centinela.zona, reanuda: true }, 'modo centinela', 'reanudar')
+    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, reanuda: true }
+    this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : 'modo centinela', 'reanudar')
       .catch(e => this.ev('[centinela] no pude retomar: ' + e.message)).finally(() => { this.reanudando = false })
   }
 
@@ -901,6 +925,58 @@ class Personaje {
         guardarAliados()
         return { exito: true, texto: o.valor ? `${o.nombre} es aliado: puede entrar a la zona. Si me pega, me defiendo.` : `${o.nombre} ya no es aliado.`, pasos: [] }
       }
+      case 'guardaespaldas_off': {
+        const antes = this.guardaespaldas
+        this.fijarGuardaespaldas(null)
+        return { exito: true, texto: antes ? `Modo guardaespaldas desactivado (cuidaba a ${antes.a}).` : 'No estaba en modo guardaespaldas.', pasos: [] }
+      }
+      case 'guardaespaldas': {
+        // 2026-11-02: no se separa del protegido (por defecto, quien da la orden; un dueño) y, con el esquema del centinela, ataca (acorralado, a
+        // puñetazos si no lleva arma) a los hostiles que se le acerquen (≤ GUARDIA_MOBS), a los jugadores no aliados a rango de golpe
+        // (≤ GUARDIA_JUGADORES) y a quien le pegue a él o al bot. Es un modo: sobrevive a las órdenes (vuelve solo), a morir y a reiniciar.
+        const prot = o.protegido || o.a || this.jugadorDe(quien) || [...AMOS].find(n => bot.players[n]) || (this.guardaespaldas && this.guardaespaldas.a)
+        const nombre = prot && (Object.keys(bot.players).find(n => n.toLowerCase() === String(prot).toLowerCase()) || prot)
+        if (!nombre) return { exito: false, texto: 'No sé a quién proteger: dime «guardaespaldas de NOMBRE».', pasos: [] }
+        this.fijarGuardaespaldas(nombre)
+        const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
+        let golpeador = null
+        const alGolpe = (victima, fuente) => {
+          const e = bot.players[nombre] && bot.players[nombre].entity
+          if (sv.esAgresor(bot, victima, fuente, e, esDueno)) golpeador = { id: fuente.id, t: Date.now() }
+        }
+        bot.on('entityHurt', alGolpe)
+        this.escoltando = true // los golpes los atiende este modo, no alGolpear (que cancelaría la orden)
+        try {
+          await this.equiparAntes(paso)
+          if (tarea && tarea.cancelada) return { exito: false, texto: '', pasos: [] }
+          const protegido = () => bot.players[nombre] && bot.players[nombre].entity
+          const objetivo = () => {
+            const e = protegido()
+            const g = golpeador && bot.entities[golpeador.id]
+            if (g && g.isValid !== false && Date.now() - golpeador.t < AGRESOR_ESCOLTA_MS) return g
+            if (!e) return null
+            return sv.amenazaCerca(bot, e, GUARDIA_MOBS, ignorar) || sv.jugadoresCerca(bot, e, GUARDIA_JUGADORES, esAliado, ignorar)[0] || null
+          }
+          while (!(tarea && tarea.cancelada)) {
+            try {
+              if (!bot.entity || !(bot.health > 0) || this.recuperando) { await esperar(500); continue }
+              const e = protegido()
+              const x = objetivo()
+              if (x) {
+                if (!avisados.has(x.id)) { avisados.add(x.id); bot.chat(`¡Atrás! ${x.type === 'player' ? x.username : x.name.replace(/_/g, ' ')}.`) }
+                const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'acorralado', 'puno', 'vedadas'], tarea)
+                if (!p || !p.exito) ignorar.set(x.id, Date.now() + 8000)
+                golpeador = null
+                continue
+              }
+              if (!e) { await esperar(1000); continue } // no lo veo (lejos o desconectado): espero a que vuelva
+              const r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              if (r === 'sin camino' || r === 'perdido') await esperar(1500)
+            } catch (err) { this.ev('[guardaespaldas] error (sigo): ' + err.message); await esperar(1000) }
+          }
+        } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
+        return { exito: true, texto: '', pasos: [] }
+      }
       case 'centinela_off': {
         const antes = this.centinela
         this.fijarCentinela(null)
@@ -923,12 +999,7 @@ class Personaje {
         this.escoltando = true
         let puesto = null
         try {
-          // antes de montar guardia se equipa, como con «equípate» (lo que falte de los armor stands; luego lo mejor que lleve). Idempotente.
-          const [rs] = await paso('equipar_soportes', ['HOGAR'])
-          if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
-          const [re] = await paso('equipar', ['todo'])
-          if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
-          else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
+          await this.equiparAntes(paso) // antes de montar guardia se equipa, como con «equípate»
           if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           const p0 = bot.entity.position
           const fuera = Math.floor(p0.x) < Math.min(zona.x1, zona.x2) || Math.floor(p0.x) > Math.max(zona.x1, zona.x2) || Math.floor(p0.z) < Math.min(zona.z1, zona.z2) || Math.floor(p0.z) > Math.max(zona.z1, zona.z2)
