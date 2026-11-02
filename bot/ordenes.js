@@ -137,6 +137,8 @@ function interpretar(texto) {
   if ((m = t.match(/\b(\w+) (no es|ya no es|deja de ser) (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: false }
   if ((m = t.match(/\b(\w+) es (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: true }
   if (/^(?:quienes son (?:tus )?aliados|aliados|lista de aliados)$/.test(t)) return { tipo: 'aliado', lista: true }
+  // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela
+  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?centinela\b|\bya no (?:seas|hagas de) centinela\b/.test(t)) return { tipo: 'centinela_off' }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
     return { tipo: 'centinela', zona: (m[1] || m[2] || 'hogar').toUpperCase() }

@@ -81,6 +81,9 @@ const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_AL
 const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
 // IO_PROPIOS=Nombre1,Nombre2: los bots del usuario (de otros procesos de esta misma máquina). Con los de este proceso (VIVOS), cuentan como dueños.
 const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.trim()).filter(Boolean))
+const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
+const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
+const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
@@ -97,6 +100,7 @@ const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia 
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
+const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
 const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
@@ -117,6 +121,7 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (
   // F8.0b
   cazar: (o) => `Voy a cazar ${o.n} ${o.animal}.`, agua: () => 'Voy a llenar el cubo.', vierte: (o) => `Vierto el ${o.que}.`,
   aliado: () => 'Entendido.',
+  centinela_off: () => 'Vale.',
   centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
@@ -143,6 +148,9 @@ class Personaje {
     // la cancela); en reposo se miran cada REPOSO_MS
     Object.assign(this, { enHabilidad: 0, reflejando: null, tareaReflejo: null })
     setInterval(() => this.reposo(), REPOSO_MS)
+    setInterval(() => this.hambre().catch(e => this.ev('[hambre] error: ' + e.message)), 2000) // 2026-11-02: come siempre que tenga hambre y comida
+    this.centinela = leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
+    setInterval(() => this.supervisarCentinela(), 3000)
     VIVOS.set(nombre, this)
     this.conectar()
     observacion.ponerPerfil(this.bot, perfil)
@@ -238,7 +246,7 @@ class Personaje {
     })
     bot.on('kicked', (r) => { this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80)) })
     bot.on('error', (e) => this.ev('[mc] error: ' + e.message))
-    bot.on('end', () => { this.ev('[mc] desconectado; reconectando en 5 s'); informe.evento(bot, 'desconectado'); setTimeout(() => this.conectar(), 5000) })
+    bot.on('end', () => { this.tarea.cancelada = true; this.ev('[mc] desconectado; reconectando en 5 s'); informe.evento(bot, 'desconectado'); setTimeout(() => this.conectar(), 5000) })
   }
 
   // Una tarea nueva cancela la anterior. Fuera del bucle del modo libre (libre = false), cualquier tarea es una orden: pasa a
@@ -765,7 +773,12 @@ class Personaje {
   // Orden con acción (ven, sígueme, quédate, tala, recoge, guarda, huye): sale del modo libre, espera a que lo anterior suelte el
   // navegador, la ejecuta con habilidades (que respetan zonas, cofres y límites) y, al terminar, se queda quieto o vuelve a libre
   // (ajuste «al terminar»), salvo «quédate» o si otra orden la ha interrumpido.
+  // Cuenta las órdenes en marcha (también las que esperan a la anterior): el supervisor del centinela solo vuelve cuando no hay ninguna.
   async ordenAccion(o, texto, quien) {
+    this.ordenes = (this.ordenes || 0) + 1
+    try { return await this.ordenAccion1(o, texto, quien) } finally { this.ordenes-- }
+  }
+  async ordenAccion1(o, texto, quien) {
     const modoAntes = this.modo
     if (o.de) o.de = Object.keys(this.bot.players).find(n => n.toLowerCase() === o.de) || o.de // «huye de seppuq» → Seppuq
     if (this.modo === 'libre') this.ponerModo('ordenes', `orden «${texto}»`)
@@ -775,23 +788,59 @@ class Personaje {
     await Promise.race([previo, esperar(3000)]).catch(() => {})
     const t0 = Date.now()
     this.enCurso = { texto, t0 }
-    if (o.tipo !== 'quedate') this.decir(AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.')
+    if (o.tipo !== 'quedate' && !o.reanuda) this.decir(AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.')
     let r
     try { r = await this.hacer(o, tarea, quien) } catch (e) { r = { exito: false, texto: 'No pude: ' + e.message } }
     const interrumpida = tarea.cancelada && o.tipo !== 'quedate'
-    if (interrumpida) {
+    const guardia = o.tipo === 'centinela' && (o.reanuda || interrumpida) // la guardia que se retoma o se deja por otra orden no se anuncia ni se anota
+    if (interrumpida && o.tipo === 'centinela') r = { ...r, exito: false, texto: '' }
+    else if (interrumpida) {
       r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
       const p = pendienteDe(o, r)
       if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
     } else if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null // terminada: ya no hay nada a medias
     if (this.enCurso && this.enCurso.t0 === t0) this.enCurso = null
-    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre'
-    this.decir(r.texto)
-    this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: r.texto, s: (Date.now() - t0) / 1000, pasos: r.pasos,
+    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre' && !this.centinela
+    if (r.texto) this.decir(r.texto)
+    if (!guardia) this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: r.texto, s: (Date.now() - t0) / 1000, pasos: r.pasos,
       despues: o.tipo === 'quedate' ? 'quieto' : interrumpida ? 'otra orden' : this.despues })
     if (vuelve) this.ponerModo('libre', `al terminar «${texto}»`)
     return r
   }
+
+  // 2026-11-02: el modo centinela no se apaga solo: tras cualquier orden (cumplida o interrumpida), tras morir, reconectar o reiniciar, vuelve a
+  // montar guardia. Solo «desactiva centinela» lo quita. Cada 3 s: si hay centinela y no hay orden ni habilidad en marcha, lo retoma.
+  fijarCentinela(zona) {
+    this.centinela = zona ? { zona } : null
+    guardarCentinela(this.nombre, this.centinela)
+  }
+  supervisarCentinela() {
+    const bot = this.bot
+    if (!this.centinela || this.reanudando || this.ordenes || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
+    this.reanudando = true
+    this.ordenAccion({ tipo: 'centinela', zona: this.centinela.zona, reanuda: true }, 'modo centinela', 'reanudar')
+      .catch(e => this.ev('[centinela] no pude retomar: ' + e.message)).finally(() => { this.reanudando = false })
+  }
+
+  // 2026-11-02: come siempre que tenga hambre (≤ HAMBRE_COMER) y comida buena en el inventario, también en mitad de una orden o de la guardia
+  // (salvo peleando o con un golpe de hace menos de 5 s). Conserva el destino del navegador, que comer detiene.
+  async hambre() {
+    const bot = this.bot
+    if (this.comiendo || this.defendiendo || !bot || !bot.entity || !(bot.health > 0) || bot.food > HAMBRE_COMER || !sv.comidas(bot).length) return
+    const g = sv.estado(bot).golpe
+    if (g && Date.now() - g.t < 5000) return
+    this.comiendo = true
+    const meta = bot.pathfinder.goal
+    try {
+      const r = await habilidades.ejecutar(bot, 'comer', [], { cancelada: false })
+      this.ev(`[hambre] comer → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa}${r.comida ? ' (' + r.comida + ')' : ''}`)
+    } finally {
+      if (meta && !bot.pathfinder.goal) { try { bot.pathfinder.setGoal(meta, true) } catch (_) {} }
+      this.comiendo = false
+    }
+  }
+
 
   anotarOrden({ texto, quien, modo, exito, resultado, s, pasos, despues }) {
     this.ultima = { texto, exito, resultado, hora: registro.hora() }
@@ -852,11 +901,17 @@ class Personaje {
         guardarAliados()
         return { exito: true, texto: o.valor ? `${o.nombre} es aliado: puede entrar a la zona. Si me pega, me defiendo.` : `${o.nombre} ya no es aliado.`, pasos: [] }
       }
+      case 'centinela_off': {
+        const antes = this.centinela
+        this.fijarCentinela(null)
+        return { exito: true, texto: antes ? `Modo centinela desactivado (era en ${antes.zona}).` : 'No estaba en modo centinela.', pasos: [] }
+      }
       case 'centinela': {
         // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
         const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
-        if (!zona) return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] }
+        if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] } }
+        this.fijarCentinela(zona.nombre) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
         const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
@@ -882,7 +937,7 @@ class Personaje {
             if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           }
           puesto = bot.entity.position.clone()
-          bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
+          if (!o.reanuda) bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
           while (!(tarea && tarea.cancelada)) {
             try {
               // muerto, o yendo a por sus cosas: la guardia espera; luego vuelve a su puesto
