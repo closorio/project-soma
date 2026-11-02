@@ -133,6 +133,10 @@ function interpretar(texto) {
   if (/\b(?:equipate|equipaos|equipar|equipa|armate|armaos|ponte la armadura|coge el arma|coge la espada)\b/.test(t)) return { tipo: 'equipate' }
   if (/\b(?:apartate|apartaos|apartarse|quitate de ahi|sal de la lava|alejate de la lava|alejate del borde|alejate del agua)\b/.test(t)) return { tipo: 'apartate' }
   if (/\b(?:caza|cazad|cazar|busca comida|buscad comida|consigue comida|trae comida|recoge comida)\b/.test(t)) return { tipo: 'caza' }
+  // 2026-11-02: aliados («Oqva es aliado», «Oqva no es aliado», «quiénes son tus aliados»); antes que cualquier otra cosa con «es»
+  if ((m = t.match(/\b(\w+) (no es|ya no es|deja de ser) (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: false }
+  if ((m = t.match(/\b(\w+) es (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: true }
+  if (/^(?:quienes son (?:tus )?aliados|aliados|lista de aliados)$/.test(t)) return { tipo: 'aliado', lista: true }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
     return { tipo: 'centinela', zona: (m[1] || m[2] || 'hogar').toUpperCase() }

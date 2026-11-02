@@ -73,8 +73,13 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
-// IO_AMOS=Nombre1,Nombre2: solo esos jugadores mandan por el chat (órdenes y !zona); vacío, cualquier humano. El puerto no cambia.
 const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
+// 2026-11-02: aliados a la hora de pelear (centinela, «protégeme», defensa por defecto): solo los dueños (IO_AMOS) y los que el dueño declare con
+// «Oqva es aliado» / «Oqva no es aliado» (se guardan en mundos/<mundo>/aliados.json). Los demás personajes, aunque sean bots tuyos, no.
+const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
+const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_ALIADOS, 'utf8')).aliados || [] } catch (_) { return [] } })().map(x => String(x).toLowerCase()))
+const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
+const esAliado = (n) => AMOS.has(n) || ALIADOS.has(String(n || '').toLowerCase())
 const SKIN = (process.env.IO_SKIN || '').trim()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
@@ -107,6 +112,7 @@ const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (
   construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
   // F8.0b
   cazar: (o) => `Voy a cazar ${o.n} ${o.animal}.`, agua: () => 'Voy a llenar el cubo.', vierte: (o) => `Vierto el ${o.que}.`,
+  aliado: () => 'Entendido.',
   centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
@@ -163,7 +169,7 @@ class Personaje {
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
-    sv.vigilarGolpes(bot, (g) => setImmediate(() => this.alGolpear(g)), (n) => esBot(n) || AMOS.has(n)) // F7.2: los golpes de monstruos, para el reflejo de defensa
+    sv.vigilarGolpes(bot, (g) => setImmediate(() => this.alGolpear(g)), (n) => esAliado(n)) // F7.2: los golpes de monstruos, para el reflejo de defensa
     // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
     // recoloca (forcedMove); eso y por qué el navegador rehace la ruta van al registro (make move-log), como mucho 1 línea / 2 s
     const mov = { n: 0, t: 0 }
@@ -819,6 +825,14 @@ class Personaje {
         const textos = { 'tiempo agotado': 'Llevo diez minutos siguiéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
+      case 'aliado': {
+        if (o.lista) return { exito: true, texto: ALIADOS.size ? `Aliados, además de ti: ${[...ALIADOS].join(', ')}.` : 'No tengo más aliados que tú.', pasos: [] }
+        const n = o.nombre.toLowerCase()
+        if (AMOS.has(Object.keys(bot.players).find(x => x.toLowerCase() === n) || o.nombre)) return { exito: true, texto: `${o.nombre} ya es de los míos: es mi dueño.`, pasos: [] }
+        if (o.valor) ALIADOS.add(n); else ALIADOS.delete(n)
+        guardarAliados()
+        return { exito: true, texto: o.valor ? `${o.nombre} es aliado: no le ataco.` : `${o.nombre} ya no es aliado.`, pasos: [] }
+      }
       case 'centinela': {
         // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
@@ -831,7 +845,7 @@ class Personaje {
         if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
         if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
-        const aliado = (n) => esBot(n) || AMOS.has(n)
+        const aliado = (n) => esAliado(n)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
         const p0 = bot.entity.position
@@ -871,7 +885,7 @@ class Personaje {
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
         const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
-        const aliado = (n) => n === e.username || esBot(n) || AMOS.has(n)
+        const aliado = (n) => n === e.username || esAliado(n)
         const ignorar = new Map() // id → hasta cuándo no se reintenta (atacar se negó)
         let agresor = null, negado = false
         const alGolpe = (victima, fuente) => {
