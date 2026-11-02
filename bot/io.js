@@ -781,8 +781,8 @@ class Personaje {
   // (ajuste «al terminar»), salvo «quédate» o si otra orden la ha interrumpido.
   // Cuenta las órdenes en marcha (también las que esperan a la anterior): el supervisor del centinela solo vuelve cuando no hay ninguna.
   async ordenAccion(o, texto, quien) {
-    this.ordenes = (this.ordenes || 0) + 1
-    try { return await this.ordenAccion1(o, texto, quien) } finally { this.ordenes-- }
+    this.enOrden = (this.enOrden || 0) + 1
+    try { return await this.ordenAccion1(o, texto, quien) } finally { this.enOrden-- }
   }
   async ordenAccion1(o, texto, quien) {
     const modoAntes = this.modo
@@ -839,7 +839,7 @@ class Personaje {
   }
   supervisarCentinela() {
     const bot = this.bot
-    if (!(this.centinela || this.guardaespaldas) || this.reanudando || this.ordenes || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!(this.centinela || this.guardaespaldas) || this.reanudando || this.enOrden || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
     const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, reanuda: true }
