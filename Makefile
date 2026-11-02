@@ -15,6 +15,7 @@ WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (server 2
 ROLE    ?= casual       # rol v2 del capataz (perfiles/v2/): casual · speedrunner
 BOTS    ?= Oqva         # uno o varios nombres: "Oqva Eco Iris" (2026-11-01: Soma pasó a llamarse Oqva)
 OTHER_BOTS ?=           # bots de otros procesos o del otro PC ("Trivino", "Oqva"): no cuentan como humanos ni se les obedece
+DESTINO ?=              # proxy del compañero: IP:puerto del server 26.3 si no es el de mundos/companero/mundo.json ("127.0.0.1:25565" cuando corre en este mismo PC)
 PROPIOS ?=              # bots tuyos de otros procesos ("Trivino Nico"): como los dueños, ni los echa el centinela ni se defiende de ellos
 OWNERS  ?=              # jugadores a los que obedecen por el chat ("__Count"); vacío, a cualquier humano
 SKIN    ?=              # skin del server que se ponen al entrar (/skin set SKIN, SkinsRestorer): "trivino"
@@ -146,7 +147,7 @@ partner-ping:
 # server 26.3 del compañero (2026-10-31): un segundo ViaProxy en 25569 hacia el «destino» de mundos/companero/mundo.json
 # un segundo ViaProxy hacia el «destino» de mundos/$(1)/mundo.json, escuchando en 127.0.0.1:$(2) (companero 25569, paper 25571)
 define proxy_hacia
-	@d=$$(python3 -c 'import json; print(json.load(open("mundos/$(1)/mundo.json"))["servidor"].get("destino", ""))'); \
+	@d="$(strip $(DESTINO))"; test -n "$$d" || d=$$(python3 -c 'import json; print(json.load(open("mundos/$(1)/mundo.json"))["servidor"].get("destino", ""))'); \
 	  test -n "$$d" || { echo "mundos/$(1)/mundo.json no tiene «destino» (IP:puerto): el server es 26.1, no hace falta proxy"; exit 1; }; \
 	  test -f servidor/proxy/viaproxy.yml || { echo "falta servidor/proxy/viaproxy.yml: make proxy-download"; exit 1; }; \
 	  sed -e "s/^bind-address: .*/bind-address: 127.0.0.1:$(2)/" -e "s/^target-address: .*/target-address: $$d/" \
