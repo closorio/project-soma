@@ -9,6 +9,7 @@ const { Vec3 } = require('vec3')
 const fs = require('fs')
 const path = require('path')
 const mundo = require('../mundo')
+const zonas = require('../zonas')
 const { conLimite, esperar, moverHasta, prudentes, hayCamino } = require('./comun')
 const { sitioCama } = require('./dormir')
 const fabricar = require('./fabricar')
@@ -53,7 +54,8 @@ function camas(bot, r) {
     if (!vistas.has(clave(v))) vistas.set(clave(v), { v, ocupada: pr.occupied === true })
     else if (pr.occupied === true) vistas.get(clave(v)).ocupada = true
   }
-  return [...vistas.values()].sort((a, b) => a.v.distanceTo(bot.entity.position) - b.v.distanceTo(bot.entity.position))
+  const enHogar = (c) => (zonas.hogarDe(c.v.x, c.v.y, c.v.z) ? 0 : 1) // las del hogar primero
+  return [...vistas.values()].sort((a, b) => enHogar(a) - enHogar(b) || a.v.distanceTo(bot.entity.position) - b.v.distanceTo(bot.entity.position))
 }
 // La suya si sigue ahí; si no, la libre más cercana que no sea de otro bot. Se la reserva. null si no hay ninguna.
 function elegirCama(bot, r, descartadas) {
@@ -124,6 +126,7 @@ async function ponerCama(bot, tarea) {
 module.exports = async function usarCama(bot, [radio], tarea) {
   const t0 = Date.now(), r = Math.min(32, parseFloat(radio) || 16), descartadas = new Set()
   let ultima = null
+  await require('./hogar')(bot, tarea) // las camas y la cama nueva, en el hogar si lo hay y llega (si no, donde esté)
   for (let i = 0; i < 4; i++) { // si al acostarse está ocupada, la siguiente
     const r1 = await unaCama(bot, r, descartadas, tarea, t0)
     if (r1.causa !== 'la cama está ocupada' || !r1.pos) return r1

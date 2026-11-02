@@ -199,7 +199,7 @@ function interpretar(texto) {
   if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?centinela\b|\bya no (?:seas|hagas de) centinela\b/.test(t)) return { tipo: 'centinela_off' }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
-    return { tipo: 'centinela', zona: (m[1] || m[2] || BASE).toUpperCase() }
+    return { tipo: 'centinela', zona: (m[1] || m[2] || '').toUpperCase() } // sin zona: el hogar del dueño (io.js), o la base
   // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
   if (/\bgranja de piedra\b|\bstone farm\b|\bgenerador de piedra\b/.test(t) && /\b(?:haz(?:me)?|hacer|construye|construir|monta|necesito|materiales|que (?:te )?falta|prepara)\b/.test(t))
     return { tipo: 'materiales', plano: 'granja_piedra', zona: BASE }

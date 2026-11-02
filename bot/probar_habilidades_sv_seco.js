@@ -465,7 +465,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
       ok(o2.tipo === 'guardaespaldas', `«modo guardaespaldas» → ${JSON.stringify(o2)}`)
     }
     const o = require('./ordenes').interpretar('modo centinela')
-    ok(o.tipo === 'centinela' && o.zona === (process.env.IO_BASE || 'HOGAR').toUpperCase(), `«modo centinela» → ${JSON.stringify(o)}`)
+    ok(o.tipo === 'centinela' && o.zona === '', `«modo centinela» → ${JSON.stringify(o)}`)
   }
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

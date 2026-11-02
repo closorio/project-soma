@@ -101,7 +101,8 @@ module.exports = async function depositar(bot, [modo], tarea) {
   if (!lista.length) return { exito: false, causa: 'sin cofre' }
   const p0 = bot.entity.position.clone()
   const centro = (c) => p0.clone().set(c.bloques[0][0] + 0.5, c.bloques[0][1] + 0.5, c.bloques[0][2] + 0.5)
-  lista.sort((a, b) => centro(a).distanceTo(p0) - centro(b).distanceTo(p0))
+  const enHogar = (c) => (zonas.hogarDe(...c.bloques[0]) ? 0 : 1) // los cofres del hogar primero
+  lista.sort((a, b) => enHogar(a) - enHogar(b) || centro(a).distanceTo(p0) - centro(b).distanceTo(p0))
   const guardado = {}, entra = {}, usados = []
   let causa = null
   for (const c of lista) {

@@ -44,6 +44,16 @@ ok(zonas.pasoVedado(2, 64, 2) && !sv.puedePoner(2, 64, 2), 'una vedada dentro de
 ok(zonas.lista().some(l => l.startsWith('HOGAR: zona hogar')), 'la lista marca HOGAR como hogar')
 console.log('  vedada dentro del hogar y lista')
 
+// 5. cambiar el modo de una zona que ya existe, y el hogar más cercano
+zonas.zonaNueva('CASA', 200, 200, 210, 210, 'vedada')
+ok(zonas.pasoVedado(205, 64, 205), 'CASA empieza vedada')
+ok(zonas.cambiarModo('casa', 'hogar') && !zonas.pasoVedado(205, 64, 205) && zonas.hogarDe(205, 64, 205).nombre === 'CASA', 'cambiarModo (sin mayúsculas) la pasa a hogar')
+ok(!zonas.cambiarModo('NOEXISTE', 'hogar'), 'cambiarModo de una zona que no existe devuelve false')
+const hc = zonas.hogarCercano(190, 205)
+ok(hc.zona.nombre === 'CASA' && hc.dist === 10 && hc.cx === 205, 'hogarCercano: ' + JSON.stringify(hc.dist))
+ok(zonas.hogarCercano(5, 5).dist === 0, 'dentro de un hogar, distancia 0')
+console.log('  cambiar el modo y hogar más cercano')
+
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

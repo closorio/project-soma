@@ -103,6 +103,23 @@ function arbolNuevo(nombre, x, y, z) {
   d.arboles.push({ nombre, x, y, z })
   guardar(d)
 }
+// Cambia el modo de una zona que ya existe (vedada → hogar…). true si estaba.
+function cambiarModo(nombre, modo) {
+  const d = leer(); const zn = d.zonas.find(z => z.nombre.toLowerCase() === String(nombre).toLowerCase())
+  if (!zn) return false
+  zn.modo = modo; guardar(d); return true
+}
+// Las zonas de hogar del dueño, y la que contiene (x, y, z) o la más cercana a (x, z) con su centro y su distancia (0 si está dentro).
+const hogares = () => leer().zonas.filter(esHogar)
+const hogarDe = (x, y, z) => hogares().find(zn => dentro(zn, x, y, z)) || null
+function hogarCercano(x, z) {
+  let mejor = null
+  for (const zn of hogares()) {
+    const d = Math.hypot(Math.max(zn.x1 - x, 0, x - zn.x2), Math.max(zn.z1 - z, 0, z - zn.z2))
+    if (!mejor || d < mejor.dist) mejor = { zona: zn, dist: d, cx: (zn.x1 + zn.x2) / 2, cz: (zn.z1 + zn.z2) / 2 }
+  }
+  return mejor
+}
 function borrar(nombre) {
   const d = leer(); const n = d.zonas.length + d.arboles.length
   d.zonas = d.zonas.filter(z => z.nombre !== nombre); d.arboles = d.arboles.filter(a => a.nombre !== nombre)
@@ -114,5 +131,5 @@ function lista() {
   return [...d.zonas.map(z => `${z.nombre}: zona ${tipo(z)} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}`),
     ...d.arboles.map(a => `${a.nombre}: árbol en ${a.x},${a.y},${a.z}`)]
 }
-module.exports = { leer, talaProtegida, ponerProtegido, protegidoPor, esHogar, DUENO, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
+module.exports = { leer, talaProtegida, ponerProtegido, protegidoPor, esHogar, hogares, hogarDe, hogarCercano, cambiarModo, DUENO, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
   trabajo, fueraDeTrabajo, esTrabajo, FUERA_DE_TRABAJO }

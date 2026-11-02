@@ -106,6 +106,7 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
 const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase() // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+const baseZona = () => (zonas.hogares()[0] || {}).nombre || BASE_ZONA // 2026-11-02: la zona de hogar del dueño, si la marcó
 // Nombres de jugador sin distinguir mayúsculas: el server puede decir «Seppuq» aunque en local.mk ponga «seppuq» (2026-11-02)
 class NombresSinMayus extends Set {
   constructor(it) { super(); this.orig = []; for (const x of it || []) this.add(x) }
@@ -1050,7 +1051,7 @@ class Personaje {
   // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
   async equiparAntes(paso) {
     const bot = this.bot
-    const [rs] = await paso('equipar_soportes', [BASE_ZONA])
+    const [rs] = await paso('equipar_soportes', [baseZona()])
     if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
     const [re] = await paso('equipar', ['todo'])
     if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
@@ -1313,8 +1314,9 @@ class Personaje {
       case 'centinela': {
         // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
-        const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
-        if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] } }
+        const nombreZona = o.zona || baseZona() // sin zona: el hogar del dueño
+        const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())
+        if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
         this.fijarCentinela(zona.nombre) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
         const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
@@ -1676,7 +1678,7 @@ class Personaje {
       }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
-        const [rs, ds] = await paso('equipar_soportes', [BASE_ZONA])
+        const [rs, ds] = await paso('equipar_soportes', [baseZona()])
         if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
@@ -1822,10 +1824,14 @@ class Personaje {
         return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)`
       }
       case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo|hogar]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
+      case 'modo': {
+        const m = modo(p[1]); if (!p[0] || !/^(vedada|no_?talar|trabajo|hogar)$/i.test(p[1] || '')) return 'uso: zona modo NOMBRE vedada|no_talar|trabajo|hogar'
+        return zonas.cambiarModo(p[0], m) ? `zona ${p[0]} ahora es ${TIPO[m]}` : `no hay ninguna zona ${p[0]}`
+      }
       case 'tronco': { const [n, x, y, z] = p; zonas.arbolNuevo(n, +x, +y, +z); return 'tronco ' + n + ' protegido' }
       case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}` : 'di cuál: !zona borrar NOMBRE'
       case 'lista': { const l = zonas.lista(); return l.length ? l.join('\n') : 'no hay zonas protegidas' }
-      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo|hogar] | arbol NOMBRE | lista | borrar NOMBRE'
+      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo|hogar] | modo NOMBRE vedada|no_talar|trabajo|hogar | arbol NOMBRE | lista | borrar NOMBRE'
     }
   }
 
