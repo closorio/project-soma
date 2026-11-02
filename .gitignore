@@ -59,3 +59,4 @@ mundos/*/guardaespaldas_*.json
 mundos/*/aliados.json
 # ajustes de cada máquina (Makefile: -include local.mk)
 local.mk
+local.env

@@ -14,6 +14,9 @@ JSON=$RAIZ/mundos/$MUNDO/personajes.json
 LOGS=$RAIZ/servidor-supervivencia/logs
 [ -f "$JSON" ] || { echo "falta $JSON"; exit 1; }
 
+# ajustes de esta máquina, sin versionar (local.env, p. ej. SOMA_OLLAMA_MODELO=qwen3:4b para el respaldo con LLM de interprete_llm.js)
+[ -f "$RAIZ/local.env" ] && { set -a; . "$RAIZ/local.env"; set +a; }
+
 # node va por nvm/mise y quien nos llama (el Paper) no trae el PATH de la terminal
 NVM_BIN=$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort | tail -n 1)
 MISE_BIN=$(ls -d "$HOME"/.local/share/mise/installs/node/*/bin 2>/dev/null | sort | tail -n 1)
