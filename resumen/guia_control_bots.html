@@ -206,15 +206,6 @@ make zone-delete NAME=CASA                       # quitar una</pre>
 <tr><td><code>make move-log WORLD=companero</code></td><td>Si no avanza: ¿el server lo está recolocando?</td></tr>
 </table>
 
-<h2>Colores en la brújula</h2>
-<p>Cada bot se pone al entrar el color de su marca en la barra de localización: <b>Oqva rojo, Soma azul, Iris verde, Eco amarillo, Alma morado</b>.
-Solo funciona si el bot es <b>operador</b> en ese server (el dueño escribe <code>/op Oqva</code>). Si no, lo pone a mano un operador:</p>
-<pre>/waypoint modify Oqva color red
-/waypoint modify Soma color blue
-/waypoint modify Iris color green</pre>
-<p>Para cambiar los colores de un mundo, añade en <code>mundos/companero/mundo.json</code>: <code>"colores": {"Oqva": "gold", "Soma": "aqua"}</code>
-(colores: red, blue, green, yellow, aqua, light_purple, gold, white… o un código como <code>FF8800</code>).</p>
-
 <h2>6. Si algo falla</h2>
 <table>
 <tr><th>Pasa esto</th><th>Haz esto</th></tr>
