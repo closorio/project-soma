@@ -30,6 +30,15 @@ v.vueltas = 2; ok(clasificar(v, { exito: true }) === 'hecha', 'veces: 3/3 → he
 const n = a.entrada({ tipo: 'ven' }, 'ven', 'yo')
 ok(clasificar(n, { exito: false, texto: 'No llego hasta ti (sin camino).' }) === 'reintentar', 'una: fallo pasajero → reintentar')
 ok(clasificar(n, { exito: false, texto: 'Estás en zona protegida.' }) === 'definitiva', 'una: fallo que no cambia → definitiva')
+{ // 2026-11-02: dormir con monstruos cerca se queda en la cola, mata al más cercano y vuelve a la cama
+  const d = a.entrada({ tipo: 'duerme' }, 'duerme', 'chat de x')
+  const fallo = { exito: false, texto: 'No pude usar la cama: monstruos cerca.' }
+  ok(clasificar(d, fallo, null) === 'reintentar', 'duerme con monstruos cerca: reintentar (no se pierde)')
+  ok(JSON.stringify(recuperar(fallo.texto)) === '{"tipo":"ataca","de":null}', 'duerme con monstruos cerca: antes, a por el más cercano')
+  ok(clasificar(d, { exito: false, texto: 'No pude usar la cama: amenaza: zombie a 5.' }, null) === 'reintentar', 'cortada por una amenaza: reintentar')
+  d.fallosSeguidos = 4; ok(clasificar(d, fallo, null) === 'reintentar', 'aguanta hasta 5 fallos seguidos por monstruos')
+  d.fallosSeguidos = 5; ok(clasificar(d, fallo, null) === 'definitiva', 'al sexto, se rinde')
+}
 n.fallosSeguidos = REINTENTOS.una - 1
 ok(clasificar(n, { exito: false, texto: 'sin camino' }) === 'definitiva', 'una: agotados los reintentos → definitiva')
 const h = a.entrada({ tipo: 'ataca' }, 'ataca', 'yo', { tipo: 'hasta' })
