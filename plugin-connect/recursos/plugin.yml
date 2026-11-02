@@ -23,7 +23,7 @@ permissions:
     description: Maneja todos los bots de project-soma con /connect y /disconnect.
     default: op
   somaconnect.operator:
-    description: Rol bot operator (se da con /bo): maneja solo los bots de los que es dueño.
+    description: "Rol bot operator (se da con /bo): maneja solo los bots de los que es dueño."
     default: false
   somaconnect.admin:
     description: Da y quita el rol de bot operator (/bo, /debo).

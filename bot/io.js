@@ -127,9 +127,9 @@ const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
-// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
+// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json; respaldo del canal soma:duenos): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
 const BOTS_DE = new Map((process.env.IO_BOTS_DE || '').split(';').filter(Boolean).map(x => { const [j, b = ''] = x.split('='); return [j.trim().toLowerCase(), b.split(',').map(y => y.trim()).filter(Boolean)] }))
-const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
+const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(require('./alcance').botsDelCanal(k) || BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.tiene(n) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.tiene(n) // aliado «por orden»: si pega, «modo diablo»
@@ -235,6 +235,8 @@ class Personaje {
     // 2026-11-02: si un dueño se acuesta de noche, el bot hace lo de «duerme» sin que se lo pidan (el juego solo pasa la noche si duermen todos)
     require('./dormir_con_dueno').vigilar(bot, { esAmo: (u) => (AMOS.size ? AMOS.has(u) : !esBot(u)),
       dormir: () => this.ordenar('duerme', { via: 'puerto', de: 'sueño' }), decir: (t) => this.decir(t) })
+    // 2026-11-02: canal del plugin SomaConnect con «dueño → sus bots» (principal; personajes.json bots_de queda de respaldo)
+    bot.once('login', () => { try { bot._client.registerChannel('soma:duenos', 'restBuffer', true); bot._client.on('soma:duenos', (d) => require('./alcance').aplicarCanal(d)) } catch (_) {} })
     bot.once('login', () => require('./velocidad').instalar(bot)) // tras los plugins de mineflayer: su oyente va antes que el nuestro
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)

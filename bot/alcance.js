@@ -43,4 +43,17 @@ function aliados(carpeta, dueno, { heredado } = {}) {
   }
 }
 
-module.exports = { aliados, duenoDe, seguro }
+// Canal del plugin «soma:duenos»: el servidor sabe qué conexiones son bots y de quién (por el brand) y empuja {"dueno":["Bot",...]}.
+// Es la fuente principal de «los bots de X»; si no ha llegado nada (servidor sin plugin), se usa la lista de personajes.json.
+const canal = { duenos: null }
+const aplicarCanal = (texto) => {
+  try {
+    const o = JSON.parse(String(texto)); const m = new Map()
+    for (const [d, bs] of Object.entries(o)) if (Array.isArray(bs)) m.set(clave(d), bs.map(String).filter(x => /^[A-Za-z0-9_]{1,16}$/.test(x)))
+    canal.duenos = m; return true
+  } catch (_) { return false } // JSON malo: se queda lo último bueno
+}
+const botsDelCanal = (dueno) => (canal.duenos ? canal.duenos.get(clave(dueno)) || null : null)
+const reiniciarCanal = () => { canal.duenos = null }
+
+module.exports = { aliados, duenoDe, seguro, aplicarCanal, botsDelCanal, reiniciarCanal }

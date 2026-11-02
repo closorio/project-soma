@@ -3,7 +3,7 @@ const assert = require('assert')
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
-const { aliados, duenoDe, seguro } = require('./alcance')
+const { aliados, duenoDe, seguro, aplicarCanal, botsDelCanal, reiniciarCanal } = require('./alcance')
 
 let n = 0
 const ok = (t) => { n++; console.log('ok', t) }
@@ -42,6 +42,14 @@ ok('el nombre del dueño no puede salir de la carpeta')
 { // archivo roto: lista vacía, sin romper
   const r = aliados(dir, 'roto'); fs.writeFileSync(r.ruta, '{no es json')
   assert.deepStrictEqual(r.lista(), []); ok('un archivo roto cuenta como vacío')
+}
+{ // canal del plugin: dueño → bots; basura y nombres raros se descartan; sin nada, null (respaldo)
+  assert.strictEqual(botsDelCanal('seppuq'), null)
+  assert.ok(aplicarCanal('{"seppuq":["Oqva","Soma"],"count":["Trivino","../x"]}'))
+  assert.deepStrictEqual(botsDelCanal('Seppuq'), ['Oqva', 'Soma']); assert.deepStrictEqual(botsDelCanal('count'), ['Trivino']); assert.strictEqual(botsDelCanal('nadie'), null)
+  assert.ok(!aplicarCanal('{roto')); assert.deepStrictEqual(botsDelCanal('seppuq'), ['Oqva', 'Soma'])
+  reiniciarCanal(); assert.strictEqual(botsDelCanal('seppuq'), null)
+  ok('el canal del plugin da los bots de un dueño, filtra nombres raros y deja lo último bueno si llega basura')
 }
 assert.deepStrictEqual(fs.readdirSync(dir).filter(f => f.endsWith('.tmp')), [])
 ok('no quedan temporales')
