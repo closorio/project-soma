@@ -403,6 +403,13 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const r3 = await viajeLargo(b, new Vec3(300, 64, 0), () => false, { mover: async () => 'sin camino' })
     ok(r3 === 'sin camino', `viajeLargo: sin avanzar → ${r3}`)
   }
+  { // 2026-11-01: siempre lo mejor puesto (equipar.pendiente)
+    const { pendiente } = require('./habilidades/equipar'), it = (name) => ({ name, count: 1 })
+    const b = { heldItem: it('stone_pickaxe'), inventory: { slots: [], items: () => [it('iron_sword'), it('iron_chestplate'), it('stone_pickaxe')] } }
+    ok(pendiente(b) === 'todo', `pendiente: espada y peto sin poner → ${pendiente(b)}`)
+    b.heldItem = it('iron_sword'); ok(pendiente(b) === 'armadura', `pendiente: con la espada en la mano → ${pendiente(b)}`)
+    b.inventory.slots[6] = it('diamond_chestplate'); ok(pendiente(b) === null, `pendiente: ya lleva un peto mejor → ${pendiente(b)}`)
+  }
   { const o = ordenes.interpretar('ataca al zombi'); ok(o.de === 'zombie' && !o.nombre, `«ataca al zombi» no lleva nombre: ${JSON.stringify(o)}`) }
   {
     const yo = { id: 0, type: 'player' }, bx = { entity: yo }

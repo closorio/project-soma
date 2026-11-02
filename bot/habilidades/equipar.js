@@ -42,3 +42,14 @@ module.exports = async function equipar(bot, [que]) {
   return { exito: true, causa: (arma && arma.cambio) || armadura.puestas.length ? 'equipado' : 'ya equipado', ...datos }
 }
 module.exports.ponerArma = ponerArma
+// 2026-11-01 (pedido del usuario: siempre lo mejor puesto): qué falta por equipar, sin tocar nada → 'todo' | 'arma' | 'armadura' | null.
+// io.js lo mira en reposo y tras cada habilidad.
+module.exports.pendiente = function pendiente(bot) {
+  const arma = sv.mejorArma(bot), ranura = { helmet: 5, chestplate: 6, leggings: 7, boots: 8 }
+  const faltaArma = !!arma && !(bot.heldItem && bot.heldItem.name === arma.name)
+  const faltaArmadura = Object.keys(sv.DESTINO_PIEZA).some(pieza => {
+    const llevo = bot.inventory.slots[ranura[pieza]]
+    return bot.inventory.items().some(i => i.name.endsWith('_' + pieza) && sv.puntosPieza(i.name) > sv.puntosPieza(llevo && llevo.name))
+  })
+  return faltaArma && faltaArmadura ? 'todo' : faltaArma ? 'arma' : faltaArmadura ? 'armadura' : null
+}

@@ -59,6 +59,8 @@ const { esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
+const equipar = require('./habilidades/equipar')
+const EQUIPAR_SIEMPRE = process.env.IO_EQUIPAR !== 'no' // 2026-11-01: armadura y arma siempre puestas (IO_EQUIPAR=no lo apaga)
 const taxonomia = require('./habilidades/taxonomia') // «defiéndeme»: el neutral que pega al protegido pasa a ser amenaza
 const DIARIO = mundo.diario
 const SERVIDOR = { // host, puerto y versión de Minecraft del mundo (bot/mundo.js); IO_HOST, IO_PORT_SERVIDOR e IO_VERSION los afinan
@@ -349,6 +351,8 @@ class Personaje {
         this.ev(`[curarse] salud ${Math.round(this.bot.health)}, hambre ${this.bot.food}: como`)
         r.curarse = await this.ejecutarHabilidad('comer', ['20'], tarea)
       }
+      const falta = nombre !== 'equipar' && !tarea.cancelada && EQUIPAR_SIEMPRE && equipar.pendiente(this.bot) // 2026-11-01: lo mejor puesto
+      if (falta) r.equipado = await this.ejecutarHabilidad('equipar', [falta], tarea)
       return r
     } finally { this.enHabilidad-- }
   }
@@ -393,6 +397,13 @@ class Personaje {
       const tarea = this.tareaReflejo = { cancelada: false }
       this.ev(`[curarse] salud ${Math.round(bot.health)}, hambre ${bot.food}: como`)
       this.reflejando = this.ejecutarHabilidad('comer', ['20'], tarea).catch(e => this.ev('[curarse] error: ' + e.message))
+        .finally(() => { this.reflejando = null; if (this.tareaReflejo === tarea) this.tareaReflejo = null })
+      return
+    }
+    const falta = EQUIPAR_SIEMPRE && equipar.pendiente(bot) // 2026-11-01 (pedido del usuario): siempre la mejor armadura y el arma en la mano
+    if (falta) {
+      const tarea = this.tareaReflejo = { cancelada: false }
+      this.reflejando = this.ejecutarHabilidad('equipar', [falta], tarea).catch(e => this.ev('[equipar] error: ' + e.message))
         .finally(() => { this.reflejando = null; if (this.tareaReflejo === tarea) this.tareaReflejo = null })
       return
     }
