@@ -73,6 +73,9 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
+// IO_AMOS=Nombre1,Nombre2: solo esos jugadores mandan por el chat (órdenes y !zona); vacío, cualquier humano. El puerto no cambia.
+const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const SKIN = (process.env.IO_SKIN || '').trim()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
 const persistente = require('./memoria_persistente') // F8.0a: lo que sobrevive a reiniciar (fuera del mundo del usuario)
@@ -148,6 +151,7 @@ class Personaje {
       host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: SERVIDOR.version,
     })
     if (mundo.tickEnd) require('./tick_end').instalar(bot) // A0 del asistente: 26.3 expulsa sin client_tick_end
+    bot.once('login', () => require('./velocidad').instalar(bot)) // tras los plugins de mineflayer: su oyente va antes que el nuestro
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
     bot.loadPlugin(pathfinder)
@@ -171,6 +175,7 @@ class Personaje {
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
+      if (SKIN) bot.chat('/skin set ' + SKIN) // IO_SKIN: una skin del server (SkinsRestorer, p. ej. «sr createcustom»), a cada conexión
       if (this.conectado) informe.evento(bot, 'reconectado', bot.entity.position.floored().toArray())
       this.conectado = true
       if (this.modoInicial) { const m = this.modoInicial; this.modoInicial = null; if (m === 'libre') this.ponerModo('libre', 'al arrancar') }
@@ -180,6 +185,7 @@ class Personaje {
       this.ev(`[mc] <${u}> ${m}`)
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
+      if (AMOS.size && !AMOS.has(u)) return // con dueños, el resto solo conversa
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
         const { a } = ordenes.destinatario(t, [...VIVOS.keys()])
         const clave = u + '|' + t // varios personajes oyen el mismo chat: la atiende el primero que la ve, para todos los destinatarios

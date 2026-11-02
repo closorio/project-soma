@@ -1,9 +1,11 @@
 {
  "servidor": {
-  "host": "192.168.1.46",
-  "puerto": 25565,
+  "host": "127.0.0.1",
+  "puerto": 25569,
   "version": "26.1",
-  "nota": "Server Java del compañero por wifi (2026-10-23). host: su IP local (ipconfig / ip a); IO_HOST la sobreescribe. version: la que habla mineflayer (4.39 llega hasta 26.1, protocolo 775): el server tiene que estar en 26.1.x."
+  "destino": "192.168.1.46:25565",
+  "tick_end": true,
+  "nota": "Server Paper 26.3 de count por wifi (2026-11-01). El bot entra por el ViaProxy local (127.0.0.1:25569, make partner-proxy-start), que traduce de 26.1 a 26.3 hacia «destino» (la IP local de count; IO_HOST sobreescribe host). version: la que habla mineflayer (4.39 llega hasta 26.1, protocolo 775); tick_end enciende bot/tick_end.js (sin él, 26.3 lo echa por «moved too quickly»)."
  },
  "aparicion": null,
  "campamento": null,
