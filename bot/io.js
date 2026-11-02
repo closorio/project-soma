@@ -42,6 +42,33 @@ function pendienteDe(o, r) {
   return { ...o }
 }
 const textoDe = (p, texto) => (p.tipo === 'tala' ? `tala ${p.n} troncos` : p.tipo === 'mina' ? texto.replace(/\d+/, String(p.n)) : texto)
+// Formación del modo guardaespaldas (2026-11-02, pedido del usuario: «en triángulo conmigo al centro»): los guardaespaldas del mismo
+// protegido en este proceso se reparten en un polígono alrededor de él (3: triángulo; 2, uno a cada lado; 4+, en círculo), a RADIO
+// bloques. Orientado al mundo (el primero al norte), no a donde mira el protegido: si girase con su cámara, correrían a cada vistazo.
+// Meta dinámica: se recoloca cuando el protegido se mueve más de 1 bloque.
+const FORMACION_RADIO = 3
+class GoalFormacion extends goals.Goal {
+  constructor(entidad, k, n) { super(); Object.assign(this, { entidad, k, n }); this.fijar() }
+  fijar() {
+    const p = this.entidad.position, a = (2 * Math.PI * this.k) / this.n // k = 0 al norte (−z), y en el sentido de las agujas del reloj
+    Object.assign(this, { x: Math.floor(p.x + FORMACION_RADIO * Math.sin(a)), y: Math.floor(p.y), z: Math.floor(p.z - FORMACION_RADIO * Math.cos(a)), ex: p.x, ez: p.z })
+  }
+  heuristic(n) { return Math.hypot(this.x - n.x, this.z - n.z) + Math.abs(this.y - n.y) }
+  isEnd(n) { return (this.x - n.x) ** 2 + (this.z - n.z) ** 2 <= 1 && Math.abs(this.y - n.y) <= 1 }
+  hasChanged() {
+    const p = this.entidad.position
+    if (Math.hypot(p.x - this.ex, p.z - this.ez) <= 1) return false
+    this.fijar(); return true
+  }
+  isValid() { return this.entidad != null }
+}
+// Mi sitio en la formación: los de este proceso que guardan al mismo, por orden alfabético
+function puestoEnFormacion(yo, protegido) {
+  const lista = [...VIVOS.values()].filter(p => p.guardaespaldas && String(p.guardaespaldas.a).toLowerCase() === String(protegido).toLowerCase())
+    .map(p => p.nombre).sort((a, b) => a.localeCompare(b))
+  const k = lista.indexOf(yo)
+  return k < 0 ? { k: 0, n: 1 } : { k, n: lista.length }
+}
 // El aviso al no talar lo protegido: las zonas por su nombre y, aparte, si hay zonas de trabajo y el tronco cae fuera
 function noTalo(nombres) {
   const otras = nombres.filter(n => n !== zonas.FUERA_DE_TRABAJO)
@@ -1233,7 +1260,11 @@ class Personaje {
                 continue
               }
               if (!e) { await esperar(1000); continue } // no lo veo (lejos o desconectado): espero a que vuelva
-              const r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              // en formación (triángulo con 3) alrededor del protegido; si no se llega a mi vértice (dentro de un bloque), detrás de él a 2
+              const { k, n } = puestoEnFormacion(this.nombre, nombre)
+              const meta = n > 1 ? new GoalFormacion(e, k, n) : new goals.GoalFollow(e, 2)
+              let r = await moverHasta(bot, meta, () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              if (r === 'sin camino' && n > 1) r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 10000, tarea, entidad: e, mov: mov() })
               if (r === 'sin camino' || r === 'perdido') await esperar(1500)
             } catch (err) { this.ev('[guardaespaldas] error (sigo): ' + err.message); await esperar(1000) }
           }
