@@ -377,11 +377,40 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const o = ordenes.interpretar(t); ok(o && o.tipo === 'escolta' && o.a === a, `«${t}» → ${JSON.stringify(o)} (esperaba escolta${a ? ' a ' + a : ''})`)
   }
   ok(ordenes.interpretar('defiéndete').tipo === 'ataca', '«defiéndete» sigue siendo atacar')
+  for (const t of ['recupera tus cosas', 'Oqva, recupera', 've a por tus cosas', 'recoge tu loot']) ok(ordenes.interpretar(t).tipo === 'recupera', `«${t}» → recupera`)
+  ok(ordenes.interpretar('recoge').tipo === 'recoge' && !ordenes.interpretar('recoge').troncos, '«recoge» → todo lo caído')
+  ok(ordenes.interpretar('recoge los troncos').troncos && ordenes.interpretar('recoge la madera').troncos, '«recoge los troncos/la madera» → solo troncos')
+  for (const [t, modo] of [['defiéndeme', 'pasivo'], ['defiéndeme agresivo', 'agresivo'], ['defiéndeme pasivo', 'pasivo'], ['defiende a Pepe agresiva', 'agresivo']])
+    ok(ordenes.interpretar(t).modo === modo, `«${t}» → modo ${ordenes.interpretar(t).modo} (esperaba ${modo})`)
   { const o = ordenes.interpretar('ataca a __Count'); ok(o.tipo === 'ataca' && o.nombre === '__count' && !o.de, `«ataca a __Count» → ${JSON.stringify(o)}`) }
   { const o = ordenes.interpretar('ataca a Trivino en 120 64 -300'); ok(o.nombre === 'trivino' && JSON.stringify(o.en) === '[120,64,-300]', `«ataca a Trivino en 120 64 -300» → ${JSON.stringify(o)}`) }
   { const j = require('./jugadores'), b = new (require('events'))(), e = { type: 'player', username: 'Pepe', position: new Vec3(5, 64, -7) }
     b.entity = { type: 'player' }; j.vigilar(b); b.emit('entityMoved', e); e.position = new Vec3(9, 64, 9)
     const v = j.ultimaVez(b, 'Pepe'); ok(v && v.pos.x === 5 && v.pos.z === -7 && !j.ultimaVez(b, 'Ana'), `jugadores: recuerda dónde le vio (${JSON.stringify(v)})`) }
+  // 2026-11-01: sin límite de distancia: coordenadas en «ven»/«sígueme»/«defiéndeme» y el viaje por tramos (viajeLargo)
+  for (const [t, tipo, en] of [['ven a 10 64 -5', 'ven', '[10,64,-5]'], ['Oqva, sígueme en 1 2 3', 'sigueme', '[1,2,3]'], ['defiéndeme en 5 6 -7', 'escolta', '[5,6,-7]'], ['ven', 'ven', undefined]]) {
+    const o = ordenes.interpretar(t); ok(o.tipo === tipo && JSON.stringify(o.en) === en, `«${t}» → ${JSON.stringify(o)}`)
+  }
+  {
+    const { viajeLargo } = require('./habilidades/comun'), b = { entity: { position: new Vec3(0, 64, 0) } }, tramos = []
+    const mover = async (bot, meta) => { tramos.push(meta); bot.entity.position = new Vec3(meta.x, meta.y != null ? meta.y : 64, meta.z); return 'listo' }
+    const r = await viajeLargo(b, new Vec3(200, 70, 0), () => false, { mover })
+    ok(r === 'llegué' && tramos.length >= 4 && tramos.every(m => Math.abs(m.x - (tramos[tramos.indexOf(m) - 1] || { x: 0 }).x) <= 64), `viajeLargo: 200 bloques en ${tramos.length} tramos de ≤ 64 → ${r}`)
+    const t2 = []; b.entity.position = new Vec3(0, 64, 0)
+    const r2 = await viajeLargo(b, new Vec3(300, 64, 0), () => b.entity.position.x >= 100, { mover: async (bot, meta) => { t2.push(meta); return mover(bot, meta) } })
+    ok(r2 === 'listo' && t2.length === 2, `viajeLargo: para en cuanto listo() (${t2.length} tramos, ${r2})`)
+    b.entity.position = new Vec3(0, 64, 0)
+    const r3 = await viajeLargo(b, new Vec3(300, 64, 0), () => false, { mover: async () => 'sin camino' })
+    ok(r3 === 'sin camino', `viajeLargo: sin avanzar → ${r3}`)
+  }
+  { // 2026-11-01: siempre lo mejor puesto (equipar.pendiente)
+    const { pendiente } = require('./habilidades/equipar'), it = (name) => ({ name, count: 1 })
+    const b = { heldItem: it('stone_pickaxe'), inventory: { slots: [], items: () => [it('iron_sword'), it('iron_chestplate'), it('stone_pickaxe')] } }
+    ok(pendiente(b) === 'todo', `pendiente: espada y peto sin poner → ${pendiente(b)}`)
+    b.heldItem = it('iron_sword'); ok(pendiente(b) === 'armadura', `pendiente: con la espada en la mano → ${pendiente(b)}`)
+    b.inventory.slots[6] = it('diamond_chestplate'); ok(pendiente(b) === null, `pendiente: ya lleva un peto mejor → ${pendiente(b)}`)
+  }
+  for (const t of ['Oqva, entra al portal', 'cruza el portal', 've al nether', 'vuelve al mundo normal']) { const o = ordenes.interpretar(t); ok(o.tipo === 'portal', `«${t}» → ${JSON.stringify(o)}`) }
   { const o = ordenes.interpretar('ataca al zombi'); ok(o.de === 'zombie' && !o.nombre, `«ataca al zombi» no lleva nombre: ${JSON.stringify(o)}`) }
   {
     const yo = { id: 0, type: 'player' }, bx = { entity: yo }
@@ -393,6 +422,23 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
       [amigo, creeper, false, 'un creeper (nunca se pelea)'], [vaca, zombi, false, 'el zombi pega a una vaca'],
       [amigo, undefined, false, 'daño sin atacante (caída, fuego)']]
     for (const [v, f, quiero, txt, al] of casos) ok(require('./habilidades/sv').esAgresor(bx, v, f, amigo, al) === quiero, `escolta: ${txt} → ${quiero ? 'pelea' : 'no pelea'}`)
+    // agresivo: el hostil más cercano al protegido (a ≤ 10), sin creepers ni los ignorados
+    const P = (x, z) => new Vec3(x, 64, z), amigoP = { ...amigo, position: P(0, 0) }
+    const ents = { 0: { ...yo, position: P(-3, 0) }, 1: amigoP, 3: { ...zombi, position: P(4, 0) }, 7: { id: 7, type: 'hostile', name: 'skeleton', position: P(0, 6) },
+      5: { ...creeper, position: P(1, 0) }, 6: { ...vaca, position: P(0, 1) }, 8: { id: 8, type: 'hostile', name: 'zombie', position: P(30, 0) } }
+    const bz = { entity: ents[0], entities: ents, yo: {} }
+    const cerca = (ign) => { const x = require('./habilidades/sv').amenazaCerca(bz, amigoP, 10, ign); return x && x.id }
+    ok(cerca() === 3, `agresivo: el zombi a 4 (no el creeper a 1, ni la vaca, ni el zombi a 30): ${cerca()}`)
+    { // curarse comiendo: poca vida, hambre sin llenar y comida buena en el inventario
+      const SVm = require('./habilidades/sv'), reg = require('minecraft-data')('26.1')
+      const cb = (health, food, items) => ({ entity: {}, health, food, registry: reg, inventory: { items: () => items.map(name => ({ name })) } })
+      ok(SVm.debeComerPorSalud(cb(8, 17, ['bread'])), 'curarse: salud 8, hambre 17, con pan → come')
+      ok(!SVm.debeComerPorSalud(cb(8, 17, [])), 'curarse: sin comida → no')
+      ok(!SVm.debeComerPorSalud(cb(8, 17, ['rotten_flesh'])), 'curarse: solo carne podrida → no')
+      ok(!SVm.debeComerPorSalud(cb(8, 20, ['bread'])), 'curarse: hambre llena → no (se cura sola)')
+      ok(!SVm.debeComerPorSalud(cb(18, 10, ['bread'])), 'curarse: con vida de sobra → no (eso es hambre, no curarse)')
+    }
+    ok(cerca(new Set([3])) === 7, `agresivo: ignorando el zombi, el esqueleto: ${cerca(new Set([3]))}`)
   }
 
   { // «modo centinela»: quién cuenta como intruso en la zona

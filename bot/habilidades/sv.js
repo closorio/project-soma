@@ -161,13 +161,21 @@ function esAgresor(bot, victima, fuente, protegido, aliado = () => false) {
   return !NUNCA_ATACAR.has(fuente.name)
 }
 
-// «protégeme», vigilancia: el monstruo hostil (o neutral que ya ha pegado) más cercano a ≤ `radio` del protegido o del bot, sin
-// los de NUNCA_ATACAR ni los de `ignorar` (id → hasta cuándo: los que atacar se negó a pelear, para no reintentarlos en bucle).
-function amenazaCerca(bot, protegido, radio = 12, ignorar = new Map()) {
-  const d = (e, o) => e.position.distanceTo(o.position)
-  return Object.values(bot.entities).filter(e => esAmenaza(bot, e) && !NUNCA_ATACAR.has(e.name) && vivo(bot, e) && !((ignorar.get(e.id) || 0) > Date.now())
-    && (d(e, bot.entity) <= radio || (protegido && d(e, protegido) <= radio)))
-    .sort((a, b) => d(a, bot.entity) - d(b, bot.entity))[0] || null
+// Curarse comiendo (2026-11-01, pedido del usuario): con poca vida (≤ SALUD_COMER) y la barra de hambre sin llenar, comer hasta
+// llenarla, porque la vida solo se recupera con el hambre ≥ 18 (rápido a 20). Solo si lleva comida buena. Va siempre, con o sin
+// reflejos (io.js: en reposo, tras cada habilidad y escoltando).
+const SALUD_COMER = 12
+const debeComerPorSalud = (bot) => !!bot.entity && bot.health > 0 && bot.health <= SALUD_COMER && bot.food < 20 && comidas(bot).length > 0
+
+// «defiéndeme agresivo»: el hostil vivo más cercano al protegido (a ≤ radio de él y a ≤ 16 del bot), sin los de NUNCA_ATACAR ni
+// los de `ignorar` (ids con los que atacar acaba de negarse). null si no hay.
+// `ignorar`: un Set de ids o un Map id → hasta cuándo (el de «protégeme», el centinela y el guardaespaldas)
+const ignorado = (ignorar, id) => (ignorar instanceof Map ? (ignorar.get(id) || 0) > Date.now() : ignorar.has(id))
+function amenazaCerca(bot, protegido, radio = 10, ignorar = new Set()) {
+  if (!protegido || !bot.entity) return null
+  const d = (x) => x.position.distanceTo(protegido.position)
+  return Object.values(bot.entities).filter(x => x !== bot.entity && x !== protegido && esAmenaza(bot, x) && vivo(bot, x) && !NUNCA_ATACAR.has(x.name) &&
+    !ignorado(ignorar, x.id) && d(x) <= radio && x.position.distanceTo(bot.entity.position) <= 16).sort((a, b) => d(a) - d(b))[0] || null
 }
 
 // «modo centinela»: los que han entrado en la zona (rectángulo x/z de zonas.json) y hay que echar: monstruos hostiles (o neutrales que ya han
@@ -223,5 +231,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

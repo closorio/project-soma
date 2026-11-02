@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía de los bots</title>
+<!-- Fuente de resumen/GUIA_control_bots.pdf. Para regenerarlo:
+     google-chrome --headless --no-pdf-header-footer --print-to-pdf=resumen/GUIA_control_bots.pdf resumen/guia_control_bots.html -->
+<style>
+  @page { size: A4; margin: 16mm 15mm; }
+  body { font-family: "DejaVu Sans", "Noto Sans", Arial, sans-serif; font-size: 10.5pt; color: #222; line-height: 1.4; }
+  h1 { font-size: 20pt; margin: 0 0 4px; }
+  h2 { font-size: 13.5pt; margin: 22px 0 8px; padding-bottom: 3px; border-bottom: 2px solid #2f6db5; }
+  h3 { font-size: 11pt; color: #2f6db5; margin: 14px 0 6px; }
+  p { margin: 6px 0; }
+  .sub { color: #555; margin-bottom: 12px; }
+  .oro { background: #fff7e0; border-left: 4px solid #e0a800; padding: 8px 12px; margin: 12px 0; }
+  .nuevo { background: #eaf6ea; border-left: 4px solid #3a9a3a; padding: 8px 12px; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+  tr { page-break-inside: avoid; }
+  th { background: #eef2f7; text-align: left; padding: 5px 7px; border: 1px solid #cfd8e3; font-size: 10pt; }
+  td { padding: 5px 7px; border: 1px solid #dde3ea; vertical-align: top; }
+  td:first-child { width: 42%; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f1f3f5; border: 1px solid #e1e4e8; border-radius: 3px; padding: 0 3px; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 9pt; background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 4px; padding: 8px 10px; }
+  .n { font-size: 8pt; font-weight: bold; color: #fff; background: #3a9a3a; border-radius: 3px; padding: 0 4px; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Guía de los bots</h1>
+<p class="sub">Todo lo que entiende Oqva (antes Soma; «Soma, …» sigue valiendo), y Eco, Iris… y cómo conectarlo. Actualizada el 1 de noviembre de 2026.</p>
+
+<div class="oro"><b>Regla de oro:</b> lo que empieza por «Oqva, …» o «!zona …» se escribe en el <b>chat de Minecraft</b>. Lo que empieza por <code>make …</code> se escribe en la <b>terminal del PC</b>, dentro de la carpeta <code>project-soma</code>.</div>
+
+<div class="nuevo"><b>Novedades de esta versión</b> (marcadas con <span class="n">NUEVO</span>): cola de órdenes, bucles y reintentos («y luego», «sin parar», «3 veces», «cola», «para todo»), guardaespaldas («defiéndeme», pasivo o agresivo), atacar a un jugador por su nombre, «recoge» recoge todo, recupera sus cosas al morir, come para curarse, solo obedece a su dueño y los bots ya salen despedidos al recibir un golpe.</div>
+
+<h2>1. Conectar el bot</h2>
+<h3>Una sola vez</h3>
+<pre>make install</pre>
+
+<h3>Al server de otra persona</h3>
+<p>1. Su IP va en la línea <code>destino</code> de <code>mundos/companero/mundo.json</code>: <code>"destino": "192.168.1.46:25565",</code></p>
+<p>2. <code>make partner-ping</code> → tiene que decir «vale».</p>
+<p>3. <code>make partner</code> (entra Oqva) · <code>make partner BOTS="Oqva Eco"</code> (entran dos).</p>
+<p>4. Para sacarlo: <code>make partner-stop</code></p>
+<p>El dueño del server tiene que tener <code>online-mode=false</code>, sin lista blanca (o con Oqva en ella) y el puerto abierto.</p>
+
+<h3>A tu propio mundo</h3>
+<pre>make server-start                        # enciende tu server
+make bots BOTS=Oqva MODE=ordenes         # entra Oqva
+make bots-stop                           # lo saca
+make server-stop                         # apaga el server</pre>
+
+<h3>Quién le manda <span class="n">NUEVO</span></h3>
+<p>Por el chat solo obedece a los jugadores de <code>IO_DUENOS</code>, en el fichero <code>local.mk</code> de tu PC (no va a git):</p>
+<pre>export IO_DUENOS = seppuq            # solo tú
+export IO_DUENOS = seppuq,__Count    # tú y otro</pre>
+<p>A los demás les contesta «Solo obedezco a …». Sin esa línea obedece a todos. Desde la terminal (<code>make order</code>) manda siempre. Hay que reiniciar el bot para que lo coja.</p>
+
+<h2>2. Cómo se le habla</h2>
+<p>En el chat: el nombre, una coma y la orden. <code>Oqva, ven</code> · <code>Eco, tala 10 troncos</code> · <code>todos, quietos</code>.</p>
+<p>Sin el nombre no hace caso. Da igual tildes, mayúsculas y «por favor». Si no entiende algo, responde «No reconozco …».</p>
+
+<h2>3. Todas las órdenes</h2>
+
+<h3>Moverse</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>ven</code></td><td>Viene hasta ti</td></tr>
+<tr><td><code>sígueme</code></td><td>Te sigue (hasta 10 minutos)</td></tr>
+<tr><td><code>quédate</code> · <code>para</code> · <code>quieto</code></td><td>Deja lo que hace y se queda quieto</td></tr>
+<tr><td><code>campamento aquí</code></td><td>Apunta este sitio como su base</td></tr>
+<tr><td><code>vuelve al campamento</code></td><td>Vuelve a su base</td></tr>
+<tr><td><code>explora hacia el norte 60</code> (sur, este, oeste; añade <code>nadando</code> para cruzar agua)</td><td>Se aleja ese número de bloques y te dice lo que ha visto</td></tr>
+<tr><td><code>huye</code> · <code>huye del zombi</code></td><td>Se aleja del peligro</td></tr>
+<tr><td><code>desatáscate</code></td><td>Sale de un sitio donde se ha quedado atrapado</td></tr>
+<tr><td><code>apártate</code></td><td>Se aleja de lava, agua honda o un precipicio</td></tr>
+<tr><td><code>sube a la superficie</code></td><td>Sale de una cueva o mina</td></tr>
+<tr><td><code>baja 12</code> · <code>cava una escalera hasta y=-20 hacia el norte</code></td><td>Cava una escalera hacia abajo</td></tr>
+</table>
+
+<h3>Conseguir cosas</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>tala 10 troncos</code></td><td>Corta árboles (hasta 64)</td></tr>
+<tr><td><code>mina 10 de carbón</code> (hierro, cobre, mineral)</td><td>Pica ese mineral. <b>Si no lo ve, va a buscarlo</b> cavando (hasta 32 bloques). Necesita pico</td></tr>
+<tr><td><code>mina 16 piedras</code> (tierra, arena, grava, granito…)</td><td>Pica lo que tiene alrededor</td></tr>
+<tr><td><code>caza 3 ovejas</code> (vacas, cerdos, pollos, conejos)</td><td>Caza esos animales</td></tr>
+<tr><td><code>caza</code></td><td>Busca comida</td></tr>
+<tr><td><code>recoge</code> <span class="n">NUEVO</span></td><td>Recoge <b>todo</b> lo que hay tirado a 16 bloques (hasta 32 objetos). Si algo no lo alcanza, te dice cuántos quedan</td></tr>
+<tr><td><code>recoge los troncos</code> · <code>recoge la madera</code></td><td>Solo los troncos caídos</td></tr>
+<tr><td><code>recupera tus cosas</code> · <code>ve a por tus cosas</code> · <code>recoge tu loot</code> <span class="n">NUEVO</span></td><td>Vuelve donde murió y recoge lo suyo (también lo hace solo al reaparecer; ver «Lo que hace solo»)</td></tr>
+<tr><td><code>recoge agua</code></td><td>Llena un cubo</td></tr>
+</table>
+
+<h3>Darte cosas y guardarlas</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>dame 10 troncos</code> (tablones, piedra, carbón, hierro, comida, lana)</td><td>Viene y te lo tira para que lo recojas</td></tr>
+<tr><td><code>dame todo</code> · <code>dame</code></td><td>Te da todo lo que ha recogido (se queda herramientas, armas, armadura y comida)</td></tr>
+<tr><td><code>guarda en el cofre</code></td><td>Deja lo recogido en su cofre</td></tr>
+<tr><td><code>saca 10 troncos</code></td><td>Saca del cofre</td></tr>
+</table>
+<p>También entiende «tráeme», «pásame», «tírame» y «entrégame».</p>
+
+<h3>Fabricar y colocar</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>fabrica una espada</code> (pico, hacha, pala, azada, mesa, palos, tablones, antorchas, cama, cubo, cofre, horno, escudo, mechero, cizallas, puerta, armadura)</td><td>Lo fabrica con lo que lleve</td></tr>
+<tr><td><code>funde 5 de hierro</code> (oro, cobre, arena)</td><td>Usa el horno</td></tr>
+<tr><td><code>cocina la carne</code></td><td>Cocina lo que lleve</td></tr>
+<tr><td><code>pon el cofre</code> (horno, mesa, antorcha, cama, tierra)</td><td>Lo coloca a su lado</td></tr>
+<tr><td><code>ilumina</code></td><td>Pone antorchas alrededor</td></tr>
+<tr><td><code>vierte el agua</code></td><td>Vacía el cubo</td></tr>
+<tr><td><code>construye una cabaña</code></td><td>Cabaña pequeña de 5×5 con techo: 71 tablones (unos 18 troncos)</td></tr>
+<tr><td><code>construye una cabaña grande</code></td><td>Cabaña de 10×10 con techo: 206 tablones (unos 52 troncos)</td></tr>
+<tr><td>… sin techo (<code>construye una cabaña sin techo</code>)</td><td>Solo paredes: 46 la pequeña, 106 la grande</td></tr>
+<tr><td><code>construye un muro</code> · <code>un pilar</code> · <code>una plataforma</code></td><td>Piezas pequeñas (10, 3 y 9 tablones)</td></tr>
+<tr><td>Añade <code>aquí</code> (<code>construye una cabaña aquí</code>)</td><td>La hace a su lado; si no, busca él un sitio llano</td></tr>
+<tr><td><code>deshaz la cabaña</code> · <code>deshaz la cabaña grande</code></td><td>Quita la última que construyó</td></tr>
+</table>
+
+<h3>Defenderte y pelear <span class="n">NUEVO</span></h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>defiéndeme</code> · <code>protégeme</code> · <code>escóltame</code> (= <code>defiéndeme pasivo</code>)</td><td>Guardaespaldas <b>pasivo</b>: te sigue y solo pelea con quien te pegue a ti o a él. Un monstruo que no ataca no cuenta. Entra contigo en las zonas prohibidas (pisa, pero no rompe nada). Dura hasta 10 minutos o hasta «para»</td></tr>
+<tr><td><code>defiéndeme agresivo</code></td><td>Guardaespaldas <b>agresivo</b>: además va a por el monstruo hostil más cercano que tengas a 10 bloques o menos, aunque no te haya atacado</td></tr>
+<tr><td><code>defiende a NOMBRE</code> · <code>defiende a NOMBRE agresivo</code></td><td>Lo mismo con otro jugador</td></tr>
+<tr><td><code>ataca</code> · <code>ataca al zombi</code></td><td>Pelea con un monstruo (no con creepers)</td></tr>
+<tr><td><code>ataca a NOMBRE</code></td><td>Va a por ese jugador. Si no lo ve, va donde lo vio por última vez y lo ataca en cuanto aparece (busca hasta 3 minutos)</td></tr>
+<tr><td><code>ataca a NOMBRE en x y z</code></td><td>Lo busca en esas coordenadas</td></tr>
+</table>
+<p>En todos los casos no pelea con creepers, ni con menos de 8 de vida, ni contra más de 2 monstruos a la vez, ni sin arma; si se niega, te dice por qué. Para hacer daño a un jugador, el server tiene que tener <code>pvp=true</code>.</p>
+
+<h3>Sobrevivir</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>duerme</code> = <code>usa la cama</code> = <code>ven a la cama</code> = <code>guarda el spawn</code></td><td>Va a la cama más cercana. Si no hay, pone la suya o la fabrica (3 de lana y tablones). De noche duerme; de día guarda ahí su punto de reaparición. La cama se queda puesta</td></tr>
+<tr><td><code>come</code></td><td>Come lo mejor que lleve</td></tr>
+<tr><td><code>equípate</code></td><td>Se pone la mejor arma y armadura</td></tr>
+<tr><td><code>refúgiate</code> · <code>sal del refugio</code></td><td>Se encierra para pasar la noche · sale</td></tr>
+<tr><td><code>espera al día</code></td><td>Igual que «duerme»</td></tr>
+</table>
+
+<h3>Encadenar, repetir y la cola <span class="n">NUEVO</span></h3>
+<p>Una orden nueva sustituye a la que hace (la anterior queda para «continúa»). Para que espere su turno, encadénala. Si algo falla por
+algo pasajero (sin camino, te pierde de vista, no ve al objetivo, demasiados monstruos), lo vuelve a intentar solo, esperando cada vez
+más (2, 5, 15, 30 s) y, si hace falta, antes se desatasca, huye o come. Si muere, primero recupera sus cosas y luego <b>sigue con lo que hacía</b>.</p>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>tala 5 y luego guarda en el cofre</code> · <code>…, después …</code></td><td>Hace la primera y deja las demás en cola, en orden</td></tr>
+<tr><td><code>ataca a NOMBRE sin parar</code> · <code>… en bucle</code> · <code>… siempre</code></td><td>La repite hasta que digas «para» (si falla, reintenta; se rinde tras 30 fallos seguidos)</td></tr>
+<tr><td><code>recoge 3 veces</code> · <code>repite … 3 veces</code></td><td>La hace ese número de veces</td></tr>
+<tr><td><code>ataca al zombi hasta que muera</code> · <code>… hasta lograrlo</code></td><td>Reintenta hasta que le salga bien</td></tr>
+<tr><td><code>cola</code> · <code>qué tienes pendiente</code></td><td>Te dice lo que hace ahora, lo urgente y lo que tiene en cola</td></tr>
+<tr><td><code>para</code> · <code>continúa</code></td><td>Corta lo que hace y deja la cola en espera · sigue con la cola</td></tr>
+<tr><td><code>salta</code></td><td>Deja lo que hace y pasa a lo siguiente de la cola</td></tr>
+<tr><td><code>para todo</code> · <code>olvida la cola</code></td><td>Corta y vacía la cola entera</td></tr>
+</table>
+<p>La cola vive mientras el bot está encendido: sobrevive a morir y a reconectar, no a reiniciarlo.</p>
+
+<h3>Lo que hace solo <span class="n">NUEVO</span></h3>
+<table>
+<tr><th>Cuándo</th><th>Qué hace</th></tr>
+<tr><td>Le queda poca vida (6 corazones o menos)</td><td>Come hasta llenar la barra de hambre, que es lo que hace que la vida se recupere. Solo si lleva comida buena (nunca carne podrida, ojo de araña ni patata venenosa). Lo hace quieto, trabajando o escoltándote</td></tr>
+<tr><td>Muere y reaparece</td><td>A los pocos segundos vuelve donde murió y recoge sus cosas («Recuperé 25/26»). No lo intenta si murió en lava, fuego o el vacío, si han pasado más de 4 min y medio (los objetos desaparecen a los 5), si está a más de 150 bloques, si ya murió intentándolo o si el server tiene keepInventory. Se apaga con <code>export IO_RECUPERAR = no</code> en <code>local.mk</code></td></tr>
+<tr><td>Le pegan</td><td>Sale despedido hacia atrás, como un jugador (antes no tenía retroceso)</td></tr>
+</table>
+
+<h3>Control</h3>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>todos, quietos</code></td><td>Para a todos los bots a la vez</td></tr>
+<tr><td><code>continúa</code> · <code>sigue</code> · <code>retoma</code></td><td>Vuelve a lo que estaba haciendo cuando le interrumpiste, justo donde lo dejó: los troncos o minerales que le faltaban, o la cabaña a medias en su sitio</td></tr>
+<tr><td><code>modo órdenes</code> · <code>modo libre</code></td><td>Que espere tus órdenes · que juegue solo</td></tr>
+<tr><td><code>al terminar quieto</code> · <code>al terminar vuelve a libre</code></td><td>Qué hace cuando acaba una orden</td></tr>
+<tr><td><code>rol casual</code> · <code>rol speedrunner</code></td><td>Cómo juega en modo libre</td></tr>
+<tr><td><code>perfil recolector</code> (cooperativo, supervivencia, constructor, explorador)</td><td>Su estilo en modo libre</td></tr>
+<tr><td><code>estado</code></td><td>Te dice qué hace, su vida y dónde está</td></tr>
+<tr><td><code>ayuda</code></td><td>La lista de órdenes en el chat</td></tr>
+</table>
+
+<h2>4. Zonas: dónde puede trabajar y dónde no</h2>
+<p>En el chat: ve a una esquina y escribe <code>!zona inicio</code>; ve a la opuesta y escribe <code>!zona fin NOMBRE</code>. La palabra del final decide el tipo:</p>
+<table>
+<tr><th>Escribe</th><th>Qué pasa</th></tr>
+<tr><td><code>!zona fin CASA</code></td><td>Prohibida: no entra ni toca nada (salvo escoltándote con «defiéndeme»: entonces entra, pero sin romper nada)</td></tr>
+<tr><td><code>!zona fin HUERTO no_talar</code></td><td>Puede pasar, pero no rompe nada</td></tr>
+<tr><td><code>!zona fin CANTERA trabajo</code></td><td>De trabajo: solo tala y pica dentro de ella</td></tr>
+<tr><td><code>!zona lista</code> · <code>!zona borrar CASA</code></td><td>Ver todas · quitar una</td></tr>
+</table>
+<p>Si el bot está lejos, <code>!zona inicio</code> dice «no te veo». Entonces, con las X y Z de dos esquinas (tecla F3), en la terminal:</p>
+<pre>make zone NAME=CANTERA AREA="100 -50 140 -10" TYPE=trabajo
+make zone NAME=CASA AREA="200 0 230 30"          # sin TYPE = prohibida
+make zones                                       # ver todas
+make zone-delete NAME=CASA                       # quitar una</pre>
+
+<h2>5. Desde la terminal</h2>
+<table>
+<tr><th>Escribe</th><th>Para qué</th></tr>
+<tr><td><code>make go POS="x y z"</code></td><td>Mandarlo a unas coordenadas (las tuyas con F3) cuando está lejos y «ven» no te ve</td></tr>
+<tr><td><code>make order TEXT="tala 5 troncos"</code></td><td>Darle cualquier orden sin entrar al juego</td></tr>
+<tr><td><code>make status-all BOTS="Oqva"</code></td><td>Qué está haciendo</td></tr>
+<tr><td><code>make bots-log WORLD=companero</code></td><td>Ver lo que hace en vivo (Ctrl+C para salir)</td></tr>
+<tr><td><code>make move-log WORLD=companero</code></td><td>Si no avanza: ¿el server lo está recolocando?</td></tr>
+</table>
+
+<h2>6. Si algo falla</h2>
+<table>
+<tr><th>Pasa esto</th><th>Haz esto</th></tr>
+<tr><td>No hace caso</td><td>Pon el nombre delante: «Oqva, …»</td></tr>
+<tr><td>Contesta «Solo obedezco a …» <span class="n">NUEVO</span></td><td>Añade a ese jugador a <code>IO_DUENOS</code> en <code>local.mk</code> y reinicia el bot</td></tr>
+<tr><td>Una orden nueva no funciona <span class="n">NUEVO</span></td><td>El bot arrancó antes del cambio: <code>make partner-stop</code> y <code>make partner</code></td></tr>
+<tr><td>«ven» dice que no te ve</td><td>Está lejos: <code>make go POS="x y z"</code> con tus coordenadas (F3)</td></tr>
+<tr><td>«ataca a NOMBRE» dice que no sabe dónde está <span class="n">NUEVO</span></td><td>No lo ha visto desde que arrancó: <code>ataca a NOMBRE en x y z</code>, o acércalo tú</td></tr>
+<tr><td>«mina» no encuentra nada</td><td>Dale un pico; busca hasta 32 bloques. Si no hay ese mineral cerca, llévalo a otra zona</td></tr>
+<tr><td>«duerme» dice que no puede hacer cama</td><td>Dale 3 de lana del mismo color y unos 7 tablones (o un tronco)</td></tr>
+<tr><td>Se mete en un agujero de noche</td><td>Se protege de monstruos: <code>Oqva, sal del refugio</code></td></tr>
+<tr><td>Lo echan: «Failed to verify username»</td><td>El dueño debe poner <code>online-mode=false</code></td></tr>
+<tr><td><code>make partner-ping</code>: «no responde»</td><td>IP mal escrita, server apagado o firewall</td></tr>
+<tr><td>«ya hay bots en marcha»</td><td><code>make partner-stop</code> (o <code>make bots-stop</code>) y vuelve a empezar</td></tr>
+</table>
+
+</body>
+</html>

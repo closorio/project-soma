@@ -52,13 +52,16 @@ const depositar = require('./habilidades/depositar')
 const cofres = require('./cofres')
 const arbolado = require('./arbolado')
 const ordenes = require('./ordenes')
+const agenda = require('./agenda') // 2026-11-01: cola de órdenes, bucles, reintentos e interrupciones que se reanudan
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
-const { esperar, moverHasta, jugadorCercano, prudentes } = require('./habilidades/comun')
+const { esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
+const equipar = require('./habilidades/equipar')
+const EQUIPAR_SIEMPRE = process.env.IO_EQUIPAR !== 'no' // 2026-11-01: armadura y arma siempre puestas (IO_EQUIPAR=no lo apaga)
 const taxonomia = require('./habilidades/taxonomia') // «defiéndeme»: el neutral que pega al protegido pasa a ser amenaza
 const DIARIO = mundo.diario
 const SERVIDOR = { // host, puerto y versión de Minecraft del mundo (bot/mundo.js); IO_HOST, IO_PORT_SERVIDOR e IO_VERSION los afinan
@@ -102,6 +105,10 @@ const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
+// IO_DUENOS=seppuq[,otro] (2026-11-01): solo esos jugadores mandan por el chat (sin la variable, todos). El puerto local manda siempre.
+const DUENOS = new Set((process.env.IO_DUENOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const obedece = (u) => DUENOS.size === 0 || [...DUENOS].some(d => d.toLowerCase() === String(u).toLowerCase())
+const AVISADOS = new Map() // a quién ya le dijo que no le obedece (una vez por minuto)
 const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiéndeme», igual)
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
@@ -112,7 +119,7 @@ const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s y
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
 const PALABRAS = { ordenes: 'órdenes', libre: 'libre' }
 // Lo que dice al aceptar una orden con acción (por el chat, y la respuesta inmediata de `orden` por el puerto).
-const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (o.a ? `Cubro a ${o.a}.` : 'Te cubro.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
+const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () => 'Te sigo.', recupera: () => 'Voy a por mis cosas.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
   tala: (o) => `Voy a talar ${o.n} tronco${o.n > 1 ? 's' : ''}.`, guarda: () => 'Voy al cofre.',
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
@@ -145,6 +152,7 @@ class Personaje {
     persistente.alArrancar(this.yo) // F8.0a: base y refugio de la sesión anterior (mundos/<mundo>/memoria_<nombre>.json)
     // Tarea en marcha (cerebro o habilidad): `para` o una tarea nueva la cancelan, para que no se pisen dos bucles.
     this.tarea = { cancelada: false }
+    this.agenda = new agenda.Agenda()
     // F4: modo («ordenes» | «libre»), qué hace al terminar una orden («quieto» | «libre»), la orden en curso, la última y lo que
     // está haciendo ahora (promesa: una orden nueva espera a que la anterior suelte el navegador).
     Object.assign(this, { modo: 'ordenes', despues, enCurso: null, ultima: null, ocupado: Promise.resolve(), libre: false, tramo: null })
@@ -180,10 +188,15 @@ class Personaje {
       host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: SERVIDOR.version,
     })
     if (mundo.tickEnd) require('./tick_end').instalar(bot) // A0 del asistente: 26.3 expulsa sin client_tick_end
+    require('./colisiones').vigilar(bot) // 2026-11-02: no se apilan: las hitboxes que se solapan se empujan, como en vanilla
+    // 2026-11-02: si un dueño se acuesta de noche, el bot hace lo de «duerme» sin que se lo pidan (el juego solo pasa la noche si duermen todos)
+    require('./dormir_con_dueno').vigilar(bot, { esAmo: (u) => (AMOS.size ? AMOS.has(u) : !esBot(u)),
+      dormir: () => this.ordenar('duerme', { via: 'puerto', de: 'sueño' }), decir: (t) => this.decir(t) })
     bot.once('login', () => require('./velocidad').instalar(bot)) // tras los plugins de mineflayer: su oyente va antes que el nuestro
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
     bot.loadPlugin(pathfinder)
+    bot.once('login', () => require('./retroceso').instalar(bot)) // 2026-11-01: el retroceso de los golpes (mineflayer 4.39 lo dejaba en ~0)
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
@@ -201,6 +214,34 @@ class Personaje {
       if (!(this.enCurso || this.enHabilidad || this.libre) || r === 'goal_updated' || r === 'goal_moved' || Date.now() - rehechas.t < 2000) return
       rehechas.t = Date.now(); this.ev(`[mov] ruta rehecha: ${r} en ${bot.entity.position.floored()}`)
     })
+    this.muestrasInventario = []
+    clearInterval(this.relojInventario) // al reconectar, uno solo
+    this.relojInventario = setInterval(() => { // cada 0,5 s, cuánto lleva (las 5 últimas), para saber qué tenía al morir
+      if (!bot.entity || bot.health <= 0) return
+      this.muestrasInventario = [...this.muestrasInventario, bot.inventory.items().reduce((a, i) => a + i.count, 0)].slice(-5)
+    }, 500)
+    bot.on('messagestr', (m) => { // la causa de la muerte: el mensaje del server que me nombra, en los 3 s siguientes
+      const u = this.ultimaMuerte
+      if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username)) u.causa = m
+    })
+    bot.on('spawn', () => {
+      if (!this.recuperarPendiente) { this.agenda.pausada = false; return }
+      this.recuperarPendiente = false
+      // a los 2 s, cuando ya llegó el inventario nuevo (al reaparecer, el cliente aún enseña el viejo un momento): con keepInventory
+      // reaparece con todo y no vuelve
+      setTimeout(() => {
+        const lleva = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) { this.ev(`[recupera] reaparezco con ${lleva} objetos: no hace falta`); this.agenda.pausada = false; return }
+        this.ev('[recupera] reaparezco: voy a por mis cosas')
+        // una urgencia de la agenda: va antes que lo que hacía y, al acabar, lo retoma («ataca a X sin parar» sigue tras recuperar)
+        const e = this.agenda.entrada({ tipo: 'recupera' }, 'recuperar mis cosas', 'auto')
+        e.fin = new Promise(res => { e.resolver = res })
+        for (const x of this.agenda.pila.filter(x => x.o.tipo === 'recupera')) { this.agenda.quitar(x); this.soltar(x, { exito: false, texto: '' }) } // la nueva cubre los dos sitios
+        this.agenda.interrumpir(e)
+        this.agenda.pausada = false
+        this.supervisar()
+      }, 2500)
+    })
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
@@ -214,12 +255,8 @@ class Personaje {
       this.ev(`[mc] <${u}> ${m}`)
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
-      if (AMOS.size && !AMOS.has(u)) { // con dueños, el resto solo conversa; si le piden algo por su nombre, se ríe
-        const clave = u + '|' + t
-        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && !CHAT_ORDEN.has(clave)) {
-          CHAT_ORDEN.add(clave); setTimeout(() => CHAT_ORDEN.delete(clave), 3000)
-          bot.chat('jaja bobo')
-        }
+      if (!obedece(u) || (AMOS.size && !AMOS.has(u))) { // con dueños (IO_DUENOS o IO_AMOS), solo atiende por el chat a esos jugadores (órdenes y !zona)
+        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
         return
       }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
@@ -240,12 +277,21 @@ class Personaje {
     bot.on('playerJoined', (p) => { if (p.username !== bot.username) this.ev(`[mc] ${p.username} entró`) })
     bot.on('playerLeft', (p) => this.ev(`[mc] ${p.username} salió`))
     bot.on('death', () => {
-      // para ir a por sus cosas al reaparecer, solo si llevaba algo (inventario, armadura o mano izquierda)
-      if (bot.entity) this.muerte = { pos: bot.entity.position.clone(), t: Date.now(), tenia: bot.inventory.slots.filter((it, i) => it && i !== 0).length }
+      this.agenda.pausada = true // muerto: la agenda espera a reaparecer, y lo que hacía se retoma (no se pierde)
+      this.cortar('interrupcion')
       this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
+      // 2026-11-01: recuperar las cosas al reaparecer (case 'recupera'); IO_RECUPERAR=no lo apaga. Muerto recuperando: no vuelve.
+      // el server vacía el inventario antes de mandar la vida a 0: lo que llevaba es lo máximo de los últimos 2,5 s
+      const objetos = Math.max(0, ...(this.muestrasInventario || []))
+      // 2026-11-01 (pedido del usuario): recuperar es prioridad. Muerto recuperando, vuelve también (a los dos sitios: lo que llevaba
+      // encima y lo que quedó en el primero), salvo tras 3 muertes seguidas recuperando (bucle de muertes)
+      this.muertesRecuperando = this.recuperando ? (this.muertesRecuperando || 0) + 1 : 0
+      this.ultimaMuerte = { pos: bot.entity.position.clone(), t: Date.now(), causa: null, objetos, segunda: this.muertesRecuperando >= 3 }
+      this.sitiosMuerte = [this.ultimaMuerte, ...(this.recuperando ? this.sitiosMuerte || [] : [])].slice(0, 3)
+      this.recuperarPendiente = process.env.IO_RECUPERAR !== 'no' && !this.ultimaMuerte.segunda && this.sitiosMuerte.some(x => x.objetos > 0)
+      this.ev(`[recupera] muerto con ${objetos} objetos en ${this.ultimaMuerte.pos.floored()}${this.recuperarPendiente ? '' : ' (no volveré)'}`)
       try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
     })
-    bot.on('spawn', () => { if (this.muerte) setTimeout(() => this.recuperarCosas().catch(e => this.ev('[muerte] error: ' + e.message)), 1500) })
     bot.on('health', () => {
       if (bot.health < 8) { this.ev(`[mc] salud baja: ${bot.health}`); if (!this.saludBaja) informe.evento(bot, 'salud_baja', bot.health) }
       this.saludBaja = bot.health < 8 // un aviso por cada bajada por debajo de 8, no uno por golpe
@@ -267,7 +313,15 @@ class Personaje {
 
   // Una tarea nueva cancela la anterior. Fuera del bucle del modo libre (libre = false), cualquier tarea es una orden: pasa a
   // modo órdenes (la red deja de decidir), también con las órdenes directas del puerto (hab, cerebro, talar, ir, ven…).
+  // Corta lo que esté en marcha con un motivo (agenda.clasificar): usuario (para, salta) · reemplazo (orden nueva) · interrupcion (urgencia).
+  cortar(motivo) {
+    if (!this.tarea.cancelada) { this.tarea.motivo = motivo; this.tarea.cancelada = true }
+    if (this.tareaReflejo) this.tareaReflejo.cancelada = true
+    try { this.bot.pathfinder.setGoal(null); this.bot.stopDigging() } catch (_) {}
+  }
+
   nuevaTarea(libre = false) {
+    if (!this.tarea.cancelada) this.tarea.motivo = this.tarea.motivo || 'reemplazo'
     this.tarea.cancelada = true
     if (!libre && this.tareaReflejo) this.tareaReflejo.cancelada = true // una orden manda sobre un reflejo en reposo
     if (!libre && this.modo === 'libre') this.ponerModo('ordenes', 'orden directa del puerto')
@@ -359,6 +413,12 @@ class Personaje {
         if (['huir', 'atacar', 'refugiarse'].includes(nombre)) reflejos.anotar(this.bot, nombre, r)
         if (!tarea.cancelada) { const p = this.reflejosSv(nombre, tarea); this.ocupado = p; const hechos = await p; if (hechos.length) r.reflejos = hechos }
       }
+      if (nombre !== 'comer' && !tarea.cancelada && sv.debeComerPorSalud(this.bot)) { // 2026-11-01: con poca vida, come (si lleva)
+        this.ev(`[curarse] salud ${Math.round(this.bot.health)}, hambre ${this.bot.food}: como`)
+        r.curarse = await this.ejecutarHabilidad('comer', ['20'], tarea)
+      }
+      const falta = nombre !== 'equipar' && !tarea.cancelada && EQUIPAR_SIEMPRE && equipar.pendiente(this.bot) // 2026-11-01: lo mejor puesto
+      if (falta) r.equipado = await this.ejecutarHabilidad('equipar', [falta], tarea)
       return r
     } finally { this.enHabilidad-- }
   }
@@ -427,38 +487,26 @@ class Personaje {
     })().catch(e => this.ev('[defensa] error: ' + e.message)).finally(() => { this.defendiendo = null; if (this.tareaReflejo && !this.tareaReflejo.cancelada) this.tareaReflejo = null })
   }
 
-  // 2026-11-02: tras morir, al reaparecer va a donde murió (si hace menos de 4,5 min: luego lo caído desaparece), lo recoge (también en
-  // zonas vedadas) y se vuelve a equipar. Lo dice por el chat.
-  async recuperarCosas() {
-    const m = this.muerte, bot = this.bot
-    this.muerte = null
-    if (!m || !bot || !bot.entity || Date.now() - m.t > 270000) return
-    if (!m.tenia) { this.ev('[muerte] no llevaba nada: no hay nada que recuperar'); return }
-    this.recuperando = true
-    const tarea = this.tareaReflejo = { cancelada: false }
-    const antes = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
-    const n0 = antes()
-    bot.chat(`Voy a por mis cosas a ${m.pos.floored().toArray().join(' ')}, a ${Math.round(m.pos.distanceTo(bot.entity.position))} bloques.`)
-    try {
-      const r = await moverHasta(bot, new goals.GoalNear(m.pos.x, m.pos.y, m.pos.z, 3), () => bot.entity.position.distanceTo(m.pos) <= 4,
-        { ms: 120000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
-      if (r !== 'listo') { bot.chat(`No llego a donde morí (${r}).`); return }
-      for (let k = 0; k < 3 && !tarea.cancelada; k++) { // los objetos caen esparcidos: varias pasadas
-        const p = await habilidades.ejecutar(bot, 'recoger', ['12', 'vedadas'], tarea)
-        if (!p.exito) break
-      }
-      await habilidades.ejecutar(bot, 'equipar', ['todo'], tarea)
-      const n = antes() - n0
-      bot.chat(n > 0 ? `Recuperé ${n} cosa${n === 1 ? '' : 's'}.` : 'No encontré mis cosas.')
-      this.ev(`[muerte] recuperé ${n} cosas de ${m.pos.floored().toArray()}`)
-    } finally { this.recuperando = false; if (this.tareaReflejo === tarea) this.tareaReflejo = null }
-  }
-
   // En reposo (ninguna habilidad, orden ni reflejo en marcha; en modo libre, entre dos decisiones: el bucle espera a que acabe):
   // cada REPOSO_MS y en cuanto le golpea un monstruo.
   reposo() {
     const bot = this.bot
-    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity || !sv.activos(bot)) return
+    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity) return
+    if (sv.debeComerPorSalud(bot)) { // 2026-11-01: con poca vida, comer (si lleva), con o sin reflejos
+      const tarea = this.tareaReflejo = { cancelada: false }
+      this.ev(`[curarse] salud ${Math.round(bot.health)}, hambre ${bot.food}: como`)
+      this.reflejando = this.ejecutarHabilidad('comer', ['20'], tarea).catch(e => this.ev('[curarse] error: ' + e.message))
+        .finally(() => { this.reflejando = null; if (this.tareaReflejo === tarea) this.tareaReflejo = null })
+      return
+    }
+    const falta = EQUIPAR_SIEMPRE && equipar.pendiente(bot) // 2026-11-01 (pedido del usuario): siempre la mejor armadura y el arma en la mano
+    if (falta) {
+      const tarea = this.tareaReflejo = { cancelada: false }
+      this.reflejando = this.ejecutarHabilidad('equipar', [falta], tarea).catch(e => this.ev('[equipar] error: ' + e.message))
+        .finally(() => { this.reflejando = null; if (this.tareaReflejo === tarea) this.tareaReflejo = null })
+      return
+    }
+    if (!sv.activos(bot)) return
     let x = null
     try { x = reflejos.siguiente(bot, {}) } catch (e) { this.ev('[reflejo] error: ' + e.message); return }
     if (!x) return
@@ -705,7 +753,8 @@ class Personaje {
   // Orden en lenguaje sencillo (ordenes.js), del chat del juego o del puerto. Devuelve el texto de la respuesta; con esperarFin,
   // la del final de la orden (si no, la de aceptarla: la orden sigue en marcha). Las respuestas también salen por el chat.
   async ordenar(texto, origen, esperarFin = false) {
-    const o = ordenes.interpretar(texto)
+    const lista = ordenes.interpretarVarias(texto) // 2026-11-01: «X y luego Y», con su repetición (agenda.js)
+    const o = lista && lista[0]
     // quién manda: el chat (con su usuario), la mente (puerto con de=mente), u otro por el puerto (Ío, pruebas)
     const quien = origen.via === 'chat' ? `chat de ${origen.usuario}` : origen.de === 'mente' ? 'mente' : origen.de ? `puerto (${origen.de})` : 'puerto'
     if (!o) {
@@ -715,8 +764,32 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
     }
-    // 2026-11-01: «continúa» retoma la última orden de trabajo interrumpida, con lo que le faltaba (this.pendiente)
+    const responder = (t, exito = true) => {
+      if (origen.via === 'chat') this.decir(t)
+      this.anotarOrden({ texto, quien, modo: this.modo, exito, resultado: t, s: 0 })
+      return t
+    }
+    // 2026-11-01 (agenda.js): para (corta y deja la cola en espera), salta, para todo, cola
+    if (o.tipo === 'agenda') { const l = this.agenda.lista(); return responder(l.length ? l.join(' · ') : 'No tengo nada pendiente.') }
+    if (o.tipo === 'quedate' || o.tipo === 'salta' || o.tipo === 'para_todo') {
+      const actual = this.agenda.siguiente()
+      if (o.tipo === 'para_todo') { this.agenda.vaciar(); this.pendiente = null }
+      else if (actual) this.agenda.quitar(actual)
+      if (o.tipo === 'quedate') this.agenda.enEspera = this.agenda.cola.length > 0
+      this.cortar('usuario')
+      if (this.modo === 'libre' && o.tipo !== 'salta') this.ponerModo('ordenes', `orden «${texto}»`)
+      if (actual) this.soltar(actual, { exito: false, texto: `Dejo «${actual.texto}».` })
+      if (o.tipo === 'salta') { this.supervisar(); return responder(actual ? `Salto «${actual.texto}».` : 'No hago nada que saltar.') }
+      const n = this.agenda.cola.length
+      return responder(o.tipo === 'para_todo' ? 'Olvido todo: me quedo aquí.' : `Me quedo aquí.${n ? ` Tengo ${n} en cola: «continúa» para seguir, «para todo» para olvidarla.` : ''}`)
+    }
+    // 2026-11-01: «continúa» retoma la última orden de trabajo interrumpida, con lo que le faltaba (this.pendiente), o la cola en espera
     if (o.tipo === 'continua') {
+      if (!this.pendiente && this.agenda.enEspera && this.agenda.cola.length) {
+        this.agenda.enEspera = false
+        this.supervisar()
+        return responder(`Sigo con la cola: «${this.agenda.cola[0].texto}».`)
+      }
       if (!this.pendiente) {
         const t = 'No tengo nada a medias.'
         if (origen.via === 'chat') this.decir(t)
@@ -739,10 +812,12 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: resumen, s: 0 })
       return r.texto
     }
-    const fin = this.ordenAccion(o, texto, quien)
+    const varias = lista.length > 1
+    const fin = this.ordenAccion(o, varias || o.repeticion ? o.frase : texto, quien)
+    for (const x of lista.slice(1)) this.ordenAccion(x, x.frase, quien, true).catch(e => this.ev('[orden] fallo: ' + e.message))
     if (esperarFin) return (await fin).texto
     fin.catch(e => this.ev('[orden] fallo: ' + e.message))
-    return AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.'
+    return (AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.') + (varias ? ` Y luego: ${lista.slice(1).map(x => '«' + x.frase + '»').join(', ')}.` : '')
   }
 
   // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
@@ -789,40 +864,95 @@ class Personaje {
   // Orden con acción (ven, sígueme, quédate, tala, recoge, guarda, huye): sale del modo libre, espera a que lo anterior suelte el
   // navegador, la ejecuta con habilidades (que respetan zonas, cofres y límites) y, al terminar, se queda quieto o vuelve a libre
   // (ajuste «al terminar»), salvo «quédate» o si otra orden la ha interrumpido.
-  // Cuenta las órdenes en marcha (también las que esperan a la anterior): el supervisor del centinela solo vuelve cuando no hay ninguna.
-  async ordenAccion(o, texto, quien) {
-    this.enOrden = (this.enOrden || 0) + 1
-    try { return await this.ordenAccion1(o, texto, quien) } finally { this.enOrden-- }
-  }
-  async ordenAccion1(o, texto, quien) {
-    const modoAntes = this.modo
+  async ordenAccion(o, texto, quien, encolar = false) {
+    // 2026-11-01 (agenda.js): una orden nueva reemplaza la cabeza de la cola (la vieja queda para «continúa»); con encolar («y luego»),
+    // va al final. Devuelve una promesa con el resultado final de esta orden (tras sus vueltas y reintentos).
     if (o.de) o.de = Object.keys(this.bot.players).find(n => n.toLowerCase() === o.de) || o.de // «huye de seppuq» → Seppuq
+    const e = this.agenda.entrada(o, texto, quien)
+    e.modoAntes = this.modo
+    e.fin = new Promise(res => { e.resolver = res })
     if (this.modo === 'libre') this.ponerModo('ordenes', `orden «${texto}»`)
+    if (encolar && !this.agenda.vacia()) { this.agenda.encolar(e); this.supervisar(); return e.fin }
+    const vieja = this.agenda.reemplazar(e)
+    if (vieja && vieja !== this.enVuelta) this.soltar(vieja, { exito: false, texto: `Dejo «${vieja.texto}» por la orden nueva.` })
+    this.cortar('reemplazo')
+    this.supervisar()
+    return e.fin
+  }
+
+  // Resuelve la promesa de una entrada que sale de la agenda (una sola vez).
+  soltar(e, r) { if (e.resolver) { const f = e.resolver; e.resolver = null; f(r) } }
+
+  // El supervisor (2026-11-01): un solo bucle por personaje que va dando vueltas a la agenda hasta vaciarla; al acabar, quieto o libre.
+  supervisar() {
+    if (this.supervisando) return this.supervisando
+    this.supervisando = (async () => {
+      let ultima = null
+      try {
+        for (;;) {
+          if (this.agenda.pausada) { await esperar(500); continue } // muerto: hasta reaparecer
+          const e = this.agenda.siguiente()
+          if (!e) break
+          ultima = await this.vuelta(e) || ultima
+        }
+      } catch (err) { this.ev('[agenda] fallo: ' + err.message) } finally { this.supervisando = null }
+      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
+    })()
+    return this.supervisando
+  }
+
+  // Una vuelta de una entrada: hacer() y, según agenda.clasificar, fuera, otra vuelta, reintento (con su recuperación) o se retoma luego.
+  // Devuelve la entrada si salió de la agenda terminada (para el «al terminar»).
+  async vuelta(e) {
+    const o = e.o, texto = e.texto
+    const guardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas' // los modos de guardia no se anuncian ni se anotan al retomarlos o dejarlos
     const previo = this.ocupado
     const tarea = this.nuevaTarea()
+    this.enVuelta = e
     try { this.bot.pathfinder.setGoal(null); this.bot.stopDigging() } catch (_) {}
     await Promise.race([previo, esperar(3000)]).catch(() => {})
     const t0 = Date.now()
     this.enCurso = { texto, t0 }
-    if (o.tipo !== 'quedate' && !o.reanuda) this.decir(AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.')
+    if (e.reanudar) { if (!guardia) this.decir(`Sigo con «${texto}».`); e.reanudar = false } else if (!e.vueltas && !e.fallosSeguidos && !o.reanuda && AVISOS[o.tipo]) this.decir(AVISOS[o.tipo](o))
     let r
-    try { r = await this.hacer(o, tarea, quien) } catch (e) { r = { exito: false, texto: 'No pude: ' + e.message } }
-    const interrumpida = tarea.cancelada && o.tipo !== 'quedate'
-    const modoGuardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas'
-    const guardia = modoGuardia && (o.reanuda || interrumpida) // la guardia que se retoma o se deja por otra orden no se anuncia ni se anota
-    if (interrumpida && modoGuardia) r = { ...r, exito: false, texto: '' }
-    else if (interrumpida) {
-      r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
-      const p = pendienteDe(o, r)
-      if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
-    } else if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null // terminada: ya no hay nada a medias
+    try { r = tarea.cancelada ? { exito: false, texto: '' } : await this.hacer(o, tarea, e.quien) } catch (err) { r = { exito: false, texto: 'No pude: ' + err.message } }
+    r = r || { exito: false, texto: '' }
     if (this.enCurso && this.enCurso.t0 === t0) this.enCurso = null
-    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre' && !this.centinela && !this.guardaespaldas
-    if (r.texto) this.decir(r.texto)
-    if (!guardia) this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: r.texto, s: (Date.now() - t0) / 1000, pasos: r.pasos,
-      despues: o.tipo === 'quedate' ? 'quieto' : interrumpida ? 'otra orden' : this.despues })
-    if (vuelve) this.ponerModo('libre', `al terminar «${texto}»`)
-    return r
+    this.enVuelta = null
+    const motivo = tarea.cancelada ? tarea.motivo || 'reemplazo' : null
+    const clase = agenda.clasificar(e, r, motivo)
+    const s = (Date.now() - t0) / 1000
+    const anotar = (exito, resultado, despues) => this.anotarOrden({ texto, quien: e.quien, modo: e.modoAntes || this.modo, exito, resultado, s, pasos: r.pasos, despues })
+    if (clase === 'interrumpida') { e.reanudar = true; this.ev(`[agenda] «${texto}» en pausa por una urgencia`); return null }
+    if (clase === 'cortada') {
+      this.agenda.quitar(e)
+      if (motivo === 'reemplazo') {
+        const p = pendienteDe(o, r)
+        if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
+        const t = `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' && r.texto ? ' ' + r.texto : ''}`
+        if (!guardia) { this.decir(t); anotar(false, t, 'otra orden') }
+        this.soltar(e, { ...r, exito: false, texto: t })
+      } else { if (!guardia) anotar(false, `cortada (${motivo})`, 'quieto'); this.soltar(e, { ...r, exito: false, texto: r.texto || `Dejo «${texto}».` }) }
+      return null
+    }
+    const ms = this.agenda.anotar(e, clase)
+    if (clase === 'repetir') { if (r.texto) this.decir(r.texto); this.ev(`[agenda] «${texto}»: vuelta ${e.vueltas + 1}`); return null }
+    if (clase === 'reintentar') {
+      const aux = agenda.recuperar(r.texto)
+      this.ev(`[agenda] «${texto}» falló (${r.texto}); reintento ${e.fallosSeguidos} en ${ms / 1000} s${aux ? `, antes ${aux.tipo}` : ''}`)
+      if (e.fallosSeguidos === 1) this.decir(`${r.texto} Lo vuelvo a intentar.`)
+      if (aux) { const x = this.agenda.entrada(aux, aux.tipo, 'agenda', { tipo: 'una' }); x.fallosSeguidos = agenda.REINTENTOS.una; this.agenda.interrumpir(x) }
+      for (const t1 = Date.now(); Date.now() - t1 < ms && !this.tarea.cancelada; ) await esperar(250) // la espera la corta cualquier orden
+      if (this.tarea.cancelada && this.tarea.motivo !== 'interrupcion' && !this.agenda.cola.includes(e) && !this.agenda.pila.includes(e)) this.soltar(e, { exito: false, texto: `Dejo «${texto}».` })
+      return null
+    }
+    // hecha o definitiva: fuera
+    const t = clase === 'definitiva' && e.fallosSeguidos ? `${r.texto} (lo dejo tras ${e.fallosSeguidos + 1} intentos)` : r.texto
+    if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null
+    if (t && !(guardia && o.reanuda)) this.decir(t)
+    if (!(guardia && o.reanuda)) anotar(!!r.exito, t, this.despues)
+    this.soltar(e, { ...r, texto: t })
+    return e.quien === 'auto' || e.quien === 'agenda' ? null : e
   }
 
   // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
@@ -849,7 +979,7 @@ class Personaje {
   }
   supervisarCentinela() {
     const bot = this.bot
-    if (!(this.centinela || this.guardaespaldas) || this.reanudando || this.enOrden || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!(this.centinela || this.guardaespaldas) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
     const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, reanuda: true }
@@ -891,7 +1021,23 @@ class Personaje {
   // Quien dio la orden por el chat, si lo ve; si no (o por el puerto), el jugador humano más cercano.
   jugadorDe(quien) {
     const u = quien.startsWith('chat de ') ? quien.slice(8) : null
-    return (u && this.bot.players[u]?.entity) ? u : ''
+    return (u && this.bot.players[u]) ? u : '' // 2026-11-01: conectado basta; si no se le ve, acercarseA va a buscarle
+  }
+
+  // 2026-11-01: llegar hasta un jugador fuera de la vista (el server manda su posición a ~48 bloques; sin RCON ni /tp no hay más): a las
+  // coordenadas que diga («ven a x y z») o a donde le vi por última vez, por tramos (viajeLargo), hasta que aparece.
+  // null: ya le veo; '' : cancelado; si no, el texto del fallo.
+  async acercarseA(u, en, tarea, mov) {
+    const bot = this.bot
+    if (!u || bot.players[u]?.entity) return null
+    const visto = require('./jugadores').ultimaVez(bot, u)
+    const meta = en ? new (require('vec3').Vec3)(...en) : visto && visto.pos
+    if (!meta) return 'No te veo y no sé dónde estás: dime tus coordenadas (F3), p. ej. «ven a 120 64 -30».'
+    bot.chat(`Voy hacia ti (${Math.round(bot.entity.position.distanceTo(meta))} bloques${en ? '' : ', a donde te vi'}).`)
+    const r = await viajeLargo(bot, meta, () => !!bot.players[u]?.entity, { tarea, mov: mov || prudentes(bot) })
+    if (r === 'listo') return null
+    if (r === 'cancelado') return ''
+    return r === 'llegué' ? 'Llegué a donde estabas y no te veo: dime tus coordenadas (F3).' : `No llego hasta ti (${r}).`
   }
 
   async hacer(o, tarea, quien) {
@@ -905,8 +1051,38 @@ class Personaje {
     }
     switch (o.tipo) {
       case 'quedate': return { exito: true, texto: 'Me quedo aquí.' }
+      case 'portal': {
+        // 2026-11-01: entrar al portal (del Nether o del End) más cercano a ≤ 64: se mete en un bloque del portal (el de abajo, con
+        // obsidiana debajo, si es del Nether), se queda quieto dentro y espera a cambiar de dimensión (el del Nether tarda ~4 s)
+        const dim0 = bot.game.dimension
+        const bloques = bot.findBlocks({ matching: (b) => b.name === 'nether_portal' || b.name === 'end_portal', maxDistance: 64, count: 64 })
+        if (!bloques.length) return { exito: false, texto: 'No veo ningún portal cerca (a 64 bloques).' }
+        const abajo = (v) => { const k = bot.blockAt(v.offset(0, -1, 0)); return !!k && k.name !== 'nether_portal' }
+        const p = bot.entity.position
+        const meta = bloques.filter(abajo).sort((a, b) => a.distanceTo(p) - b.distanceTo(p))[0] || bloques[0]
+        const dentro = () => { const k = bot.blockAt(bot.entity.position.floored()); return !!k && /portal$/.test(k.name) }
+        const r = await moverHasta(bot, new goals.GoalBlock(meta.x, meta.y, meta.z), () => dentro() || bot.game.dimension !== dim0, { ms: 90000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+        if (r !== 'listo' && !dentro()) return { exito: false, texto: `No llego al portal (${r}).` }
+        bot.pathfinder.setGoal(null); bot.clearControlStates()
+        for (let t0 = Date.now(); Date.now() - t0 < 15000 && !tarea.cancelada; await esperar(250)) {
+          if (bot.game.dimension !== dim0) {
+            await esperar(2000) // a que cargue el otro lado
+            // sale del portal de llegada (a ≥ 3 bloques y fuera de sus bloques): quieto dentro, el juego no le deja volver a cruzarlo
+            const llegada = bot.entity.position.clone()
+            const fuera = () => !dentro() && bot.entity.position.distanceTo(llegada) >= 3
+            await moverHasta(bot, new goals.GoalInvert(new goals.GoalNear(llegada.x, llegada.y, llegada.z, 3)), fuera, { ms: 15000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+            bot.pathfinder.setGoal(null); bot.clearControlStates()
+            const DIM = { the_nether: 'el Nether', overworld: 'el mundo normal', the_end: 'el End' }
+            return { exito: true, texto: `Ya estoy en ${DIM[String(bot.game.dimension).replace('minecraft:', '')] || bot.game.dimension}.` }
+          }
+          if (!dentro()) { await moverHasta(bot, new goals.GoalBlock(meta.x, meta.y, meta.z), dentro, { ms: 5000, tarea, mov: prudentes(bot, { pisarVedadas: true }) }); bot.pathfinder.setGoal(null); bot.clearControlStates() }
+        }
+        return { exito: false, texto: tarea.cancelada ? 'Dejo el portal.' : 'Estoy en el portal pero no me lleva: ¿está encendido?' }
+      }
       case 'ven': {
-        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60', 'vedadas']) // '' = el jugador humano más cercano
+        const falta = await this.acercarseA(this.jugadorDe(quien), o.en, tarea, prudentes(bot, { pisarVedadas: true }))
+        if (falta !== null) return { exito: false, texto: falta || 'Dejo de buscarte.' }
+        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60', 'vedadas']) // 2026-11-02: también dentro de las zonas vedadas; solo romper bloques está vedado // '' = el jugador humano más cercano
         const texto = r.causa === 'llegué' || r.causa === 'ya estaba' ? 'Aquí estoy.'
           : r.zona ? `Estás en ${r.zona}, que es zona protegida: te espero en el borde.` : `No llego: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
@@ -917,13 +1093,23 @@ class Personaje {
         return { exito: !!r.exito, texto: r.exito ? `Toma: ${lista}.` : `No puedo darte nada: ${r.causa}.`, pasos: [d] }
       }
       case 'sigueme': {
-        const u = this.jugadorDe(quien)
-        const e = u ? bot.players[u].entity : jugadorCercano(bot)
-        if (!e) return { exito: false, texto: 'No te veo.' }
-        // 2026-11-02: también dentro de las zonas vedadas (pisa; lo único vedado es romper bloques)
-        const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => false, { ms: SIGUEME_MAX, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
-        this.ocupado = marcha
-        const r = await marcha
+        // 2026-11-01: desde donde esté (acercarseA) y, si le pierde de vista, a donde le vio por última vez, hasta «para» o SIGUEME_MAX
+        const u = this.jugadorDe(quien), t0 = Date.now()
+        let r = 'cancelado', en = o.en
+        while (!(tarea && tarea.cancelada)) {
+          const queda = SIGUEME_MAX - (Date.now() - t0)
+          if (queda <= 0) { r = 'tiempo agotado'; break }
+          const falta = await this.acercarseA(u, en, tarea, prudentes(bot, { pisarVedadas: true }))
+          if (falta !== null) return { exito: false, texto: falta || 'Dejo de seguirte.' }
+          const e = u ? bot.players[u].entity : jugadorCercano(bot)
+          if (!e) return { exito: false, texto: 'No te veo.' }
+          // 2026-11-02: también dentro de las zonas vedadas (pisa; lo único vedado es romper bloques)
+          const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => false, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+          this.ocupado = marcha
+          r = await marcha
+          if (r !== 'perdido' || !u) break
+          en = null
+        }
         const textos = { 'tiempo agotado': 'Llevo diez minutos siguiéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
@@ -1046,15 +1232,18 @@ class Personaje {
         return { exito: true, texto: 'Dejo la guardia.', pasos: [] }
       }
       case 'escolta': {
-        // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y vigila: si un monstruo hostil se le acerca
-        // (sv.amenazaCerca) o alguien le pega a él o al bot (sv.esAgresor: monstruos y jugadores que no sean dueños ni personajes),
-        // corta, pelea (atacar id:N, con sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle.
+        // 2026-11-01: le sigue (también dentro de las zonas vedadas: pisa, no rompe ni pone) y, si alguien le pega a él o al bot (sv.esAgresor), corta, pelea (atacar id:N, con
+        // sus negativas: creeper, salud baja, demasiados) y vuelve a seguirle. Pasivo (por defecto): el mob que no pega no cuenta.
+        // Agresivo («defiéndeme agresivo»): además, a por el hostil más cercano a ≤ 10 del protegido (sv.amenazaCerca).
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
-        const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
+        const vedadas = prudentes(bot, { pisarVedadas: true })
+        if (nombre) { const falta = await this.acercarseA(nombre, o.en, tarea, vedadas); if (falta !== null) return { exito: false, texto: falta || 'Dejo de cubrirte.' } }
+        let e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
-        const aliado = (n) => n === e.username || esDueno(n)
-        const ignorar = new Map() // id → hasta cuándo no se reintenta (atacar se negó)
+        const agresivo = o.modo === 'agresivo' // también a por los hostiles a ≤ 10 del protegido, aunque no peguen
+        const aliado = (n) => n === (e && e.username) || esDueno(n) // los dueños y mis bots no cuentan como agresores
         let agresor = null, negado = false
+        const ignorar = new Map() // id → hasta cuándo no reintentar (atacar se negó: creeper, demasiados…), para no girar en vacío
         const alGolpe = (victima, fuente) => {
           if (!sv.esAgresor(bot, victima, fuente, e, aliado)) return
           agresor = { id: fuente.id, t: Date.now() }
@@ -1064,7 +1253,12 @@ class Personaje {
           const x = agresor && bot.entities[agresor.id]
           return !!x && x.isValid !== false && Date.now() - agresor.t < AGRESOR_ESCOLTA_MS && x.position.distanceTo(bot.entity.position) <= 16 ? x : null
         }
-        const objetivo = () => golpeador() || sv.amenazaCerca(bot, e, ESCOLTA_RADIO, ignorar)
+        const objetivo = () => {
+          for (const [id, hasta] of ignorar) if (Date.now() > hasta) ignorar.delete(id)
+          if (vivo() && !ignorar.has(agresor.id)) return agresor.id
+          const x = agresivo ? sv.amenazaCerca(bot, e, 10, new Set(ignorar.keys())) : null
+          return x ? x.id : null
+        }
         bot.on('entityHurt', alGolpe)
         this.escoltando = true
         const t0 = Date.now()
@@ -1074,28 +1268,80 @@ class Personaje {
             const queda = SIGUEME_MAX - (Date.now() - t0)
             if (queda <= 0) { r = 'tiempo agotado'; break }
             // entra tras él en las zonas vedadas (GoalFollow, no GoalSeguirFuera): pisa, pero no rompe ni pone
-            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            if (sv.debeComerPorSalud(bot)) { await this.ejecutarHabilidad('comer', ['20'], tarea); continue } // poca vida: come y sigue
+            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => objetivo() !== null || sv.debeComerPorSalud(bot), { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
-            if (r !== 'listo') break
-            const x = objetivo()
-            if (!x) continue
-            const p = await this.ejecutarHabilidad('atacar', ['id:' + x.id, '20', 'vedadas'], tarea)
-            if (p && !p.exito && /creeper|salud|demasiados|sin arma|nunca|sin camino|lo perd/.test(p.causa || '')) {
-              ignorar.set(x.id, Date.now() + ESCOLTA_REINTENTO_MS) // no reintentar al momento al que se negó a pelear
-              if (!negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
+            if (r === 'perdido' && nombre) { // se fue de la vista: a donde le vi por última vez, y sigo
+              const falta = await this.acercarseA(nombre, null, tarea, vedadas)
+              if (falta !== null || !bot.players[nombre]?.entity) break
+              e = bot.players[nombre].entity
+              continue
             }
-            agresor = null
+            if (r !== 'listo') break
+            const id = objetivo()
+            if (id === null) continue // (o le toca comer: lo hace al empezar la vuelta)
+            const p = await this.ejecutarHabilidad('atacar', ['id:' + id, '20', 'vedadas'], tarea)
+            if (p && !p.exito) ignorar.set(id, Date.now() + 5000)
+            if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
+            if (agresor && agresor.id === id) agresor = null
           }
         } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
         const textos = { 'tiempo agotado': 'Llevo diez minutos cubriéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de cubrirte.' }
       }
+      case 'recupera': {
+        // 2026-11-01 (A4 reducido): volver donde murió (los últimos sitios, si murió recuperando) y recoger lo suyo. No con lava, fuego o
+        // vacío, ni pasados 290 s (los objetos desaparecen a los 300) salvo a ≥ 128 bloques (chunk sin cargar: no envejecen).
+        // 2026-11-01 (pedido del usuario): es prioridad y no se detiene por peligro: con poca vida come (si lleva) y sigue; al acabar, si
+        // hay peligro (≥ 3 hostiles a ≤ 12 o vida < 10), vuelve a casa (el campamento; sin él, se refugia)
+        const sitios = (this.sitiosMuerte || []).slice()
+        if (!sitios.length) return { exito: false, texto: 'No he muerto desde que entré.' }
+        if (sitios[0].segunda) return { exito: false, texto: `He muerto 3 veces seguidas recuperando mis cosas: lo dejo.` }
+        const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
+        const contar = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = []
+        this.recuperando = true
+        try {
+          for (const m of sitios) {
+            if (tarea.cancelada) break
+            const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
+            if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) { fallos.push(`en ${donde} (${m.causa}) no queda nada`); continue }
+            // los objetos solo envejecen con el chunk cargado: muerto lejos de donde está (≥ 128), puede que sigan ahí aunque pase el tiempo
+            if (edad > 290 && d < 128) { fallos.push(`lo de ${donde} ya habrá desaparecido`); continue }
+            this.decir(`Voy a por mis cosas a ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques.`)
+            let r
+            for (let k = 0; k < 6 && !tarea.cancelada; k++) { // sin tope de distancia, por tramos; con poca vida come y sigue
+              r = await viajeLargo(bot, m.pos, () => sv.debeComerPorSalud(bot), { tarea, mov: prudentes(bot), cerca: 2 })
+              if (r !== 'listo') break
+              await this.ejecutarHabilidad('comer', ['20'], tarea)
+            }
+            if (r !== 'llegué') { fallos.push(`no llego a ${donde} (${r})`); continue }
+            for (let k = 0; k < 5 && !tarea.cancelada; k++) {
+              if (sv.debeComerPorSalud(bot)) await this.ejecutarHabilidad('comer', ['20'], tarea)
+              const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
+              if (!q.exito || !q.quedan) break
+            }
+          }
+        } finally { this.recuperando = false }
+        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x)) // los de una muerte nueva, para la próxima vuelta
+        const n = contar() - antes
+        const texto = (n > 0 ? `Recuperé ${Math.min(n, total)}/${total}.` : 'No encontré mis cosas.') + (fallos.length ? ` (${fallos.join('; ')})` : '')
+        if (!tarea.cancelada && peligro()) {
+          this.decir(texto + ' Hay peligro: vuelvo a casa.')
+          const v = await this.ejecutarHabilidad('explorar', ['volver', '120', '150'], tarea)
+          if (!v.exito && !tarea.cancelada) await this.ejecutarHabilidad('refugiarse', ['auto'], tarea)
+          return { exito: n > 0, texto: v.exito ? 'Ya estoy en casa.' : 'No llego a casa: me refugio aquí.' }
+        }
+        return { exito: n > 0, texto }
+      }
       case 'tala': return this.talarN(o, tarea, paso)
       case 'recoge': {
         // F7.7: fuera del mundo del usuario, la orden vuelve a intentar también lo que recoger dio por inalcanzable hace poco
-        const [r, d] = await paso('recoger', (o.todo ? '8' : '8 _log') + (mundo.reglasLibres ? ' otra_vez' : ''))
-        const texto = r.exito ? `Recogí ${r.objetos} ${o.todo ? 'cosa' : 'tronco'}${r.objetos === 1 ? '' : 's'}.` : r.causa === 'nada que recoger' ? 'No hay nada que recoger cerca.' : `No pude recoger: ${r.causa}.`
+        // 2026-11-01: «recoge» = todo lo caído a ≤ 16, hasta 32 objetos, reintentando lo que dio por inalcanzable; «recoge los troncos», solo madera
+        const [r, d] = await paso('recoger', (o.troncos ? '16 _log' : '16 -') + ' max:32 otra_vez')
+        const resto = r.quedan ? ` Quedan ${r.quedan} que no alcanzo.` : ''
+        const texto = r.exito ? `Recogí ${r.objetos} ${o.troncos ? 'tronco' : 'cosa'}${r.objetos === 1 ? '' : 's'}.${resto}` : r.causa === 'nada que recoger' ? 'No hay nada que recoger cerca.' : `No pude recoger: ${r.causa}.${resto}`
         return { exito: !!r.exito, texto, pasos: [d] }
       }
       case 'guarda': {
@@ -1183,14 +1429,29 @@ class Personaje {
             const meta = o.en ? new (require('vec3').Vec3)(...o.en) : visto && visto.pos
             if (!meta) return { exito: false, texto: `No veo a ${jugador} y no sé dónde está: dime «ataca a ${jugador} en x y z» o llévame hacia él.` }
             bot.chat(o.en ? `Voy a buscar a ${jugador} a ${o.en.join(' ')}.` : `Voy a buscar a ${jugador} donde le vi hace ${Math.round((Date.now() - visto.t) / 1000)} s.`)
-            const r = await moverHasta(bot, new goals.GoalNear(meta.x, meta.y, meta.z, 3), () => !!bot.players[jugador]?.entity, { ms: 180000, tarea, mov: prudentes(bot) })
-            if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r}).` }
+            const r = await viajeLargo(bot, meta, () => !!bot.players[jugador]?.entity, { tarea, mov: prudentes(bot) })
+            if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r === 'llegué' ? 'no está allí' : r}).` }
           }
-          const e = bot.players[jugador].entity
-          const [r, d] = await paso('atacar', ['id:' + e.id, '30'])
-          const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se fue.`, 'sin hostil': `No veo a ${jugador} cerca.`,
+          // 2026-11-01: atacar solo coge objetivos a ≤ 16 y se le ve a ~48: antes de pelear se acerca (GoalFollow, hasta 12); si se va de la
+          // vista, vuelve a buscarle donde le vio; y si huye (> 16) durante la pelea, le persigue otra vez (hasta 5 rondas o «para»)
+          let r = { causa: 'sin hostil' }, d = null
+          for (let ronda = 0; ronda < 5 && !(tarea && tarea.cancelada); ronda++) {
+            if (!bot.players[jugador]?.entity) {
+              const visto = require('./jugadores').ultimaVez(bot, jugador)
+              if (!visto) break
+              const v = await viajeLargo(bot, visto.pos, () => !!bot.players[jugador]?.entity, { tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+              if (v !== 'listo') { r = { causa: v === 'llegué' ? 'no está allí' : v }; break }
+            }
+            const e = bot.players[jugador].entity
+            const c = await moverHasta(bot, new goals.GoalFollow(e, 2), () => e.position.distanceTo(bot.entity.position) <= 12, { ms: 120000, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            if (c === 'perdido') continue
+            if (c !== 'listo') { r = { causa: c }; break }
+            ;[r, d] = await paso('atacar', ['id:' + e.id, '30'])
+            if (r.causa !== 'huyó' && r.causa !== 'sin hostil') break
+          }
+          const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se me escapa.`, 'sin hostil': `No alcanzo a ${jugador}.`, cancelado: 'Dejo de perseguirle.',
             'salud baja': 'Estoy muy herido: no peleo.', demasiados: 'Hay demasiados monstruos: no peleo.', 'sin arma': 'No llevo arma: no peleo.' }
-          return { exito: !!r.exito, texto: textos[r.causa] || `No pude: ${r.causa}.`, pasos: [d] }
+          return { exito: !!r.exito, texto: textos[r.causa] || `No pude: ${r.causa}.`, pasos: d ? [d] : [] }
         }
         const [r, d] = await paso('atacar', [o.de || '-', '30'])
         const textos = { muerto: `Lo maté (${r.golpes} golpes).`, 'huyó': 'Se fue.', 'sin hostil': 'No veo ningún monstruo cerca.',

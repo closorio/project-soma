@@ -82,7 +82,9 @@
   "verter",
   "ir_a_mena",
   "rutina_madera",
-  "rutina_noche"
+  "rutina_noche",
+  "equipar_soportes",
+  "revisar_cofres"
  ],
  "etapas": {
   "madera": {

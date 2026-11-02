@@ -11,12 +11,12 @@ const NUMEROS = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, s
 const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: 'skeleton', esqueletos: 'skeleton', arana: 'spider',
   aranas: 'spider', creeper: 'creeper', creepers: 'creeper', bruja: 'witch', aldeano: 'villager', oveja: 'sheep', vaca: 'cow' }
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
-const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
+const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
-  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme (o defiende a X: solo a quien ataque), modo centinela (vigila HOGAR y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
+  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela (vigila HOGAR y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
-  'desatáscate, caza N ovejas, recoge agua, vierte el agua; y continúa (sigue con lo que dejaste a medias).'
+  'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
 const BLOQUES = { piedra: 'stone', piedras: 'stone', roca: 'stone', tierra: 'dirt', arena: 'sand', grava: 'gravel', mineral: 'mineral', minerales: 'mineral',
   carbon: 'coal_ore', hierro: 'iron_ore', cobre: 'copper_ore', andesita: 'andesite', granito: 'granite', diorita: 'diorite', arenisca: 'sandstone' }
@@ -72,10 +72,44 @@ function destinatario(texto, nombres) {
   return { a: null, resto: original }
 }
 
+// 2026-11-01: «ven a 120 64 -30», «sígueme en x y z»: dónde está quien habla si no se le ve (del original: normalizar quita el signo)
+function coords(texto) {
+  const m = String(texto).match(/\b(?:en|a)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/i)
+  return m ? { en: m.slice(1, 4).map(Number) } : {}
+}
+
+// 2026-11-01 (agenda.js): una frase puede traer varias órdenes («tala 5 y luego guarda en el cofre») y cada una su repetición:
+// «sin parar», «en bucle», «siempre» → bucle; «3 veces», «repite … 3 veces» → veces; «hasta que muera», «hasta lograrlo» → hasta.
+// Devuelve [orden, …] (cada una con `frase` y, si se repite, `repeticion`) o null si alguna parte no se entiende.
+const BUCLE = /\b(?:sin parar|en bucle|siempre|todo el rato|una y otra vez|continuamente|sin descanso)\b/i
+const HASTA = /\bhasta (?:que (?:muera|muere|caiga|lo mates|la mates|los mates|lo consigas|lo logres)|lograrlo|conseguirlo)\b/i
+const VECES = /\b(\d{1,3}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+veces\b/i
+function conRepeticion(frase) {
+  let f = frase.trim(), repeticion = null, m
+  if (BUCLE.test(f)) { repeticion = { tipo: 'bucle' }; f = f.replace(BUCLE, ' ') }
+  else if (HASTA.test(f)) { repeticion = { tipo: 'hasta' }; f = f.replace(HASTA, ' ') }
+  else if ((m = f.match(VECES))) { repeticion = { tipo: 'veces', n: Math.max(1, Math.min(100, numero(normalizar(m[1])) || 1)) }; f = f.replace(VECES, ' ').replace(/^\s*repite\s+/i, '') }
+  f = f.replace(/\s+/g, ' ').trim()
+  const o = interpretar(f)
+  if (o) { o.frase = f; if (repeticion) o.repeticion = repeticion }
+  return o
+}
+function interpretarVarias(texto) {
+  const entera = interpretar(texto)
+  if (entera && entera.tipo === 'despues') return [entera] // «luego quédate quieto» es el ajuste «al terminar»
+  const partes = String(texto || '').split(/\s*,?\s*\b(?:y\s+)?(?:luego|despu[eé]s)\b\s*,?\s*/i).map(x => x.trim()).filter(Boolean)
+  const lista = partes.map(conRepeticion)
+  return lista.length && lista.every(Boolean) ? lista : null
+}
+
 function interpretar(texto) {
   const t = normalizar(texto).replace(CORTESIA, '').trim()
   if (!t) return null
   let m
+  // 2026-11-01 (agenda.js): la cola de órdenes. Antes que «quédate» (que se comería «para todo»)
+  if (/^(?:para todo|parad todo|paralo todo|olvida la cola|olvidad la cola|vacia la cola|borra la cola|cancela todo|olvidalo todo|olvida todo)$/.test(t)) return { tipo: 'para_todo' }
+  if (/^(?:salta|saltala|saltate esa|siguiente|pasa a la siguiente|la siguiente)$/.test(t)) return { tipo: 'salta' }
+  if (/^(?:cola|tu cola|la cola|pendientes?|agenda)$|\b(?:que tienes pendiente|que te queda por hacer|que tienes en (?:la )?cola)\b/.test(t)) return { tipo: 'agenda' }
   if ((m = t.match(/\b(?:al terminar|al acabar|despues|luego|cuando termines|cuando acabes)\b.*\b(quiet[oa]s?|parad[oa]s?|libres?)\b/)))
     return { tipo: 'despues', valor: m[1].startsWith('libre') ? 'libre' : 'quieto' }
   if (/\bmodo (?:de )?libre\b|\ba tu aire\b|\b(?:haz|haced) lo que quieras\b|^libres?$/.test(t)) return { tipo: 'modo', modo: 'libre' }
@@ -119,9 +153,15 @@ function interpretar(texto) {
       /\b(?:usa|usad|usar|utiliza) (?:la|esa|esta|tu) cama\b|\b(?:ven|ve|vete|id|anda) a (?:la|tu) cama\b|^a la cama\b|\bguarda (?:el|tu) (?:spawn|punto de reaparicion)\b/.test(t))
     return { tipo: 'duerme' }
   if (/^(?:come|comed|comer|comete|cena|desayuna|almuerza)\b|\b(?:come|comete) algo\b/.test(t)) return { tipo: 'come' }
+  // 2026-11-01: volver a por sus cosas tras morir (también lo lanza solo al reaparecer)
+  if (/\b(?:recupera|recuperad)\b|\bve a por tus cosas\b|\brecoge tu loot\b/.test(t)) return { tipo: 'recupera' }
   // 2026-11-01: guardaespaldas defensivo (le sigue y solo pelea con quien le pega a él o al bot); antes que «ataca»
-  if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta' }
-  if ((m = t.match(/\b(?:defiende|defended|protege|proteged|escolta|escoltad) a (\w+)/))) return { tipo: 'escolta', a: m[1] }
+  // «… agresivo»: también va a por los hostiles que tenga cerca el protegido; «pasivo» (o nada): solo a por quien pegue
+  const modoEscolta = /\bagresiv[oa]s?\b|\b(?:protegeme|protegedme|protege|proteged)\b/.test(t) ? 'agresivo' : 'pasivo' // 2026-11-02: «protégeme» ya vigila (ataca al hostil que se acerque); «defiéndeme» sigue pasivo salvo «agresivo»
+  // 2026-11-01: «entra al portal», «cruza el portal», «ve al nether»: el portal más cercano (io.js)
+  if (/\b(?:entra|entrad|entrar|metete|meteos|cruza|cruzad|pasa|pasad|usa|usad)\b.*\bportal\b|\b(?:ve|vete|id|vamos|vuelve|volved) al? (?:nether|end|portal|mundo normal|overworld)\b/.test(t)) return { tipo: 'portal' }
+  if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta', modo: modoEscolta, ...coords(texto) }
+  if ((m = t.match(/\b(?:defiende|defended|protege|proteged|escolta|escoltad) a (\w+)/))) return { tipo: 'escolta', a: m[1], modo: modoEscolta, ...coords(texto) }
   if ((m = t.match(/\b(?:ataca|atacad|atacar|mata|matad|matar|pelea|pelead|lucha|luchad|defiendete|defendeos|acaba con)\b(?: (?:a la |a los |a las |al |a |el |la |los |las |ese |esa |este |esta )?(\w+))?/)))
   {
     const en = String(texto).match(/\ben\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s*$/i) // «ataca a X en x y z», del original (normalizar quita el signo)
@@ -184,13 +224,13 @@ function interpretar(texto) {
     const n = numero(t) || 1
     return { tipo: 'tala', n: Math.min(n, MAX_TRONCOS), pedido: n }
   }
-  if (/\b(?:recoge|recoger|recoged|coge|coger|recogelo|recogelos|recolecta)\b/.test(t)) return { tipo: 'recoge', todo: /\btodo\b/.test(t) }
+  if (/\b(?:recoge|recoger|recoged|coge|coger|recogelo|recogelos|recolecta)\b/.test(t)) return { tipo: 'recoge', troncos: /\b(?:troncos?|madera|lena)\b/.test(t) } // 2026-11-01: sin decir troncos, todo lo caído
   if (/\b(?:guarda|guardar|guardad|guardalo|deposita|depositar|vacia)\b|\bal cofre\b/.test(t)) return { tipo: 'guarda' }
   if ((m = t.match(/\b(?:huye|huir|huid|escapa|escapad|alejate|alejaos)\b(?: del? (?:el |la |los |las )?(\w+))?/)))
     return { tipo: 'huye', de: (m[1] && !/^(?:aqui|ahi|alli|aca|este|esta)$/.test(m[1]) && (MOBS[m[1]] || m[1])) || null }
-  if (/\b(?:sigueme|seguidme|sigue ?me|ven conmigo|acompaname)\b/.test(t)) return { tipo: 'sigueme' }
-  if (/^(?:ven|venid|vente|acercate|acercaos|aqui|ven aqui|ven aca)\b/.test(t)) return { tipo: 'ven' }
+  if (/\b(?:sigueme|seguidme|sigue ?me|ven conmigo|acompaname)\b/.test(t)) return { tipo: 'sigueme', ...coords(texto) }
+  if (/^(?:ven|venid|vente|acercate|acercaos|aqui|ven aqui|ven aca)\b/.test(t)) return { tipo: 'ven', ...coords(texto) }
   return null
 }
 
-module.exports = { interpretar, destinatario, normalizar, AYUDA, MAX_TRONCOS, ALIAS }
+module.exports = { interpretar, interpretarVarias, destinatario, normalizar, AYUDA, MAX_TRONCOS, ALIAS }

@@ -57,3 +57,5 @@ mundos/*/memoria_*.json.*
 mundos/*/centinela_*.json
 mundos/*/guardaespaldas_*.json
 mundos/*/aliados.json
+# ajustes de cada máquina (Makefile: -include local.mk)
+local.mk
