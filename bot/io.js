@@ -79,7 +79,9 @@ const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).f
 const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
 const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_ALIADOS, 'utf8')).aliados || [] } catch (_) { return [] } })().map(x => String(x).toLowerCase()))
 const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
-const esAliado = (n) => AMOS.has(n) || ALIADOS.has(String(n || '').toLowerCase())
+const esDueno = (n) => AMOS.has(n) // el único que nunca se defiende de un golpe suyo
+const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
+const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
 const SKIN = (process.env.IO_SKIN || '').trim()
 // F7.5: los argumentos y la decisión del modo libre están en libre.js (la observación que pide la política: obs u obs_sv).
 const libre = require('./libre')
@@ -169,7 +171,7 @@ class Personaje {
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
-    sv.vigilarGolpes(bot, (g) => setImmediate(() => this.alGolpear(g)), (n) => esAliado(n)) // F7.2: los golpes de monstruos, para el reflejo de defensa
+    sv.vigilarGolpes(bot, (g) => { this.diablo(g); setImmediate(() => this.alGolpear(g)) }, esDueno) // F7.2: los golpes de monstruos, para el reflejo de defensa
     // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
     // recoloca (forcedMove); eso y por qué el navegador rehace la ruta van al registro (make move-log), como mucho 1 línea / 2 s
     const mov = { n: 0, t: 0 }
@@ -363,6 +365,18 @@ class Personaje {
       previo = x.habilidad
     }
     return hechos
+  }
+
+  // 2026-11-02: un aliado declarado («Oqva es aliado») que le pega deja de ser intocable: lo dice y se defiende (alGolpear, centinela y
+  // «protégeme» ya cuentan sus golpes; solo los de un dueño no cuentan). Un aviso cada 30 s por aliado.
+  diablo(g) {
+    if (!g || g.tipo !== 'jugador' || !esDeclarado(g.nombre) || esDueno(g.nombre)) return
+    const k = String(g.nombre).toLowerCase(), ahora = Date.now()
+    this.diablos = this.diablos || new Map()
+    if (ahora - (this.diablos.get(k) || 0) < 30000) return
+    this.diablos.set(k, ahora)
+    this.bot.chat('Modo diablo activado')
+    this.ev(`[defensa] modo diablo: ${g.nombre} (aliado) le ha pegado`)
   }
 
   // 2026-11-02: SIEMPRE devuelve el golpe de un monstruo o de un jugador que no sea aliado. Con los reflejos activos y el personaje en reposo
@@ -831,7 +845,7 @@ class Personaje {
         if (AMOS.has(Object.keys(bot.players).find(x => x.toLowerCase() === n) || o.nombre)) return { exito: true, texto: `${o.nombre} ya es de los míos: es mi dueño.`, pasos: [] }
         if (o.valor) ALIADOS.add(n); else ALIADOS.delete(n)
         guardarAliados()
-        return { exito: true, texto: o.valor ? `${o.nombre} es aliado: no le ataco.` : `${o.nombre} ya no es aliado.`, pasos: [] }
+        return { exito: true, texto: o.valor ? `${o.nombre} es aliado: puede entrar a la zona. Si me pega, me defiendo.` : `${o.nombre} ya no es aliado.`, pasos: [] }
       }
       case 'centinela': {
         // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
@@ -845,7 +859,7 @@ class Personaje {
         if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         else if (!re.exito) bot.chat('Voy sin equipo: no tengo nada que ponerme.')
         if (tarea && tarea.cancelada) return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
-        const aliado = (n) => esAliado(n)
+        const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
         const p0 = bot.entity.position
@@ -856,7 +870,7 @@ class Personaje {
         }
         const puesto = bot.entity.position.clone()
         let golpeador = null
-        const alGolpe = (victima, fuente) => { if (sv.esAgresor(bot, victima, fuente, null, aliado)) golpeador = { id: fuente.id, t: Date.now() } }
+        const alGolpe = (victima, fuente) => { if (sv.esAgresor(bot, victima, fuente, null, esDueno)) golpeador = { id: fuente.id, t: Date.now() } }
         bot.on('entityHurt', alGolpe)
         this.escoltando = true // los golpes los atiende esta guardia, no alGolpear
         bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los nuestros.`)
@@ -885,7 +899,7 @@ class Personaje {
         const nombre = o.a ? Object.keys(bot.players).find(n => n.toLowerCase() === o.a) : this.jugadorDe(quien)
         const e = nombre ? bot.players[nombre]?.entity : o.a ? null : jugadorCercano(bot)
         if (!e) return { exito: false, texto: o.a ? `No veo a ${o.a}.` : 'No te veo.' }
-        const aliado = (n) => n === e.username || esAliado(n)
+        const aliado = (n) => n === e.username || esDueno(n)
         const ignorar = new Map() // id → hasta cuándo no se reintenta (atacar se negó)
         let agresor = null, negado = false
         const alGolpe = (victima, fuente) => {
