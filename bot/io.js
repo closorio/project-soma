@@ -1351,7 +1351,7 @@ class Personaje {
               if (r.exito || (r.faltan && r.faltan.length)) this.ev(`[herrero] ${r.causa}: puestas ${(r.puestas || []).join(',') || '-'}, fabricadas ${JSON.stringify(r.fabricadas)}, guardadas ${JSON.stringify(r.guardadas)}${r.faltan && r.faltan.length ? '; faltan: ' + r.faltan.join(' | ') : ''}`)
               if (r.faltan && r.faltan.length) {
                 noAntesDe = Date.now() + ESPERA_HERRERO
-                if (Date.now() - ultimoAviso > ESPERA_HERRERO) { bot.chat(`Me falta material: ${r.faltan[0]}.`); ultimoAviso = Date.now() }
+                if (Date.now() - ultimoAviso > ESPERA_HERRERO) { bot.chat(`Me falta material: ${[...new Set(r.faltan)].slice(0, 2).join('; ')}.`); ultimoAviso = Date.now() }
               } else if (hecho) bot.chat(`Listo: ${[...(r.puestas || []).map(x => 'puse ' + x.replace(/_/g, ' ')), ...Object.entries(r.guardadas || {}).map(([k, n]) => `guardé ${n} ${k.replace(/_/g, ' ')}`)].join(', ')}.`)
             } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
             for (const t1 = Date.now(); Date.now() - t1 < 5000 && !(tarea && tarea.cancelada); ) await esperar(500)

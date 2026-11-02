@@ -121,7 +121,14 @@ module.exports = async function herrero(bot, [nombreZona, modo = 'todo', persona
   }
 
   // 2. de hierro: junta lingotes y madera, y fabrica
-  const mesaConocida = () => bot.findBlock({ matching: bot.registry.blocksByName.crafting_table.id, maxDistance: radio, useExtraInfo: (b) => dentro(b.position) })
+  // la mesa de crafteo que ya hay junto a los soportes (a ≤ 24 de alguno, aunque caiga fuera del rectángulo de la zona): la más cercana al personaje
+  const mesaConocida = () => {
+    const desde = soportes.slice().sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))[0].position
+    return bot.findBlocks({ matching: bot.registry.blocksByName.crafting_table.id, point: desde, maxDistance: 24, count: 10 })
+      .map(p => bot.blockAt(p)).filter(Boolean).sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))[0] || null
+  }
+  // hasta pegarse a la mesa (fabricar solo la ve a ≤ 4 de los pies del personaje)
+  const irAMesa = (mesa) => { const c = mesa.position.offset(0.5, 0.5, 0.5); return moverHasta(bot, new goals.GoalNear(mesa.position.x, mesa.position.y, mesa.position.z, 2), () => bot.entity.position.distanceTo(c) <= 3, { ms: 20000, tarea, mov: movs(bot) }) }
   let sinHierro = false // sin lingotes en los cofres: no se vuelve a intentar en esta pasada
   async function fabricarDeHierro(nombre) {
     const g = GASTO[tipoDe(nombre)]
@@ -129,11 +136,12 @@ module.exports = async function herrero(bot, [nombreZona, modo = 'todo', persona
     if (llevo(n => n === 'iron_ingot') < g.i) await tomar(n => n === 'iron_ingot', g.i - llevo(n => n === 'iron_ingot'))
     if (llevo(n => n === 'iron_ingot') < g.i) { sinHierro = true; base.faltan.push(`${nombre}: faltan lingotes de hierro (${llevo(n => n === 'iron_ingot')} de ${g.i})`); return false }
     const mesa = mesaConocida()
+    if (g.p > 0 && llevo(n => n === 'stick') < g.p) await tomar(n => n === 'stick', g.p - llevo(n => n === 'stick')) // los palos ya hechos, primero
     const tabl = (g.p > 0 && llevo(n => n === 'stick') < g.p ? 2 : 0) + (mesa || llevo(n => n === 'crafting_table') ? 0 : 4)
     if (tabl > llevo(n => /_planks$/.test(n)) + 4 * llevo(n => /_log$/.test(n))) {
       if (!(await tomar(n => /_log$/.test(n), Math.ceil(tabl / 4)))) await tomar(n => /_planks$/.test(n), tabl)
     }
-    if (mesa) await ir(mesa.position, 20000)
+    if (mesa && await irAMesa(mesa) !== 'listo') fallos.push(`no llego a la mesa de ${mesa.position.x},${mesa.position.y},${mesa.position.z}`)
     const r = await fabricar(bot, [nombre, '1'], tarea)
     if (!r.exito) { base.faltan.push(`${nombre}: ${r.causa}`); return false }
     base.fabricadas[nombre] = (base.fabricadas[nombre] || 0) + 1
