@@ -797,7 +797,7 @@ class Personaje {
     switch (o.tipo) {
       case 'quedate': return { exito: true, texto: 'Me quedo aquí.' }
       case 'ven': {
-        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60']) // '' = el jugador humano más cercano
+        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60', 'vedadas']) // '' = el jugador humano más cercano
         const texto = r.causa === 'llegué' || r.causa === 'ya estaba' ? 'Aquí estoy.'
           : r.zona ? `Estás en ${r.zona}, que es zona protegida: te espero en el borde.` : `No llego: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
@@ -811,8 +811,8 @@ class Personaje {
         const u = this.jugadorDe(quien)
         const e = u ? bot.players[u].entity : jugadorCercano(bot)
         if (!e) return { exito: false, texto: 'No te veo.' }
-        const meta = new GoalSeguirFuera(e, 2)
-        const marcha = moverHasta(bot, meta, () => false, { ms: SIGUEME_MAX, tarea, entidad: e })
+        // 2026-11-02: también dentro de las zonas vedadas (pisa; lo único vedado es romper bloques)
+        const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => false, { ms: SIGUEME_MAX, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
         this.ocupado = marcha
         const r = await marcha
         const textos = { 'tiempo agotado': 'Llevo diez minutos siguiéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
