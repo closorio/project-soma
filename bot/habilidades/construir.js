@@ -207,7 +207,6 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
     ...orden.map(b => ({ dest: new Vec3(x0 + b[0], y + 1 + b[1], z0 + b[2]), estado: plano.viejo ? null : plano.paleta[b[3]] }))]
   // qué objeto lleva cada bloque y cuándo está bien puesto
   const cx = { bot, materia, catalogo: !plano.viejo, id, mov, y, enHuella }
-  const malYa = new Set(((obras.leer().obras.find(o => o.id === id) || {}).mal_orientado || []).map(b => b.slice(0, 3).join()))
   const maxMs = plano.viejo ? MAX_MS : MAX_MS_CATALOGO
   const ms = Math.min(maxMs, (60 + 10 * lista.length) * 1000), t0 = Date.now()
   let puestos = 0, causa = null, ultimo = null, mal = 0
@@ -217,7 +216,9 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
     if (Date.now() - t0 > ms) { causa = 'tiempo agotado'; break }
     const actual = bot.blockAt(dest)
     if (actual && bienPuesto(cx, ent, actual)) { puestos++; continue } // ya estaba (una obra retomada)
-    if (actual && ent.estado && malYa.has([dest.x, dest.y, dest.z].join()) && estructuras.mismoMaterial(actual.name, estructuras.nombre(ent.estado))) { puestos++; continue }
+    // la misma pieza ya puesta con otro estado (una puerta que alguien abrió, una mal orientada de antes): hecha; cerrarComoPlantilla
+    // deja al final puertas y trampillas como en la plantilla (2026-11-02: «ocupado en … (oak_door)» al retomar la casita)
+    if (actual && ent.estado && estructuras.mismoMaterial(actual.name, estructuras.nombre(ent.estado))) { puestos++; continue }
     if (!parcela.libre(actual)) { causa = `ocupado en ${dest.x},${dest.y},${dest.z} (${actual ? actual.name : '?'})`; break }
     if ((zonas.pasoVedado(dest.x, dest.y, dest.z) && !obras.enTemporal(dest.x, dest.z)) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break } // los carteles mandan dentro
     const item = itemPara(cx, ent)
