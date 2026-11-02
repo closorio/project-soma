@@ -4,10 +4,9 @@
 // él; IO_REFLEJOS=si|no lo fuerza). Esta función solo decide; io.js ejecuta.
 // Por orden de urgencia (fuera del refugio; dentro no hace falta nada salvo comer):
 //   1 creeper a ≤ 6                         → huir de él (a 12). Nunca se pelea con un creeper.
-//   2 le ha golpeado un monstruo (≤ 3 s)    → regla del usuario (2026-10-15): huir si hay MÁS DE 2 hostiles a la vista (≤ 16) o la
-//                                             salud es < 8, o si no lleva arma (atacar se niega sin ella); si no, defenderse:
-//                                             atacar a quien le golpeó. El daño que no viene de un monstruo (caída, fuego, lava,
-//                                             hambre, un jugador) no cuenta (sv.vigilarGolpes ni lo apunta).
+//   2 le ha golpeado un monstruo o un jugador no aliado (≤ 3 s)    → 2026-11-02: SIEMPRE defenderse (atacar a quien le golpeó, sin negarse por
+//                                             salud, número ni arma: a puñetazos); solo huye de un creeper o si no ve a quien le pega. El daño que no viene de un monstruo (caída, fuego, lava,
+//                                             hambre) no cuenta (sv.vigilarGolpes ni lo apunta); tampoco un dueño ni otro personaje.
 //   3 salud < 8 con un hostil a ≤ 8         → huir (el reflejo duro del plan)
 //   (tras huir por 2 o 3, de noche: refugiarse; refugiarse no empieza con un hostil a ≤ 4)
 //   acorralado: si huir ha fallado (en esta ronda o hace < 15 s: no perder otros 2 s buscando salida mientras le pegan) y un
@@ -51,14 +50,12 @@ function siguiente(bot, { h = null, hechos = [] } = {}) {
     if (g && !ya.has('huir') && !ya.has('atacar')) {
       const atacante = bot.entities[g.id]
       const visible = !!atacante && atacante.isValid !== false && dist(bot, atacante) <= sv.RADIO_N
-      const n = vistos.length, arma = sv.mejorArma(bot)
+      const arma = sv.mejorArma(bot)
       if (g.tipo === 'creeper') return { habilidad: 'huir', args: ['creeper', '12', '15'], motivo: 'golpe de creeper', golpe: g }
-      if (n > MAS_DE || bot.health < SALUD_HUIR || !arma || !visible) {
-        const motivo = n > MAS_DE ? `golpe con ${n} hostiles a la vista` : bot.health < SALUD_HUIR ? `golpe con salud ${Math.round(bot.health)}`
-          : !arma ? 'golpe sin arma' : 'golpe de alguien que no veo'
-        return conRefugio({ habilidad: 'huir', args: ['-', '16', '20'], motivo, golpe: g })
-      }
-      return { habilidad: 'atacar', args: [`id:${g.id}`, '20'], motivo: `defensa: golpe de ${g.nombre}`, golpe: g }
+      // 2026-11-02 (pedido del usuario): SIEMPRE devuelve el golpe, también con salud baja, con muchos hostiles o sin arma (a puñetazos);
+      // solo huye si no ve a quien le pega
+      if (!visible) return conRefugio({ habilidad: 'huir', args: ['-', '16', '20'], motivo: 'golpe de alguien que no veo', golpe: g })
+      return { habilidad: 'atacar', args: [`id:${g.id}`, '20', 'acorralado', ...(arma ? [] : ['puno'])], motivo: `defensa: golpe de ${g.nombre}`, golpe: g }
     }
     const cerca = vistos.find(e => dist(bot, e) <= RADIO_HUIR)
     if (bot.health < SALUD_HUIR && cerca && !ya.has('huir') && h !== 'huir' && h !== 'refugiarse')

@@ -13,7 +13,7 @@ const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: '
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
-  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), refúgiate, ' +
+  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela (vigila HOGAR y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
@@ -157,7 +157,7 @@ function interpretar(texto) {
   if (/\b(?:recupera|recuperad)\b|\bve a por tus cosas\b|\brecoge tu loot\b/.test(t)) return { tipo: 'recupera' }
   // 2026-11-01: guardaespaldas defensivo (le sigue y solo pelea con quien le pega a él o al bot); antes que «ataca»
   // «… agresivo»: también va a por los hostiles que tenga cerca el protegido; «pasivo» (o nada): solo a por quien pegue
-  const modoEscolta = /\bagresiv[oa]s?\b/.test(t) ? 'agresivo' : 'pasivo'
+  const modoEscolta = /\bagresiv[oa]s?\b|\b(?:protegeme|protegedme|protege|proteged)\b/.test(t) ? 'agresivo' : 'pasivo' // 2026-11-02: «protégeme» ya vigila (ataca al hostil que se acerque); «defiéndeme» sigue pasivo salvo «agresivo»
   // 2026-11-01: «entra al portal», «cruza el portal», «ve al nether»: el portal más cercano (io.js)
   if (/\b(?:entra|entrad|entrar|metete|meteos|cruza|cruzad|pasa|pasad|usa|usad)\b.*\bportal\b|\b(?:ve|vete|id|vamos|vuelve|volved) al? (?:nether|end|portal|mundo normal|overworld)\b/.test(t)) return { tipo: 'portal' }
   if (/\b(?:defiendeme|defendedme|protegeme|protegedme|escoltame|escoltadme)\b/.test(t)) return { tipo: 'escolta', modo: modoEscolta, ...coords(texto) }
@@ -173,6 +173,21 @@ function interpretar(texto) {
   if (/\b(?:equipate|equipaos|equipar|equipa|armate|armaos|ponte la armadura|coge el arma|coge la espada)\b/.test(t)) return { tipo: 'equipate' }
   if (/\b(?:apartate|apartaos|apartarse|quitate de ahi|sal de la lava|alejate de la lava|alejate del borde|alejate del agua)\b/.test(t)) return { tipo: 'apartate' }
   if (/\b(?:caza|cazad|cazar|busca comida|buscad comida|consigue comida|trae comida|recoge comida)\b/.test(t)) return { tipo: 'caza' }
+  // 2026-11-02: aliados («Oqva es aliado», «Oqva no es aliado», «quiénes son tus aliados»); antes que cualquier otra cosa con «es»
+  if ((m = t.match(/\b(\w+) (no es|ya no es|deja de ser) (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: false }
+  if ((m = t.match(/\b(\w+) es (?:un |una )?aliad[oa]\b/))) return { tipo: 'aliado', nombre: m[1], valor: true }
+  if (/^(?:quienes son (?:tus )?aliados|aliados|lista de aliados)$/.test(t)) return { tipo: 'aliado', lista: true }
+  // 2026-11-02: «modo guardaespaldas» (te sigue y ataca a quien se te acerque); «desactiva guardaespaldas» lo apaga
+  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?guardaespaldas\b|\bya no (?:seas|hagas de) guardaespaldas\b/.test(t)) return { tipo: 'guardaespaldas_off' }
+  if ((m = t.match(/\bguardaespaldas\b(?: (?:de|a) (\w+))?/))) return { tipo: 'guardaespaldas', ...(m[1] ? { a: m[1] } : {}) }
+  // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela
+  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?centinela\b|\bya no (?:seas|hagas de) centinela\b/.test(t)) return { tipo: 'centinela_off' }
+  // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
+  if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
+    return { tipo: 'centinela', zona: (m[1] || m[2] || 'hogar').toUpperCase() }
+  // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
+  if (/\bgranja de piedra\b|\bstone farm\b|\bgenerador de piedra\b/.test(t) && /\b(?:haz(?:me)?|hacer|construye|construir|monta|necesito|materiales|que (?:te )?falta|prepara)\b/.test(t))
+    return { tipo: 'materiales', plano: 'granja_piedra', zona: 'HOGAR' }
   if (/\b(?:fabrica|fabricad|fabricar|craftea|craftead|craftear|hazte|haz(?:me)?|crea|hacer)\b/.test(t) && (/\b(?:fabrica|fabricad|fabricar|craftea|craftead|craftear)\b/.test(t) || t.split(' ').some(w => FABRICABLES[w]))) {
     const w = t.split(' ').find(x => FABRICABLES[x])
     let objeto = w ? FABRICABLES[w] : null

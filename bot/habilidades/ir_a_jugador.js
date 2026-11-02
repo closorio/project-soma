@@ -1,9 +1,10 @@
 // ir_a_jugador [nombre] [segundos]: acercarse a ≤ 3 bloques de un jugador (por defecto el más cercano), siguiéndole si se mueve.
 // Sin romper ni poner bloques. Acepta también el tipo de una entidad cercana (p. ej. villager) para las pruebas.
 // Si el jugador está en una zona vedada (../zonas.json), no entra: va a la casilla de fuera más cercana y espera en el borde.
+// Con «vedadas» (2026-11-02, la orden «ven»): entra en las zonas vedadas como en cualquier sitio; lo único vedado es romper bloques.
 const { goals } = require('mineflayer-pathfinder')
 const zonas = require('../zonas')
-const { buscarEntidad, moverHasta, dist } = require('./comun')
+const { buscarEntidad, moverHasta, dist, prudentes } = require('./comun')
 
 const CERCA = 3
 
@@ -32,12 +33,17 @@ class GoalSeguirFuera extends goals.Goal {
   enElBorde(bot) { return !!this.fuera && Math.hypot(this.x + 0.5 - bot.entity.position.x, this.z + 0.5 - bot.entity.position.z) <= 1.6 }
 }
 
-module.exports = async function irAJugador(bot, [nombre, segundos], tarea) {
+module.exports = async function irAJugador(bot, [nombre, segundos, vedadas], tarea) {
   const e = buscarEntidad(bot, nombre)
   if (!e) return { exito: false, causa: nombre ? 'no veo a ' + nombre : 'no veo a ningún jugador' }
   const d0 = dist(bot, e)
   if (d0 <= CERCA) return { exito: true, causa: 'ya estaba', distancia: +d0.toFixed(1) }
   const ms = (parseFloat(segundos) || Math.min(90, 10 + d0)) * 1000 // ~1 s por bloque de margen
+  if (vedadas === 'vedadas') {
+    const r = await moverHasta(bot, new goals.GoalFollow(e, CERCA - 1), () => dist(bot, e) <= CERCA, { ms, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+    const datos = { distancia: +dist(bot, e).toFixed(1), desde: +d0.toFixed(1) }
+    return r === 'listo' ? { exito: true, causa: 'llegué', ...datos } : { exito: false, causa: r === 'perdido' ? 'lo perdí de vista' : r, ...datos }
+  }
   const meta = new GoalSeguirFuera(e, CERCA - 1)
   const r = await moverHasta(bot, meta, () => dist(bot, e) <= CERCA || meta.enElBorde(bot), { ms, tarea, entidad: e })
   const datos = { distancia: +dist(bot, e).toFixed(1), desde: +d0.toFixed(1), ...(meta.fuera ? { zona: meta.fuera } : {}) }
