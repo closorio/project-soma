@@ -196,7 +196,8 @@ def main():
     if not m.esperar_conectado():
         print(f"{m.personaje} no está en el mundo {a.mundo}: mira el docstring (cómo arrancarlo)")
         return 1
-    with Sesion(m, ficheros=[DATOS(a.mundo) / f for f in ("cofres.json", "obras.json", "zonas.json", f"memoria_{m.personaje}.json")]) as s:
+    from mundo import propio  # 2026-11-02: los datos de cada persona, en su copia «.local»
+    with Sesion(m, ficheros=[propio(DATOS(a.mundo) / f) for f in ("cofres.json", "obras.json", "zonas.json")] + [DATOS(a.mundo) / f"memoria_{m.personaje}.json"]) as s:
         s.suelo_firme()
         FASES[a.fase](m, s, a)
     datos = s.datos(a.fase, TITULOS[a.fase], "minecraft 26.3" if a.mundo == "usuario" else "minecraft 26.1.2")

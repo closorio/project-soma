@@ -21,7 +21,8 @@ def main():
         print(f"{m.personaje} no está en el servidor {a.mundo}")
         return 1
     bien = fantasmas = fallos = 0
-    with Sesion(m, ficheros=[RAIZ / "mundos" / a.mundo / "obras.json"]) as s:
+    from mundo import propio  # 2026-11-02: los datos de cada persona, en su copia «.local»
+    with Sesion(m, ficheros=[propio(RAIZ / "mundos" / a.mundo / "obras.json")]) as s:
         s.suelo_firme()
         s.plataforma(lado=31)
         m.r(f"clear {m.personaje}")

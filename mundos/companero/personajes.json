@@ -1,12 +1,13 @@
 {
  "nota": "Los personajes que /connect puede lanzar en el server Paper de count (bot/conectar.sh y plugin-connect/). Cada uno es un proceso node io.js con su puerto de control. «externos» son bots de otros procesos o del otro PC: no cuentan como humanos ni se les obedece.",
  "mundo": "companero",
- "amos": ["seppuq"],
- "externos": ["Trivino", "Nico", "Lola", "Teo"],
-  "bots_de": {"__Count": ["Trivino", "Nico", "Lola", "Teo"]},
+ "amos": ["__Count"],
+ "externos": ["Oqva"],
+  "bots_de": {"seppuq": ["Oqva"]},
  "personajes": [
-  { "nombre": "Oqva", "puerto": 3011, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" },
-  { "nombre": "Soma",    "puerto": 3012, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" },
-  { "nombre": "Iris",    "puerto": 3013, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" }
+  { "nombre": "Trivino", "puerto": 3011, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "trivino" },
+  { "nombre": "Nico",    "puerto": 3012, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" },
+  { "nombre": "Lola",    "puerto": 3013, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" },
+  { "nombre": "Teo",     "puerto": 3014, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" }
  ]
 }

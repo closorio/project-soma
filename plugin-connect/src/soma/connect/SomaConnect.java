@@ -61,7 +61,10 @@ public final class SomaConnect extends JavaPlugin implements Listener {
         saveDefaultConfig();
         File proyecto = new File(getConfig().getString("proyecto", "/home/count/codes/project-soma"));
         script = new File(proyecto, "bot/conectar.sh");
-        personajes = new File(proyecto, "mundos/" + getConfig().getString("mundo", "companero") + "/personajes.json");
+        // 2026-11-02: los personajes son de cada persona: personajes.local.json (no se versiona; conectar.sh lo hace de personajes.json si falta)
+        String carpeta = "mundos/" + getConfig().getString("mundo", "companero");
+        personajes = new File(proyecto, carpeta + "/personajes.local.json");
+        if (!personajes.exists()) personajes = new File(proyecto, carpeta + "/personajes.json");
         ficheroOperadores = new File(getDataFolder(), "operadores.yml");
         operadores.addAll(YamlConfiguration.loadConfiguration(ficheroOperadores).getStringList("operadores"));
         getServer().getPluginManager().registerEvents(this, this);

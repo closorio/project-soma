@@ -15,7 +15,10 @@ from pathlib import Path
 import probar_noche as pn
 
 r, OW = pn.r, pn.OW
-ESTADO = pn.RAIZ / "mundos" / "supervivencia" / "arboles.json"
+# 2026-11-02: el estado es de cada persona: su copia «.local» (no se versiona), hecha del versionado si falta (como mundo.propio)
+ESTADO = pn.RAIZ / "mundos" / "supervivencia" / "arboles.local.json"
+if not ESTADO.exists() and ESTADO.with_name("arboles.json").exists():
+    ESTADO.write_bytes(ESTADO.with_name("arboles.json").read_bytes())
 ARBOLES = [(6, 20, "oak"), (8, 95, "birch"), (10, 165, "oak"), (12, 235, "birch"), (14, 305, "oak"), (11, 340, "birch")]  # (radio, rumbo °, especie)
 CERCA = [(2, 0), (0, 2), (-2, 0), (0, -2), (3, 3), (-3, 3), (3, -3), (-3, -3)]  # si el sitio no vale
 LIBRE = 4  # ningún tronco a menos de 4 bloques de un punto o del campamento (que el bot aparezca sin un árbol encima)

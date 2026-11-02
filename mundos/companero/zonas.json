@@ -1,28 +1,12 @@
 {
  "zonas": [
   {
-   "nombre": "TALLER",
-   "x1": 657,
-   "z1": -840,
-   "x2": 679,
-   "z2": -818,
-   "modo": "trabajo"
-  },
-  {
-   "nombre": "CASASOMA",
-   "x1": 654,
-   "z1": -852,
-   "x2": 680,
-   "z2": -814,
+   "nombre": "HOGAR",
+   "x1": 711,
+   "z1": -960,
+   "x2": 767,
+   "z2": -887,
    "modo": "vedada"
-  },
-  {
-   "nombre": "BOSQUE",
-   "x1": 608,
-   "z1": -810,
-   "x2": 727,
-   "z2": -784,
-   "modo": "trabajo"
   }
  ],
  "arboles": []

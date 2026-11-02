@@ -61,15 +61,8 @@ mundos/*/aliados_*.json
 # ajustes de cada máquina (Makefile: -include local.mk)
 local.mk
 local.env
-# datos de cada persona por mundo (2026-11-02): sus bots, zonas, cofres, obras y diarios son de cada PC; al versionarlos llegaban
-# los del compañero en cada pull. Plantilla: mundos/companero/personajes.ejemplo.json
-mundos/*/personajes.json
-mundos/*/zonas.json
-mundos/*/cofres.json
-mundos/*/obras.json
-mundos/*/arboles.json
-mundos/*/diario.md
-/zonas.json
-/obras.json
-/cofres.json
-mente/diario.md
+# datos de cada persona por mundo (2026-11-02), como un .env: sus bots, zonas, cofres, obras, árboles y diario van en la copia «.local»
+# (zonas.local.json, diario.local.md…), que bot/mundo.js y entrenamiento/mundo.py hacen del versionado si falta. El versionado queda de
+# plantilla y nadie lo vuelve a escribir: así un pull no trae los del compañero ni le borra los suyos
+*.local.json
+*.local.md

@@ -33,7 +33,8 @@ def main():
         print(f"{m.personaje} no está en el servidor: make user-server-start proxy-start assistant")
         return 1
     desde = LOG.stat().st_size if LOG.exists() else 0
-    with Sesion(m, ficheros=[RAIZ / "mundos" / "usuario" / "cofres.json", RAIZ / "mundos" / "usuario" / "obras.json"]) as s:
+    from mundo import propio  # 2026-11-02: los datos de cada persona, en su copia «.local»
+    with Sesion(m, ficheros=[propio(RAIZ / "mundos" / "usuario" / "cofres.json"), propio(RAIZ / "mundos" / "usuario" / "obras.json")]) as s:
         bx, by, bz = s.suelo_firme(*(a.centro or (None, None)))
         print(f"sitio de la prueba: {bx} {by} {bz}", flush=True)
         m.r(f"clear {m.personaje}")

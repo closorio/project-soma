@@ -58,15 +58,25 @@ function reglas() {
 }
 const REGLAS_LIBRES = reglas()
 
-// Ruta real de un archivo de datos de este mundo (sigue los enlaces).
+// Ruta real de un archivo de datos de este mundo (sigue los enlaces). 2026-11-02: los datos de cada persona (zonas, cofres, obras, árboles,
+// personajes, diario) se leen y escriben en su copia «.local» (zonas.local.json, diario.local.md), que no se versiona, como un .env: el
+// versionado queda de plantilla y nadie lo vuelve a tocar (así un pull no trae los del compañero). Si falta la copia, se hace del versionado.
+const PROPIOS = /^(zonas|cofres|obras|arboles|personajes)\.json$|^diario\.md$/
+const local = (p) => p.replace(/(\.[a-z]+)$/, '.local$1')
+function propio(p) {
+  const l = local(p)
+  if (!fs.existsSync(l) && fs.existsSync(p)) { try { fs.copyFileSync(p, l) } catch (_) {} }
+  return l
+}
 function ruta(archivo) {
   const p = path.join(carpetaDatos, archivo)
-  try { return fs.realpathSync(p) } catch (_) {}
-  return nombre === 'usuario' && HEREDADOS[archivo] ? HEREDADOS[archivo] : p
+  let real
+  try { real = fs.realpathSync(p) } catch (_) { real = nombre === 'usuario' && HEREDADOS[archivo] ? HEREDADOS[archivo] : p }
+  return PROPIOS.test(archivo) ? propio(real) : real
 }
 
 module.exports = {
-  nombre, carpetaDatos, host: SERVIDOR.host, puertoMc: SERVIDOR.puertoMc, version: SERVIDOR.version, tickEnd: SERVIDOR.tickEnd, reglasLibres: REGLAS_LIBRES, ruta,
+  nombre, carpetaDatos, host: SERVIDOR.host, puertoMc: SERVIDOR.puertoMc, version: SERVIDOR.version, tickEnd: SERVIDOR.tickEnd, reglasLibres: REGLAS_LIBRES, ruta, propio,
   diario: ruta('diario.md'), zonas: ruta('zonas.json'), cofres: ruta('cofres.json'), obras: ruta('obras.json'),
   // el mundo del usuario conserva los nombres de siempre; los demás llevan su nombre (entrenamiento/ejecuciones/modos-supervivencia-…)
   sufijo: nombre === 'usuario' ? '' : '-' + nombre,

@@ -9,7 +9,7 @@ archivos de siempre (../zonas.json…, ../mente/diario.md): cada ruta se resuelv
 Si falta el enlace, el mundo del usuario vuelve a su archivo de siempre; el de supervivencia nunca lee ni escribe nada del usuario.
 Puntos de partida: en el del usuario, alrededor del arbolado de pruebas (303, 32); en el otro, la lista «puntos» de mundo.json o,
 mientras no la haya, alrededor del campamento o de la aparición."""
-import json, os
+import json, os, shutil
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -26,12 +26,30 @@ CARPETA = RAIZ / "mundos" / NOMBRE
 SUFIJO = "" if NOMBRE == "usuario" else "-" + NOMBRE  # el del usuario conserva los nombres de siempre (modos-AAAAMMDD.jsonl)
 
 
+PROPIOS = {"zonas.json", "cofres.json", "obras.json", "arboles.json", "personajes.json", "diario.md"}
+
+
+def propio(p):
+    """La copia «.local» de un archivo de datos de una persona (zonas.local.json, diario.local.md: no se versiona, como un .env; el
+    versionado queda de plantilla). Si falta, se hace del versionado. Igual que propio() de bot/mundo.js (2026-11-02)."""
+    p = Path(p)
+    l = p.with_name(p.stem + ".local" + p.suffix)
+    if not l.exists() and p.exists():
+        try:
+            shutil.copy2(p, l)
+        except OSError:
+            pass
+    return l
+
+
 def ruta(archivo):
-    """Ruta real de un archivo de datos de este mundo (sigue los enlaces)."""
+    """Ruta real de un archivo de datos de este mundo (sigue los enlaces); los de cada persona, su copia «.local» (propio)."""
     p = CARPETA / archivo
     if p.exists():
-        return p.resolve()
-    return HEREDADOS[archivo] if NOMBRE == "usuario" and archivo in HEREDADOS else p
+        real = p.resolve()
+    else:
+        real = HEREDADOS[archivo] if NOMBRE == "usuario" and archivo in HEREDADOS else p
+    return propio(real) if archivo in PROPIOS else real
 
 
 DIARIO, ZONAS, COFRES, OBRAS = (ruta(n) for n in ("diario.md", "zonas.json", "cofres.json", "obras.json"))

@@ -577,8 +577,10 @@ def comprobar():
         ok.append(bool(cond))
         print(("bien  " if cond else "FALLO ") + texto, flush=True)
 
-    reales = [pn.MUNDO, pn.OBRAS, RAIZ / "mundos" / "supervivencia" / "diario.md", RAIZ / "mundos" / "supervivencia" / "arboles.json",
-              RAIZ / "mente" / "diario.md", RAIZ / "mente" / "alma" / "diario.md", RAIZ / "mente" / "alma" / "memoria.md"]
+    # 2026-11-02: los datos de cada persona, en su copia «.local» (zonas.local.json…)
+    local = lambda p: p.with_name(p.stem + ".local" + p.suffix)
+    reales = [pn.MUNDO, pn.OBRAS, local(RAIZ / "mundos" / "supervivencia" / "diario.md"), local(RAIZ / "mundos" / "supervivencia" / "arboles.json"),
+              local(RAIZ / "mente" / "diario.md"), RAIZ / "mente" / "alma" / "diario.md", RAIZ / "mente" / "alma" / "memoria.md"]
     antes = {p: p.read_bytes() if p.exists() else None for p in reales}
     tmp = Path(tempfile.mkdtemp(prefix="mente_sv_"))
     r_real = pn.r
