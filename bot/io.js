@@ -252,7 +252,17 @@ class Personaje {
     })
     bot.on('kicked', (r) => { this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80)) })
     bot.on('error', (e) => this.ev('[mc] error: ' + e.message))
-    bot.on('end', () => { this.tarea.cancelada = true; this.ev('[mc] desconectado; reconectando en 5 s'); informe.evento(bot, 'desconectado'); setTimeout(() => this.conectar(), 5000) })
+    bot.on('end', () => {
+      this.tarea.cancelada = true; informe.evento(bot, 'desconectado')
+      // IO_RECONECTAR=0 (lo pone bot/conectar.sh, el /connect del juego): solo entra cuando el usuario lo manda, así que si lo echan o el server cae, no vuelve solo
+      if (process.env.IO_RECONECTAR === '0') {
+        this.ev('[mc] desconectado; sin reconexión automática (se vuelve con /connect)')
+        try { this.cerrarTramo('desconectado') } catch (_) {}
+        try { persistente.guardar(this.yo.persistente) } catch (_) {}
+        return process.exit(0)
+      }
+      this.ev('[mc] desconectado; reconectando en 5 s'); setTimeout(() => this.conectar(), 5000)
+    })
   }
 
   // Una tarea nueva cancela la anterior. Fuera del bucle del modo libre (libre = false), cualquier tarea es una orden: pasa a
