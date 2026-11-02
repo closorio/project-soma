@@ -151,6 +151,7 @@ class Personaje {
     bot.yo = this.yo
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
     bot.loadPlugin(pathfinder)
+    bot.once('login', () => require('./retroceso').instalar(bot)) // 2026-11-01: el retroceso de los golpes (mineflayer 4.39 lo dejaba en ~0)
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
     require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
