@@ -173,9 +173,15 @@ function amenazaCerca(bot, protegido, radio = 12, ignorar = new Map()) {
 // «modo centinela»: los que han entrado en la zona (rectángulo x/z de zonas.json) y hay que echar: monstruos hostiles (o neutrales que ya han
 // pegado) y jugadores que no sean aliados (`aliado(nombre)`: dueños y otros personajes). Sin los de NUNCA_ATACAR (creeper…) ni los de
 // `ignorar` (id → hasta cuándo). Los más cercanos al bot primero.
-function intrusos(bot, zona, aliado = () => false, ignorar = new Map()) {
+function intrusos(bot, zona, aliado = () => false, ignorar = new Map(), altura = null) {
   const x1 = Math.min(zona.x1, zona.x2), x2 = Math.max(zona.x1, zona.x2), z1 = Math.min(zona.z1, zona.z2), z2 = Math.max(zona.z1, zona.z2)
-  const dentro = (p) => { const x = Math.floor(p.x), z = Math.floor(p.z); return x >= x1 && x <= x2 && z >= z1 && z <= z2 }
+  // altura: { y, dy } (el puesto del centinela ± dy); si la zona trae y1/y2, esos mandan. Sin nada, toda la altura.
+  const dentro = (p) => {
+    const x = Math.floor(p.x), z = Math.floor(p.z)
+    if (!(x >= x1 && x <= x2 && z >= z1 && z <= z2)) return false
+    if (zona.y1 != null && zona.y2 != null) return p.y >= Math.min(zona.y1, zona.y2) && p.y <= Math.max(zona.y1, zona.y2) + 1
+    return !altura || Math.abs(p.y - altura.y) <= altura.dy
+  }
   return Object.values(bot.entities).filter(e => e !== bot.entity && vivo(bot, e) && !((ignorar.get(e.id) || 0) > Date.now()) && dentro(e.position)
     && (e.type === 'player' ? !!e.username && !aliado(e.username) : esAmenaza(bot, e) && !NUNCA_ATACAR.has(e.name)))
     .sort((a, b) => a.position.distanceTo(bot.entity.position) - b.position.distanceTo(bot.entity.position))

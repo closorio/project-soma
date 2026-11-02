@@ -404,6 +404,9 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const zona = { x1: 10, z1: 0, x2: 0, z2: 10 } // esquinas al revés a propósito
     const quien = sv.intrusos(bx, zona, (n) => n === '__Count' || n === 'Oqva').map(e => e.id)
     ok(JSON.stringify(quien) === '[1,2]', `centinela: zombi y jugador desconocido sí; dueño, bot, zombi fuera, creeper y vaca no (${JSON.stringify(quien)})`)
+    bx.entities[8] = { ...mk(8, 'hostile', 'zombie', 5), position: new Vec3(5, 40, 5) } // en una cueva, 24 bloques más abajo
+    const alto = sv.intrusos(bx, zona, () => false, new Map(), { y: 64, dy: 8 }).map(e => e.id)
+    ok(!alto.includes(8) && alto.includes(1), `centinela: el zombi de la cueva (y 40) no cuenta con ±8 sobre y 64 (${JSON.stringify(alto)})`)
     const o = require('./ordenes').interpretar('modo centinela')
     ok(o.tipo === 'centinela' && o.zona === 'HOGAR', `«modo centinela» → ${JSON.stringify(o)}`)
   }
