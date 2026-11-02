@@ -12,8 +12,35 @@ const fabricar = require('./fabricar')
 const sv = require('./sv')
 
 const MAX_S = 720
-const camaMasCercana = (bot, r) => bot.findBlocks({ matching: (b) => b.name.endsWith('_bed'), maxDistance: r, count: 20 })
-  .sort((a, b) => a.distanceTo(bot.entity.position) - b.distanceTo(bot.entity.position))[0]
+// 2026-11-02 (pedido del usuario: con 4 camas, todos iban a la misma y dos se quedaban sin dormir): cada bot del proceso se reserva
+// una cama (la cabecera, 'x,y,z' → nombre) y los demás eligen otra; la próxima vez vuelve a la suya. Las ocupadas (alguien dormido)
+// se saltan, y si al acostarse está ocupada prueba la siguiente.
+const RESERVAS = new Map()
+const DIR = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] }
+const clave = (v) => `${v.x},${v.y},${v.z}`
+// Las camas a ≤ r, una por cama (su cabecera), de la más cercana a la más lejana: [{ v, ocupada }]
+function camas(bot, r) {
+  const vistas = new Map()
+  for (const p of bot.findBlocks({ matching: (b) => b.name.endsWith('_bed'), maxDistance: r, count: 64 })) {
+    const k = bot.blockAt(p); if (!k) continue
+    let pr = {}; try { pr = k.getProperties() } catch (_) {}
+    const [dx, dz] = DIR[pr.facing] || [0, 0]
+    const v = pr.part === 'foot' ? p.offset(dx, 0, dz) : p // los pies apuntan hacia la cabecera
+    if (!vistas.has(clave(v))) vistas.set(clave(v), { v, ocupada: pr.occupied === true })
+    else if (pr.occupied === true) vistas.get(clave(v)).ocupada = true
+  }
+  return [...vistas.values()].sort((a, b) => a.v.distanceTo(bot.entity.position) - b.v.distanceTo(bot.entity.position))
+}
+// La suya si sigue ahí; si no, la libre más cercana que no sea de otro bot. Se la reserva. null si no hay ninguna.
+function elegirCama(bot, r, descartadas) {
+  const yo = bot.username, lista = camas(bot, r).filter(c => !descartadas.has(clave(c.v)))
+  const mia = lista.find(c => RESERVAS.get(clave(c.v)) === yo && !c.ocupada)
+  const c = mia || lista.find(c => !c.ocupada && (!RESERVAS.has(clave(c.v)) || RESERVAS.get(clave(c.v)) === yo))
+  if (!c) return null
+  for (const [k, n] of RESERVAS) if (n === yo) RESERVAS.delete(k) // una cama por bot
+  RESERVAS.set(clave(c.v), yo)
+  return c.v
+}
 
 // Una casilla a ≤ 6 bloques donde el bot puede estar de pie y desde la que sitioCama encuentra sitio; la más cercana, o null
 function buscarSitio(bot) {
@@ -54,13 +81,27 @@ async function ponerCama(bot, tarea) {
 }
 
 module.exports = async function usarCama(bot, [radio], tarea) {
-  const t0 = Date.now(), r = Math.min(32, parseFloat(radio) || 16)
+  const t0 = Date.now(), r = Math.min(32, parseFloat(radio) || 16), descartadas = new Set()
+  let ultima = null
+  for (let i = 0; i < 4; i++) { // si al acostarse está ocupada, la siguiente
+    const r1 = await unaCama(bot, r, descartadas, tarea, t0)
+    if (r1.causa !== 'la cama está ocupada' || !r1.pos) return r1
+    descartadas.add(r1.pos.join(',')); ultima = r1
+  }
+  return ultima
+}
+
+async function unaCama(bot, r, descartadas, tarea, t0) {
   const datos = () => ({ s: +((Date.now() - t0) / 1000).toFixed(1) })
-  let v = camaMasCercana(bot, r), puesta = false
-  if (!v) {
+  let v = elegirCama(bot, r, descartadas), puesta = false
+  if (!v) { // ninguna libre: la suya, puesta o fabricada
     const p = await ponerCama(bot, tarea)
     if (!p.v) return { exito: false, causa: p.causa, ...datos() }
     v = p.v; puesta = true
+    const suya = camas(bot, 4).find(c => c.v.equals(v) || c.v.distanceTo(v) <= 1) // por su cabecera, como las demás
+    if (suya) v = suya.v
+    for (const [k, n] of RESERVAS) if (n === bot.username) RESERVAS.delete(k)
+    RESERVAS.set(clave(v), bot.username)
   }
   const cerca = () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= 3
   if (!cerca()) {

@@ -31,7 +31,7 @@ const CHAT_ZONA = new Set() // órdenes de chat ya atendidas (varios personajes 
 const ESQUINAS = new Map() // usuario -> primera esquina de la zona que está marcando
 // «continúa» (2026-11-01): las órdenes de trabajo que se retoman si otra las interrumpe, y con qué les faltaba. Moverse, pelear o
 // comer no se retoman: «continúa» es volver al trabajo
-const ORDENES_TRABAJO = new Set(['tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
+const ORDENES_TRABAJO = new Set(['armate', 'tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
   'fabrica', 'funde', 'pon', 'ilumina', 'baja', 'sube', 'agua', 'vierte', 'duerme'])
 function pendienteDe(o, r) {
   if (!ORDENES_TRABAJO.has(o.tipo)) return null
@@ -102,7 +102,7 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   // F7.2
   come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : o.nombre ? `Voy a por ${o.nombre}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
   sal: () => 'Salgo del refugio.', duerme: () => 'Voy a la cama.', dame: (o) => (o.objeto === 'todo' ? 'Te doy lo que llevo.' : `Te doy ${o.n || 'los'} ${o.objeto}.`), fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
-  equipate: () => 'Me equipo.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
+  equipate: () => 'Me equipo.', armate: () => 'Me armo: espada, pico y hacha de piedra.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
   explora: (o) => `Voy a explorar ${o.rumbo === '-' ? 'por ahí' : 'hacia el ' + o.rumbo}, ${o.n} bloques${o.nada ? ', nadando si hace falta' : ''}.`, mina: (o) => `Voy a minar ${o.n} de ${o.bloque}.`,
   construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
@@ -258,9 +258,18 @@ class Personaje {
       if (bot.health < 8) { this.ev(`[mc] salud baja: ${bot.health}`); if (!this.saludBaja) informe.evento(bot, 'salud_baja', bot.health) }
       this.saludBaja = bot.health < 8 // un aviso por cada bajada por debajo de 8, no uno por golpe
     })
-    bot.on('kicked', (r) => { this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80)) })
+    bot.on('kicked', (r) => {
+      this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80))
+      this.frenado = /throttled/i.test(JSON.stringify(r)) // Paper: conexiones desde la misma IP a < 4 s (2026-11-02)
+    })
     bot.on('error', (e) => this.ev('[mc] error: ' + e.message))
-    bot.on('end', () => { this.ev('[mc] desconectado; reconectando en 5 s'); informe.evento(bot, 'desconectado'); setTimeout(() => this.conectar(), 5000) })
+    // tras «Connection throttled» (Paper, misma IP), una espera al azar de 6-12 s: si no, los bots del mismo proceso reintentan a la
+    // vez y se rechazan unos a otros para siempre (2026-11-02)
+    bot.on('end', () => {
+      const ms = this.frenado ? 6000 + Math.floor(Math.random() * 6000) : 5000
+      this.frenado = false
+      this.ev(`[mc] desconectado; reconectando en ${Math.round(ms / 1000)} s`); informe.evento(bot, 'desconectado'); setTimeout(() => this.conectar(), ms)
+    })
   }
 
   // Una tarea nueva cancela la anterior. Fuera del bucle del modo libre (libre = false), cualquier tarea es una orden: pasa a
@@ -1213,6 +1222,62 @@ class Personaje {
         const hecho = Object.entries(r.fabricados || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
         return { exito: !!r.exito, texto: r.exito ? `Fabricado: ${hecho}.` : `No pude fabricar: ${r.causa}.`, pasos: [d] }
       }
+      case 'armate': { // 2026-11-02 (pedido del usuario): espada, pico y hacha de piedra, consiguiendo lo que falte, y equiparse
+        const pasos = [], inv = () => bot.inventory.items(), cuenta = (re) => inv().filter(i => re.test(i.name)).reduce((a, i) => a + i.count, 0)
+        const PIEDRA = /^(cobblestone|cobbled_deepslate|blackstone)$/
+        const faltan = [['espada_piedra', 'stone_sword', 2], ['pico_piedra', 'stone_pickaxe', 3], ['hacha_piedra', 'stone_axe', 3]]
+          .filter(([, item]) => !inv().some(i => i.name === item))
+        const equiparse = async () => { const [, d] = await paso('equipar', ['todo']); pasos.push(d) }
+        if (!faltan.length) { await equiparse(); return { exito: true, texto: 'Ya llevo espada, pico y hacha de piedra: equipado.', pasos } }
+        const talar = async (n) => { const r = await this.talarN({ tipo: 'tala', n }, tarea, paso); pasos.push(...(r.pasos || [])) }
+        // piedra: la que pidan las que faltan; para picarla, un pico (de madera si no hay ninguno)
+        const q = () => faltan.reduce((a, [, , n]) => a + n, 0) - cuenta(PIEDRA)
+        const sinPico = () => !inv().some(i => i.name.endsWith('_pickaxe'))
+        const madera = 3 + (q() > 0 && sinPico() ? 2 : 0) // palos y mesa (+ el pico de madera y otra mesa abajo o lejos)
+        // lo que cuenta es la madera que lleva de verdad: a veces no llega a recoger lo talado (2026-11-02, Oqva se quedó corto)
+        const maderaQueLlevo = () => cuenta(/_log$/) + Math.floor(cuenta(/_planks$/) / 4)
+        for (let i = 0; i < 3 && maderaQueLlevo() < madera && !tarea.cancelada; i++) await talar(madera - maderaQueLlevo())
+        // una mesa fija al lado para todo lo de aquí: fabricar la usa sin ponerla ni quitarla. Si la pone y la recoge en cada
+        // receta, a veces no llega a recogerla y la siguiente gasta 4 tablones en otra (2026-11-02: se quedaba sin madera)
+        const mesaAqui = async () => {
+          if (bot.findBlock({ matching: bot.registry.blocksByName.crafting_table.id, maxDistance: 4 })) return
+          if (!inv().some(i => i.name === 'crafting_table')) { const [, d] = await paso('fabricar', ['mesa']); pasos.push(d) }
+          const [, d2] = await paso('poner', ['mesa']); pasos.push(d2)
+        }
+        if (q() > 0 && sinPico() && !tarea.cancelada) {
+          await mesaAqui()
+          const [r, d] = await paso('fabricar', ['pico_madera']); pasos.push(d)
+          if (!r.exito) return { exito: false, texto: `No pude hacerme un pico de madera: ${r.causa}.`, pasos }
+        }
+        if (q() > 0 && !tarea.cancelada) { const [, d] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d) }
+        if (q() > 0 && !tarea.cancelada) { // sin piedra a la vista: una escalera de 8 hacia abajo (la que baje de las 4 direcciones;
+          // los escalones ya dan piedra), picar allí lo que falte y subir
+          const y0 = bot.entity.position.floored().y
+          for (const rumbo of ['norte', 'este', 'sur', 'oeste']) {
+            if (q() <= 0 || tarea.cancelada) break
+            const [, d1] = await paso('cavar_escalera', [String(y0 - 8), rumbo]); pasos.push(d1)
+            if (bot.entity.position.y < y0 - 2) break // bajó: aquí abajo hay piedra
+          }
+          if (q() > 0 && !tarea.cancelada) { const [, d2] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d2) }
+          // la escalera no recoge lo que pica: la piedra se queda en los escalones (2026-11-02, Soma subió con 1)
+          if (q() > 0 && !tarea.cancelada) { const [, dr] = await paso('recoger', ['12', 'cobble', 'max:24', 'otra_vez']); pasos.push(dr) }
+          if (bot.entity.position.y < y0 - 1) { const [, d3] = await paso('subir_a_superficie', []); pasos.push(d3) }
+          if (q() > 0 && !tarea.cancelada) { const [, dr2] = await paso('recoger', ['12', 'cobble', 'max:24', 'otra_vez']); pasos.push(dr2) }
+        }
+        const hechas = []
+        if (!tarea.cancelada) await mesaAqui()
+        for (const [obj, item] of faltan) {
+          if (tarea.cancelada) break
+          let [r, d] = await paso('fabricar', [obj]); pasos.push(d)
+          if (!r.exito && !/piedra|cobble/i.test(r.causa || '') && (/log|tronco|madera|tabl|planks|palo|stick|no se pudo/i.test(r.causa || ''))) {
+            await talar(2); await mesaAqui(); [r, d] = await paso('fabricar', [obj]); pasos.push(d)
+          }
+          if (inv().some(i => i.name === item)) hechas.push(obj.replace('_piedra', ''))
+        }
+        await equiparse()
+        const no = faltan.map(([obj]) => obj.replace('_piedra', '')).filter(n => !hechas.includes(n))
+        return { exito: !no.length, texto: no.length ? `Me falta: ${no.join(', ')} de piedra${q() > 0 ? ` (no encontré ${q()} de piedra)` : ''}.${hechas.length ? ` Hecho: ${hechas.join(', ')}.` : ''}` : `Armado: espada, pico y hacha de piedra.`, pasos }
+      }
       case 'equipate': {
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
@@ -1576,8 +1641,9 @@ for (const x of lista) {
   PERSONAJES.add(x.nombre)
 }
 registro.sesion.nombres = lista.map(x => x.nombre)
-// Entran de uno en uno (2 s entre ellos) para no saturar el servidor al conectar.
-lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES, x.decisor), 2000 * k))
+// Entran de uno en uno para no saturar el servidor al conectar: 5 s entre ellos, porque Paper rechaza («Connection throttled») las
+// conexiones desde la misma IP a menos de 4 s (connection-throttle de bukkit.yml; 2026-11-02, antes 2 s)
+lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES, x.decisor), 5000 * k))
 // Al cerrar el bot (kill PID o Ctrl+C), el tramo de modo libre en curso se apunta en el diario antes de salir.
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
   for (const p of VIVOS.values()) try { p.cerrarTramo('bot cerrado') } catch (_) {}

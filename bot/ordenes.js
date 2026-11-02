@@ -14,7 +14,7 @@ const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), refúgiate, ' +
-  'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
+  'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, ármate (espada, pico y hacha de piedra, con lo que haga falta), equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
@@ -129,6 +129,8 @@ function interpretar(texto) {
     return { tipo: 'funde', entrada: palabra(t, FUNDIBLES) || (/\b(?:cocina|cocinad|cocinar|asa|asad)\b/.test(t) ? 'carne' : 'hierro'), n: numero(t) || 1 }
   if (/\b(?:ilumina|iluminad|iluminar|alumbra|alumbrad|pon antorchas|poned antorchas)\b/.test(t)) return { tipo: 'ilumina' }
   if (/^(?:pon|poned|coloca|colocad)\b/.test(t) && palabra(t, PONIBLES)) return { tipo: 'pon', objeto: palabra(t, PONIBLES) }
+  // 2026-11-02: «ármate»: espada, pico y hacha de piedra, con lo que haga falta (antes que «equípate»)
+  if (/^(?:armate|armaos|armad|arma te|preparate|preparaos|equipate de piedra)\b/.test(t)) return { tipo: 'armate' }
   // 2026-11-01: «continúa»: retomar la última orden de trabajo interrumpida (antes que «sigue», que no es «sígueme»)
   if (/^(?:continua|continuad|continue|retoma|retomalo|reanuda|sigue|seguid)(?: (?:con )?(?:lo que (?:hacias|estabas haciendo)|(?:lo )?tuyo|trabajando|con eso))?$/.test(t))
     return { tipo: 'continua' }
