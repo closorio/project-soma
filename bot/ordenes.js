@@ -11,7 +11,7 @@ const NUMEROS = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, s
 const MOBS = { zombi: 'zombie', zombie: 'zombie', zombis: 'zombie', esqueleto: 'skeleton', esqueletos: 'skeleton', arana: 'spider',
   aranas: 'spider', creeper: 'creeper', creepers: 'creeper', bruja: 'witch', aldeano: 'villager', oveja: 'sheep', vaca: 'cow' }
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
-const AYUDA = 'Puedo: ven, sígueme, entra al portal, quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
+const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
@@ -78,10 +78,38 @@ function coords(texto) {
   return m ? { en: m.slice(1, 4).map(Number) } : {}
 }
 
+// 2026-11-01 (agenda.js): una frase puede traer varias órdenes («tala 5 y luego guarda en el cofre») y cada una su repetición:
+// «sin parar», «en bucle», «siempre» → bucle; «3 veces», «repite … 3 veces» → veces; «hasta que muera», «hasta lograrlo» → hasta.
+// Devuelve [orden, …] (cada una con `frase` y, si se repite, `repeticion`) o null si alguna parte no se entiende.
+const BUCLE = /\b(?:sin parar|en bucle|siempre|todo el rato|una y otra vez|continuamente|sin descanso)\b/i
+const HASTA = /\bhasta (?:que (?:muera|muere|caiga|lo mates|la mates|los mates|lo consigas|lo logres)|lograrlo|conseguirlo)\b/i
+const VECES = /\b(\d{1,3}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+veces\b/i
+function conRepeticion(frase) {
+  let f = frase.trim(), repeticion = null, m
+  if (BUCLE.test(f)) { repeticion = { tipo: 'bucle' }; f = f.replace(BUCLE, ' ') }
+  else if (HASTA.test(f)) { repeticion = { tipo: 'hasta' }; f = f.replace(HASTA, ' ') }
+  else if ((m = f.match(VECES))) { repeticion = { tipo: 'veces', n: Math.max(1, Math.min(100, numero(normalizar(m[1])) || 1)) }; f = f.replace(VECES, ' ').replace(/^\s*repite\s+/i, '') }
+  f = f.replace(/\s+/g, ' ').trim()
+  const o = interpretar(f)
+  if (o) { o.frase = f; if (repeticion) o.repeticion = repeticion }
+  return o
+}
+function interpretarVarias(texto) {
+  const entera = interpretar(texto)
+  if (entera && entera.tipo === 'despues') return [entera] // «luego quédate quieto» es el ajuste «al terminar»
+  const partes = String(texto || '').split(/\s*,?\s*\b(?:y\s+)?(?:luego|despu[eé]s)\b\s*,?\s*/i).map(x => x.trim()).filter(Boolean)
+  const lista = partes.map(conRepeticion)
+  return lista.length && lista.every(Boolean) ? lista : null
+}
+
 function interpretar(texto) {
   const t = normalizar(texto).replace(CORTESIA, '').trim()
   if (!t) return null
   let m
+  // 2026-11-01 (agenda.js): la cola de órdenes. Antes que «quédate» (que se comería «para todo»)
+  if (/^(?:para todo|parad todo|paralo todo|olvida la cola|olvidad la cola|vacia la cola|borra la cola|cancela todo|olvidalo todo|olvida todo)$/.test(t)) return { tipo: 'para_todo' }
+  if (/^(?:salta|saltala|saltate esa|siguiente|pasa a la siguiente|la siguiente)$/.test(t)) return { tipo: 'salta' }
+  if (/^(?:cola|tu cola|la cola|pendientes?|agenda)$|\b(?:que tienes pendiente|que te queda por hacer|que tienes en (?:la )?cola)\b/.test(t)) return { tipo: 'agenda' }
   if ((m = t.match(/\b(?:al terminar|al acabar|despues|luego|cuando termines|cuando acabes)\b.*\b(quiet[oa]s?|parad[oa]s?|libres?)\b/)))
     return { tipo: 'despues', valor: m[1].startsWith('libre') ? 'libre' : 'quieto' }
   if (/\bmodo (?:de )?libre\b|\ba tu aire\b|\b(?:haz|haced) lo que quieras\b|^libres?$/.test(t)) return { tipo: 'modo', modo: 'libre' }
@@ -190,4 +218,4 @@ function interpretar(texto) {
   return null
 }
 
-module.exports = { interpretar, destinatario, normalizar, AYUDA, MAX_TRONCOS, ALIAS }
+module.exports = { interpretar, interpretarVarias, destinatario, normalizar, AYUDA, MAX_TRONCOS, ALIAS }

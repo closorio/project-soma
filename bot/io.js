@@ -52,6 +52,7 @@ const depositar = require('./habilidades/depositar')
 const cofres = require('./cofres')
 const arbolado = require('./arbolado')
 const ordenes = require('./ordenes')
+const agenda = require('./agenda') // 2026-11-01: cola de órdenes, bucles, reintentos e interrupciones que se reanudan
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
@@ -123,6 +124,7 @@ class Personaje {
     persistente.alArrancar(this.yo) // F8.0a: base y refugio de la sesión anterior (mundos/<mundo>/memoria_<nombre>.json)
     // Tarea en marcha (cerebro o habilidad): `para` o una tarea nueva la cancelan, para que no se pisen dos bucles.
     this.tarea = { cancelada: false }
+    this.agenda = new agenda.Agenda()
     // F4: modo («ordenes» | «libre»), qué hace al terminar una orden («quieto» | «libre»), la orden en curso, la última y lo que
     // está haciendo ahora (promesa: una orden nueva espera a que la anterior suelte el navegador).
     Object.assign(this, { modo: 'ordenes', despues, enCurso: null, ultima: null, ocupado: Promise.resolve(), libre: false, tramo: null })
@@ -186,15 +188,21 @@ class Personaje {
       if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username)) u.causa = m
     })
     bot.on('spawn', () => {
-      if (!this.recuperarPendiente) return
+      if (!this.recuperarPendiente) { this.agenda.pausada = false; return }
       this.recuperarPendiente = false
       // a los 2 s, cuando ya llegó el inventario nuevo (al reaparecer, el cliente aún enseña el viejo un momento): con keepInventory
       // reaparece con todo y no vuelve
       setTimeout(() => {
         const lleva = bot.inventory.items().reduce((a, i) => a + i.count, 0)
-        if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) { this.ev(`[recupera] reaparezco con ${lleva} objetos: no hace falta`); return }
+        if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) { this.ev(`[recupera] reaparezco con ${lleva} objetos: no hace falta`); this.agenda.pausada = false; return }
         this.ev('[recupera] reaparezco: voy a por mis cosas')
-        this.ordenar('recupera tus cosas', { de: 'auto' }).catch(e => this.ev('[recupera] fallo: ' + e.message))
+        // una urgencia de la agenda: va antes que lo que hacía y, al acabar, lo retoma («ataca a X sin parar» sigue tras recuperar)
+        const e = this.agenda.entrada({ tipo: 'recupera' }, 'recuperar mis cosas', 'auto')
+        e.fin = new Promise(res => { e.resolver = res })
+        for (const x of this.agenda.pila.filter(x => x.o.tipo === 'recupera')) { this.agenda.quitar(x); this.soltar(x, { exito: false, texto: '' }) } // la nueva cubre los dos sitios
+        this.agenda.interrumpir(e)
+        this.agenda.pausada = false
+        this.supervisar()
       }, 2500)
     })
     bot.once('spawn', () => {
@@ -231,6 +239,8 @@ class Personaje {
     bot.on('playerJoined', (p) => { if (p.username !== bot.username) this.ev(`[mc] ${p.username} entró`) })
     bot.on('playerLeft', (p) => this.ev(`[mc] ${p.username} salió`))
     bot.on('death', () => {
+      this.agenda.pausada = true // muerto: la agenda espera a reaparecer, y lo que hacía se retoma (no se pierde)
+      this.cortar('interrupcion')
       this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
       // 2026-11-01: recuperar las cosas al reaparecer (case 'recupera'); IO_RECUPERAR=no lo apaga. Muerto recuperando: no vuelve.
       // el server vacía el inventario antes de mandar la vida a 0: lo que llevaba es lo máximo de los últimos 2,5 s
@@ -255,7 +265,15 @@ class Personaje {
 
   // Una tarea nueva cancela la anterior. Fuera del bucle del modo libre (libre = false), cualquier tarea es una orden: pasa a
   // modo órdenes (la red deja de decidir), también con las órdenes directas del puerto (hab, cerebro, talar, ir, ven…).
+  // Corta lo que esté en marcha con un motivo (agenda.clasificar): usuario (para, salta) · reemplazo (orden nueva) · interrupcion (urgencia).
+  cortar(motivo) {
+    if (!this.tarea.cancelada) { this.tarea.motivo = motivo; this.tarea.cancelada = true }
+    if (this.tareaReflejo) this.tareaReflejo.cancelada = true
+    try { this.bot.pathfinder.setGoal(null); this.bot.stopDigging() } catch (_) {}
+  }
+
   nuevaTarea(libre = false) {
+    if (!this.tarea.cancelada) this.tarea.motivo = this.tarea.motivo || 'reemplazo'
     this.tarea.cancelada = true
     if (!libre && this.tareaReflejo) this.tareaReflejo.cancelada = true // una orden manda sobre un reflejo en reposo
     if (!libre && this.modo === 'libre') this.ponerModo('ordenes', 'orden directa del puerto')
@@ -654,7 +672,8 @@ class Personaje {
   // Orden en lenguaje sencillo (ordenes.js), del chat del juego o del puerto. Devuelve el texto de la respuesta; con esperarFin,
   // la del final de la orden (si no, la de aceptarla: la orden sigue en marcha). Las respuestas también salen por el chat.
   async ordenar(texto, origen, esperarFin = false) {
-    const o = ordenes.interpretar(texto)
+    const lista = ordenes.interpretarVarias(texto) // 2026-11-01: «X y luego Y», con su repetición (agenda.js)
+    const o = lista && lista[0]
     // quién manda: el chat (con su usuario), la mente (puerto con de=mente), u otro por el puerto (Ío, pruebas)
     const quien = origen.via === 'chat' ? `chat de ${origen.usuario}` : origen.de === 'mente' ? 'mente' : origen.de ? `puerto (${origen.de})` : 'puerto'
     if (!o) {
@@ -664,8 +683,32 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: this.modo, exito: false, resultado: 'no entendida', s: 0 })
       return t
     }
-    // 2026-11-01: «continúa» retoma la última orden de trabajo interrumpida, con lo que le faltaba (this.pendiente)
+    const responder = (t, exito = true) => {
+      if (origen.via === 'chat') this.decir(t)
+      this.anotarOrden({ texto, quien, modo: this.modo, exito, resultado: t, s: 0 })
+      return t
+    }
+    // 2026-11-01 (agenda.js): para (corta y deja la cola en espera), salta, para todo, cola
+    if (o.tipo === 'agenda') { const l = this.agenda.lista(); return responder(l.length ? l.join(' · ') : 'No tengo nada pendiente.') }
+    if (o.tipo === 'quedate' || o.tipo === 'salta' || o.tipo === 'para_todo') {
+      const actual = this.agenda.siguiente()
+      if (o.tipo === 'para_todo') { this.agenda.vaciar(); this.pendiente = null }
+      else if (actual) this.agenda.quitar(actual)
+      if (o.tipo === 'quedate') this.agenda.enEspera = this.agenda.cola.length > 0
+      this.cortar('usuario')
+      if (this.modo === 'libre' && o.tipo !== 'salta') this.ponerModo('ordenes', `orden «${texto}»`)
+      if (actual) this.soltar(actual, { exito: false, texto: `Dejo «${actual.texto}».` })
+      if (o.tipo === 'salta') { this.supervisar(); return responder(actual ? `Salto «${actual.texto}».` : 'No hago nada que saltar.') }
+      const n = this.agenda.cola.length
+      return responder(o.tipo === 'para_todo' ? 'Olvido todo: me quedo aquí.' : `Me quedo aquí.${n ? ` Tengo ${n} en cola: «continúa» para seguir, «para todo» para olvidarla.` : ''}`)
+    }
+    // 2026-11-01: «continúa» retoma la última orden de trabajo interrumpida, con lo que le faltaba (this.pendiente), o la cola en espera
     if (o.tipo === 'continua') {
+      if (!this.pendiente && this.agenda.enEspera && this.agenda.cola.length) {
+        this.agenda.enEspera = false
+        this.supervisar()
+        return responder(`Sigo con la cola: «${this.agenda.cola[0].texto}».`)
+      }
       if (!this.pendiente) {
         const t = 'No tengo nada a medias.'
         if (origen.via === 'chat') this.decir(t)
@@ -688,10 +731,12 @@ class Personaje {
       this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: resumen, s: 0 })
       return r.texto
     }
-    const fin = this.ordenAccion(o, texto, quien)
+    const varias = lista.length > 1
+    const fin = this.ordenAccion(o, varias || o.repeticion ? o.frase : texto, quien)
+    for (const x of lista.slice(1)) this.ordenAccion(x, x.frase, quien, true).catch(e => this.ev('[orden] fallo: ' + e.message))
     if (esperarFin) return (await fin).texto
     fin.catch(e => this.ev('[orden] fallo: ' + e.message))
-    return AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.'
+    return (AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.') + (varias ? ` Y luego: ${lista.slice(1).map(x => '«' + x.frase + '»').join(', ')}.` : '')
   }
 
   // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
@@ -738,32 +783,93 @@ class Personaje {
   // Orden con acción (ven, sígueme, quédate, tala, recoge, guarda, huye): sale del modo libre, espera a que lo anterior suelte el
   // navegador, la ejecuta con habilidades (que respetan zonas, cofres y límites) y, al terminar, se queda quieto o vuelve a libre
   // (ajuste «al terminar»), salvo «quédate» o si otra orden la ha interrumpido.
-  async ordenAccion(o, texto, quien) {
-    const modoAntes = this.modo
+  async ordenAccion(o, texto, quien, encolar = false) {
+    // 2026-11-01 (agenda.js): una orden nueva reemplaza la cabeza de la cola (la vieja queda para «continúa»); con encolar («y luego»),
+    // va al final. Devuelve una promesa con el resultado final de esta orden (tras sus vueltas y reintentos).
     if (o.de) o.de = Object.keys(this.bot.players).find(n => n.toLowerCase() === o.de) || o.de // «huye de seppuq» → Seppuq
+    const e = this.agenda.entrada(o, texto, quien)
+    e.modoAntes = this.modo
+    e.fin = new Promise(res => { e.resolver = res })
     if (this.modo === 'libre') this.ponerModo('ordenes', `orden «${texto}»`)
+    if (encolar && !this.agenda.vacia()) { this.agenda.encolar(e); this.supervisar(); return e.fin }
+    const vieja = this.agenda.reemplazar(e)
+    if (vieja && vieja !== this.enVuelta) this.soltar(vieja, { exito: false, texto: `Dejo «${vieja.texto}» por la orden nueva.` })
+    this.cortar('reemplazo')
+    this.supervisar()
+    return e.fin
+  }
+
+  // Resuelve la promesa de una entrada que sale de la agenda (una sola vez).
+  soltar(e, r) { if (e.resolver) { const f = e.resolver; e.resolver = null; f(r) } }
+
+  // El supervisor (2026-11-01): un solo bucle por personaje que va dando vueltas a la agenda hasta vaciarla; al acabar, quieto o libre.
+  supervisar() {
+    if (this.supervisando) return this.supervisando
+    this.supervisando = (async () => {
+      let ultima = null
+      try {
+        for (;;) {
+          if (this.agenda.pausada) { await esperar(500); continue } // muerto: hasta reaparecer
+          const e = this.agenda.siguiente()
+          if (!e) break
+          ultima = await this.vuelta(e) || ultima
+        }
+      } catch (err) { this.ev('[agenda] fallo: ' + err.message) } finally { this.supervisando = null }
+      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre') this.ponerModo('libre', `al terminar «${ultima.texto}»`)
+    })()
+    return this.supervisando
+  }
+
+  // Una vuelta de una entrada: hacer() y, según agenda.clasificar, fuera, otra vuelta, reintento (con su recuperación) o se retoma luego.
+  // Devuelve la entrada si salió de la agenda terminada (para el «al terminar»).
+  async vuelta(e) {
+    const o = e.o, texto = e.texto
     const previo = this.ocupado
     const tarea = this.nuevaTarea()
+    this.enVuelta = e
     try { this.bot.pathfinder.setGoal(null); this.bot.stopDigging() } catch (_) {}
     await Promise.race([previo, esperar(3000)]).catch(() => {})
     const t0 = Date.now()
     this.enCurso = { texto, t0 }
-    if (o.tipo !== 'quedate') this.decir(AVISOS[o.tipo](o))
+    if (e.reanudar) { this.decir(`Sigo con «${texto}».`); e.reanudar = false } else if (!e.vueltas && !e.fallosSeguidos && AVISOS[o.tipo]) this.decir(AVISOS[o.tipo](o))
     let r
-    try { r = await this.hacer(o, tarea, quien) } catch (e) { r = { exito: false, texto: 'No pude: ' + e.message } }
-    const interrumpida = tarea.cancelada && o.tipo !== 'quedate'
-    if (interrumpida) {
-      r = { ...r, exito: false, texto: `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' ? ' ' + r.texto : ''}` }
-      const p = pendienteDe(o, r)
-      if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
-    } else if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null // terminada: ya no hay nada a medias
+    try { r = tarea.cancelada ? { exito: false, texto: '' } : await this.hacer(o, tarea, e.quien) } catch (err) { r = { exito: false, texto: 'No pude: ' + err.message } }
+    r = r || { exito: false, texto: '' }
     if (this.enCurso && this.enCurso.t0 === t0) this.enCurso = null
-    const vuelve = !tarea.cancelada && o.tipo !== 'quedate' && this.despues === 'libre'
-    this.decir(r.texto)
-    this.anotarOrden({ texto, quien, modo: modoAntes, exito: r.exito, resultado: r.texto, s: (Date.now() - t0) / 1000, pasos: r.pasos,
-      despues: o.tipo === 'quedate' ? 'quieto' : interrumpida ? 'otra orden' : this.despues })
-    if (vuelve) this.ponerModo('libre', `al terminar «${texto}»`)
-    return r
+    this.enVuelta = null
+    const motivo = tarea.cancelada ? tarea.motivo || 'reemplazo' : null
+    const clase = agenda.clasificar(e, r, motivo)
+    const s = (Date.now() - t0) / 1000
+    const anotar = (exito, resultado, despues) => this.anotarOrden({ texto, quien: e.quien, modo: e.modoAntes || this.modo, exito, resultado, s, pasos: r.pasos, despues })
+    if (clase === 'interrumpida') { e.reanudar = true; this.ev(`[agenda] «${texto}» en pausa por una urgencia`); return null }
+    if (clase === 'cortada') {
+      this.agenda.quitar(e)
+      if (motivo === 'reemplazo') {
+        const p = pendienteDe(o, r)
+        if (p) this.pendiente = { o: p, texto: textoDe(p, texto) }
+        const t = `Dejo «${texto}» por la orden nueva.${o.tipo === 'tala' && r.texto ? ' ' + r.texto : ''}`
+        this.decir(t); anotar(false, t, 'otra orden'); this.soltar(e, { ...r, exito: false, texto: t })
+      } else { anotar(false, `cortada (${motivo})`, 'quieto'); this.soltar(e, { ...r, exito: false, texto: r.texto || `Dejo «${texto}».` }) }
+      return null
+    }
+    const ms = this.agenda.anotar(e, clase)
+    if (clase === 'repetir') { if (r.texto) this.decir(r.texto); this.ev(`[agenda] «${texto}»: vuelta ${e.vueltas + 1}`); return null }
+    if (clase === 'reintentar') {
+      const aux = agenda.recuperar(r.texto)
+      this.ev(`[agenda] «${texto}» falló (${r.texto}); reintento ${e.fallosSeguidos} en ${ms / 1000} s${aux ? `, antes ${aux.tipo}` : ''}`)
+      if (e.fallosSeguidos === 1) this.decir(`${r.texto} Lo vuelvo a intentar.`)
+      if (aux) { const x = this.agenda.entrada(aux, aux.tipo, 'agenda', { tipo: 'una' }); x.fallosSeguidos = agenda.REINTENTOS.una; this.agenda.interrumpir(x) }
+      for (const t1 = Date.now(); Date.now() - t1 < ms && !this.tarea.cancelada; ) await esperar(250) // la espera la corta cualquier orden
+      if (this.tarea.cancelada && this.tarea.motivo !== 'interrupcion' && !this.agenda.cola.includes(e) && !this.agenda.pila.includes(e)) this.soltar(e, { exito: false, texto: `Dejo «${texto}».` })
+      return null
+    }
+    // hecha o definitiva: fuera
+    const t = clase === 'definitiva' && e.fallosSeguidos ? `${r.texto} (lo dejo tras ${e.fallosSeguidos + 1} intentos)` : r.texto
+    if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null
+    if (t) this.decir(t)
+    anotar(!!r.exito, t, this.despues)
+    this.soltar(e, { ...r, texto: t })
+    return e.quien === 'auto' || e.quien === 'agenda' ? null : e
   }
 
   anotarOrden({ texto, quien, modo, exito, resultado, s, pasos, despues }) {
