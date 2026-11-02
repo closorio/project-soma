@@ -864,6 +864,22 @@ class Personaje {
         const nombre = ES[o.bloque.replace(/_ore$/, '')] || o.bloque.replace(/_ore$/, '').replace(/_/g, ' ')
         return { exito: total > 0, hechos: total, texto: total ? `Miné ${total} de ${nombre}${total < o.n ? ` (quería ${o.n}: ${causa})` : ''}.` : `No miné nada: ${causa}.`, pasos }
       }
+      case 'materiales': {
+        // 2026-11-02: la lista de materiales de una construcción grande (bot/materiales/*.json) contra el inventario y los cofres de HOGAR
+        const mat = require('./materiales'), plan = mat.cargar(o.plano)
+        if (!plan) return { exito: false, texto: `No tengo la lista de materiales de ${o.plano}.`, pasos: [] }
+        bot.chat(`Reviso los cofres de ${o.zona} para ${plan.nombre}…`)
+        const [r, d] = await paso('revisar_cofres', [o.zona])
+        if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [d] }
+        const stock = { ...(r.items || {}) }
+        for (const it of bot.inventory.items()) stock[it.name] = (stock[it.name] || 0) + it.count
+        const falta = mat.faltan(plan, stock)
+        const donde = r.cofres ? `${r.cofres} cofre${r.cofres === 1 ? '' : 's'} de ${r.zona}${r.noAbiertos ? ` (${r.noAbiertos} sin abrir)` : ''} y mi inventario` : `mi inventario (${r.causa === 'sin cofres' ? `no hay cofres en ${r.zona}` : `no abrí ningún cofre de ${r.zona}`})`
+        if (!falta.length) return { exito: true, texto: `Con ${donde} tengo todo para ${plan.nombre}.`, pasos: [d] }
+        bot.chat(`Para ${plan.nombre} me falta, mirando ${donde}:`)
+        for (const f of mat.frases(falta)) bot.chat(f)
+        return { exito: true, texto: `Faltan ${falta.length} materiales de ${Object.keys(plan.materiales).length}.`, pasos: [d] }
+      }
       case 'construye': {
         const aqui = o.aqui ? bot.entity.position.floored() : null
         const [r, d] = await paso('construir', o.retomar ? [`retomar=${o.retomar}`] : [o.plano, ...(aqui ? [String(aqui.x + 2), String(aqui.z + 2)] : [])])

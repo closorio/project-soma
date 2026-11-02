@@ -1,0 +1,23 @@
+{
+ "nombre": "granja de piedra",
+ "origen": "Little stone farm (with beacon)-from-abfielder.litematic (Mini stone farm, de Syttynyt; 10×6×6, 151 bloques, MC 1.19.4). Pese al nombre del archivo, no lleva faro.",
+ "materiales": {
+  "black_concrete": 70,
+  "spruce_trapdoor": 20,
+  "hopper": 10,
+  "stone": 10,
+  "repeater": 8,
+  "redstone": 5,
+  "redstone_torch": 2,
+  "chest": 2,
+  "piston": 2,
+  "stone_button": 1,
+  "water_bucket": 1,
+  "lava_bucket": 1
+ },
+ "notas": {
+  "black_concrete": "solo estructura: vale cualquier bloque sólido",
+  "water_bucket": "el diseño tiene 10 bloques de agua; con un cubo (o dos) se rellena",
+  "lava_bucket": "una sola fuente de lava; el resto fluye"
+ }
+}
