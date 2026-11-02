@@ -410,6 +410,7 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     b.heldItem = it('iron_sword'); ok(pendiente(b) === 'armadura', `pendiente: con la espada en la mano → ${pendiente(b)}`)
     b.inventory.slots[6] = it('diamond_chestplate'); ok(pendiente(b) === null, `pendiente: ya lleva un peto mejor → ${pendiente(b)}`)
   }
+  for (const t of ['Oqva, entra al portal', 'cruza el portal', 've al nether', 'vuelve al mundo normal']) { const o = ordenes.interpretar(t); ok(o.tipo === 'portal', `«${t}» → ${JSON.stringify(o)}`) }
   { const o = ordenes.interpretar('ataca al zombi'); ok(o.de === 'zombie' && !o.nombre, `«ataca al zombi» no lleva nombre: ${JSON.stringify(o)}`) }
   {
     const yo = { id: 0, type: 'player' }, bx = { entity: yo }

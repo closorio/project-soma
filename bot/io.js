@@ -95,7 +95,7 @@ const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s y
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
 const PALABRAS = { ordenes: 'órdenes', libre: 'libre' }
 // Lo que dice al aceptar una orden con acción (por el chat, y la respuesta inmediata de `orden` por el puerto).
-const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', recupera: () => 'Voy a por mis cosas.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
+const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () => 'Te sigo.', recupera: () => 'Voy a por mis cosas.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
   tala: (o) => `Voy a talar ${o.n} tronco${o.n > 1 ? 's' : ''}.`, guarda: () => 'Voy al cofre.',
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
@@ -811,6 +811,29 @@ class Personaje {
     }
     switch (o.tipo) {
       case 'quedate': return { exito: true, texto: 'Me quedo aquí.' }
+      case 'portal': {
+        // 2026-11-01: entrar al portal (del Nether o del End) más cercano a ≤ 64: se mete en un bloque del portal (el de abajo, con
+        // obsidiana debajo, si es del Nether), se queda quieto dentro y espera a cambiar de dimensión (el del Nether tarda ~4 s)
+        const dim0 = bot.game.dimension
+        const bloques = bot.findBlocks({ matching: (b) => b.name === 'nether_portal' || b.name === 'end_portal', maxDistance: 64, count: 64 })
+        if (!bloques.length) return { exito: false, texto: 'No veo ningún portal cerca (a 64 bloques).' }
+        const abajo = (v) => { const k = bot.blockAt(v.offset(0, -1, 0)); return !!k && k.name !== 'nether_portal' }
+        const p = bot.entity.position
+        const meta = bloques.filter(abajo).sort((a, b) => a.distanceTo(p) - b.distanceTo(p))[0] || bloques[0]
+        const dentro = () => { const k = bot.blockAt(bot.entity.position.floored()); return !!k && /portal$/.test(k.name) }
+        const r = await moverHasta(bot, new goals.GoalBlock(meta.x, meta.y, meta.z), () => dentro() || bot.game.dimension !== dim0, { ms: 90000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+        if (r !== 'listo' && !dentro()) return { exito: false, texto: `No llego al portal (${r}).` }
+        bot.pathfinder.setGoal(null); bot.clearControlStates()
+        for (let t0 = Date.now(); Date.now() - t0 < 15000 && !tarea.cancelada; await esperar(250)) {
+          if (bot.game.dimension !== dim0) {
+            await esperar(2000) // a que cargue el otro lado
+            const DIM = { the_nether: 'el Nether', overworld: 'el mundo normal', the_end: 'el End' }
+            return { exito: true, texto: `Ya estoy en ${DIM[String(bot.game.dimension).replace('minecraft:', '')] || bot.game.dimension}.` }
+          }
+          if (!dentro()) { await moverHasta(bot, new goals.GoalBlock(meta.x, meta.y, meta.z), dentro, { ms: 5000, tarea, mov: prudentes(bot, { pisarVedadas: true }) }); bot.pathfinder.setGoal(null); bot.clearControlStates() }
+        }
+        return { exito: false, texto: tarea.cancelada ? 'Dejo el portal.' : 'Estoy en el portal pero no me lleva: ¿está encendido?' }
+      }
       case 'ven': {
         const falta = await this.acercarseA(this.jugadorDe(quien), o.en, tarea)
         if (falta !== null) return { exito: false, texto: falta || 'Dejo de buscarte.' }
