@@ -27,8 +27,8 @@ y crafteen. Además, todo alcance es individual: las zonas de un dueño no son l
 - El `HOGAR` de ejemplo del repo sigue siendo `vedada` hasta que cada dueño lo cambie a `hogar` (`!zona fin HOGAR hogar`).
 - `entrenamiento/mundo.py` sigue leyendo el `zonas.json` heredado.
 - Cambiar el modo de una zona ya marcada: `!zona modo NOMBRE vedada|no_talar|trabajo|hogar` (`zonas.cambiarModo`).
-- El hogar es la zona preferida (si no hay, todo como antes): `habilidades/hogar.js` lleva al personaje allí si está fuera, a ≤ 64 bloques
-  (24 para refugiarse) y sin hostiles a ≤ 8. Lo usan `dormir` (antes de poner la cama), `usar_cama` («duerme»; además prefiere las camas
+- El hogar es la zona preferida (si no hay, todo como antes): `habilidades/hogar.js` lleva al personaje allí si está fuera, a ≤ 400 bloques
+  (96 para refugiarse), por tramos con `viajeLargo` y sin hostiles a ≤ 8. Lo usan `dormir` (antes de poner la cama), `usar_cama` («duerme»; además prefiere las camas
   del hogar), `refugiarse auto` (dentro no se pica: tapia) y `depositar` (cofres del hogar primero, sin desplazarse). «modo centinela» sin zona
   y `equipar_soportes` usan el hogar del dueño (`IO_BASE`/HOGAR solo si no hay ninguno).
 - Prueba en seco: `bot/probar_zona_hogar_seco.js` (14/14). No se ha probado en juego.
