@@ -2,11 +2,11 @@
 // paleta de 5 → 3 bits con valores que cruzan el límite de un long, escaleras, puerta de dos mitades, losa doble y antorcha de pared),
 // lo importa y comprueba la vuelta bloque a bloque, los materiales, el orden de colocación y el catálogo. No toca bot/estructuras/.
 // Uso: node bot/probar_estructuras_seco.js
-const fs = require('fs'), os = require('os'), path = require('path'), zlib = require('zlib')
-const nbt = require('prismarine-nbt')
+const fs = require('fs'), os = require('os'), path = require('path')
 const registry = require('minecraft-data')('1.21.11')
 const estructuras = require('./estructuras')
 const imp = require('../herramientas/importar_estructura')
+const sint = require('../herramientas/litematic_sintetico')
 
 let pruebas = 0, fallos = 0
 const ok = (cond, que) => { pruebas++; if (!cond) { fallos++; console.log('  FALLO ' + que) } }
@@ -20,51 +20,11 @@ const LOSA = ['oak_slab', { type: 'double' }], ANTORCHA = ['wall_torch', { facin
 const FAROL = ['lantern', { hanging: 'true', waterlogged: 'false' }]
 
 const esperado = new Map() // "x,y,z" absoluta → estado, lo que el importador tiene que devolver
-
-// Una región: pos y size como en el archivo (size puede ser negativo); poner() recibe coordenadas absolutas
-function region(pos, size, paleta) {
-  const min = [0, 1, 2].map(i => pos[i] + (size[i] < 0 ? size[i] + 1 : 0)), tam = size.map(Math.abs)
-  const valores = new Array(tam[0] * tam[1] * tam[2]).fill(0)
-  return {
-    pos, size, paleta, valores,
-    poner(x, y, z, i) {
-      const [lx, ly, lz] = [x - min[0], y - min[1], z - min[2]]
-      if (lx < 0 || ly < 0 || lz < 0 || lx >= tam[0] || ly >= tam[1] || lz >= tam[2]) throw new Error('fuera de la región')
-      valores[ly * tam[0] * tam[2] + lz * tam[0] + lx] = i
-      if (i) esperado.set(`${x},${y},${z}`, estadoDe(paleta[i])); else esperado.delete(`${x},${y},${z}`)
-    },
-  }
-}
-
-// Empaqueta los índices de forma continua (bits = max(2, ceil(log2(paleta)))) y los parte en longs como pares [alto, bajo] de int32
-function empaquetar(valores, tamPaleta) {
-  const bits = Math.max(2, Math.ceil(Math.log2(tamPaleta)))
-  let todo = 0n
-  valores.forEach((v, i) => { todo |= BigInt(v) << BigInt(i * bits) })
-  const longs = []
-  for (let k = 0; k < Math.ceil(valores.length * bits / 64); k++) {
-    const w = (todo >> BigInt(64 * k)) & ((1n << 64n) - 1n)
-    longs.push([Number(BigInt.asIntN(32, w >> 32n)), Number(BigInt.asIntN(32, w))])
-  }
-  return longs
-}
-
-function litematic(regiones) {
-  const xyz = (v) => nbt.comp({ x: nbt.int(v[0]), y: nbt.int(v[1]), z: nbt.int(v[2]) })
-  const entrada = ([nombre, props]) => nbt.comp(props
-    ? { Name: nbt.string('minecraft:' + nombre), Properties: nbt.comp(Object.fromEntries(Object.entries(props).map(([k, v]) => [k, nbt.string(v)]))) }
-    : { Name: nbt.string('minecraft:' + nombre) })
-  const Regions = {}
-  regiones.forEach((r, i) => {
-    Regions['region' + i] = nbt.comp({
-      Position: xyz(r.pos), Size: xyz(r.size),
-      BlockStatePalette: nbt.list(nbt.comp(r.paleta.map(entrada).map(c => c.value))),
-      BlockStates: nbt.longArray(empaquetar(r.valores, r.paleta.length)),
-    })
-  })
-  const raiz = nbt.comp({ MinecraftDataVersion: nbt.int(4671), Regions: nbt.comp(Regions) }, '')
-  return zlib.gzipSync(nbt.writeUncompressed(raiz, 'big'))
-}
+const { litematic } = sint
+// una región que apunta en `esperado` cada bloque que se pone (el armador está en herramientas/litematic_sintetico.js)
+const region = (pos, size, paleta) => sint.region(pos, size, paleta, (x, y, z, i) => {
+  if (i) esperado.set(`${x},${y},${z}`, estadoDe(paleta[i])); else esperado.delete(`${x},${y},${z}`)
+})
 
 // Región A: 5×4×4 en (10, 5, 20); paleta de 5 → 3 bits. Región B: Size negativo, Position en la esquina opuesta; paleta de 5 → 3 bits
 const A = region([10, 5, 20], [5, 4, 4], [AIRE, TABLON, ESCALERA, BAJA, ALTA])

@@ -1,0 +1,14 @@
+{
+ "nombre": "casita prueba",
+ "origen": "casita_prueba.litematic (5×5×5, 99 bloques; importado para MC 1.21.11)",
+ "importado": true,
+ "materiales": {
+  "oak_planks": 68,
+  "oak_slab": 17,
+  "oak_stairs": 10,
+  "glass": 2,
+  "oak_door": 1,
+  "torch": 1
+ },
+ "notas": {}
+}

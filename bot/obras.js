@@ -2,7 +2,8 @@
 // (habilidad deshacer, o reponerlo por RCON en las pruebas) y para que la mente lo vea. Se guarda en obras.json de los datos del
 // mundo (bot/mundo.js: ../obras.json en el del usuario):
 //   { permitido: { x1, z1, x2, z2 } | null,   ← rectángulo de obras acordado con el usuario; sin él, construir y minar se niegan
-//     obras: [{ id, nombre, plano, personaje, materia, origen: [x, y, z], inicio, fin, estado, bloques: [[x, y, z, tipo], …] }],
+//     obras: [{ id, nombre, plano, personaje, materia, origen: [x, y, z], inicio, fin, estado, bloques: [[x, y, z, tipo], …],
+//              andamio: [[x, y, z, tipo], …], mal_orientado: [[x, y, z, estado], …] }],   ← andamio y mal_orientado: catálogo (2026-11-02)
 //     minados: [{ t, personaje, x, y, z, tipo, herramienta }] }
 // Se relee solo cuando el archivo cambia (como cofres.js y zonas.js); cada bloque puesto se escribe en el acto, no al final.
 const fs = require('fs')
@@ -47,6 +48,16 @@ function quitarPuesto(id, [x, y, z]) {
   o.bloques = o.bloques.filter(b => !(b[0] === x && b[1] === y && b[2] === z))
   guardar(d)
 }
+// Catálogo (2026-11-02): el andamio (se quita al acabar o con deshacer) y los bloques que quedaron con otra orientación
+function anotarEn(id, campo, bloque) { const d = leer(), o = buscarId(d, id); if (o) { (o[campo] = o[campo] || []).push(bloque); guardar(d) } }
+const anotarAndamio = (id, bloque) => anotarEn(id, 'andamio', bloque)
+const anotarMal = (id, bloque) => anotarEn(id, 'mal_orientado', bloque)
+function quitarAndamio(id, [x, y, z]) {
+  const d = leer(), o = buscarId(d, id)
+  if (!o || !o.andamio) return
+  o.andamio = o.andamio.filter(b => !(b[0] === x && b[1] === y && b[2] === z))
+  guardar(d)
+}
 function reabrir(id) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = 'en curso'; o.fin = null; guardar(d) } } // «continúa»
 function cerrar(id, estado) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = estado; o.fin = fecha(); guardar(d) } }
 function anotarMinado(personaje, [x, y, z], tipo, herramienta) {
@@ -61,6 +72,6 @@ const obra = (nombre) => [...leer().obras].reverse().find(o => (o.nombre === nom
 const enCurso = () => leer().obras.find(o => o.estado === 'en curso') || null
 const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: o.plano, estado: o.estado, bloques: o.bloques.length, origen: o.origen }))
 // ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
-const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && o.bloques.some(b => b[0] === x && b[1] === y && b[2] === z))
+const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && [...o.bloques, ...(o.andamio || [])].some(b => b[0] === x && b[1] === y && b[2] === z))
 
-module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }
+module.exports = { leer, guardar, permitido, enPermitido, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

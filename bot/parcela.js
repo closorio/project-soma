@@ -106,6 +106,38 @@ function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax =
   if (camino && !conCamino(bot, pie, mov)) return { mal: 'sin camino hasta la parcela' }
   return { x0, z0, y, desnivel, relleno, pie }
 }
+// Catálogo de estructuras (2026-11-02): la caja dim con la esquina mínima en (x0, y0, z0), tal como la da el usuario. Entera dentro del
+// rectángulo de obras (mundo del usuario) y de la zona de trabajo, sin pisar zonas vedadas ni cofres (sin el margen de 10 de evaluar:
+// la posición la ha elegido él). Lo que hay dentro: aire, bien; vegetación que se quita (hierba, flores, nieve…), a `quitar`; cualquier
+// otro bloque o líquido, ocupado (no empieza ni excava). Bajo cada columna con bloque en la capa 0, suelo sólido o `relleno` hasta 8
+// por debajo. `columnas`: las (dx, dz) con bloque en la capa 0. Devuelve { x0, z0, y: y0 − 1, desnivel, relleno, quitar, pie } o { mal }.
+function evaluarCaja(bot, x0, y0, z0, [ancho, alto, largo], columnas, { mov = null, camino = true } = {}) {
+  const esquinas = [[x0, z0], [x0 + ancho - 1, z0], [x0, z0 + largo - 1], [x0 + ancho - 1, z0 + largo - 1]]
+  if (!require('./mundo').reglasLibres && !esquinas.every(([x, z]) => obras.enPermitido(x, z))) return { mal: 'fuera del rectángulo de obras' }
+  if (esquinas.some(([x, z]) => zonas.fueraDeTrabajo(x, null, z))) return { mal: 'fuera de la zona de trabajo' }
+  const ocupado = [], quitar = [], relleno = []
+  for (let x = x0; x < x0 + ancho; x++) for (let z = z0; z < z0 + largo; z++) {
+    for (let y = y0; y < y0 + alto; y++) {
+      if (zonas.pasoVedado(x, y, z) || cofres.esCofre(x, y, z)) return { mal: `protegido en ${x},${y},${z}` }
+      const b = bot.blockAt(new Vec3(x, y, z))
+      if (!b) return { mal: `sin cargar en ${x},${y},${z}` }
+      if (b.name === 'air' || b.name === 'cave_air') continue
+      if ((libre(b) || b.name === 'snow') && !esLiquido(b)) quitar.push([x, y, z])
+      else ocupado.push([x, y, z, b.name])
+    }
+  }
+  if (ocupado.length) return { mal: `ocupado: ${ocupado.length} bloques (${ocupado.slice(0, 3).map(o => o.join(',')).join('; ')}${ocupado.length > 3 ? '…' : ''})` }
+  for (const [dx, dz] of columnas) {
+    const x = x0 + dx, z = z0 + dz
+    let y = y0 - 1
+    for (; y >= y0 - 9; y--) { const b = bot.blockAt(new Vec3(x, y, z)); if (solido(b) && !esLiquido(b)) break }
+    if (y < y0 - 9) return { mal: `sin suelo bajo ${x},${y0},${z} (más de 8 de hueco)` }
+    for (let yy = y + 1; yy < y0; yy++) relleno.push([x, yy, z])
+  }
+  const pie = [x0 - 1, y0, z0 - 1]
+  if (camino && !conCamino(bot, pie, mov)) return { mal: 'sin camino hasta la obra' }
+  return { x0, z0, y: y0 - 1, desnivel: 0, relleno, quitar, pie }
+}
 // ¿Hay camino a pie hasta el pie de la parcela? El cálculo es síncrono (bloquea a todos los personajes del proceso): corto.
 const conCamino = (bot, pie, mov) => hayCamino(bot, new goals.GoalNear(pie[0], pie[1], pie[2], 1), 150, mov)
 const respirar = () => new Promise(resolve => setImmediate(resolve))
@@ -147,4 +179,4 @@ function superficieAgua(bot, x, z, yRef, margen = 6) {
   return null
 }
 
-module.exports = { superficieAgua, pisable, superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }
+module.exports = { superficieAgua, pisable, superficie, vecinosLiquidos, caeEncima, lejosDeProtegido, distRect, evaluar, evaluarCaja, elegirParcela, libre, solido, esLiquido, LIQUIDO, CAE }
