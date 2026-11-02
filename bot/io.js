@@ -256,7 +256,9 @@ class Personaje {
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
       if (!obedece(u) || (AMOS.size && !AMOS.has(u))) { // con dueños (IO_DUENOS o IO_AMOS), solo atiende por el chat a esos jugadores (órdenes y !zona)
-        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
+        const dest = ordenes.destinatario(t, [...VIVOS.keys()]).a
+        if (dest === 'todos') return // 2026-11-02: «todos …» de quien no es su dueño se ignora sin avisar (no contestan todos los bots a la vez)
+        if (dest && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
         return
       }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
