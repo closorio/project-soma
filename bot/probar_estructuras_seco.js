@@ -187,6 +187,19 @@ if (fs.existsSync(JAR)) { // una casa de aldea de verdad (no se guarda en el rep
 }
 console.log('  .nbt: palette y blocks, jigsaw con su final_state, structure_void fuera, entrada por la puerta o FRONT=')
 
+// --- 7b. .schem de WorldEdit (Sponge v2 y v3) ----------------------------------------------------------------------------------
+// paleta de 200 estados (los índices > 127 ocupan dos bytes en varint); 3×2×2, orden x + z·W + y·W·L
+const RELLENO = registry.blocksArray.map(b => b.name).filter(n => !/air$|^stone$|^oak_stairs$/.test(n)).slice(0, 197) // distintos: la paleta no repite
+const ESTADOS = ['air', 'stone', ...RELLENO, 'oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]']
+const IND = [0, 1, 199, 1, 0, 199, 199, 0, 0, 0, 1, 0] // (x, y, z): 199 en (2,0,0), (2,0,1), (0,1,0)
+for (const version of [2, 3]) {
+  const sc = imp.importar(sint.schem(version, [3, 2, 2], ESTADOS, IND), { id: 'schem_prueba', registry }).estructura, scm = casillas(sc)
+  ok(sc.dim.join() === '3,2,2' && sc.bloques.length === 6, `schem v${version}: ${sc.dim} ${sc.bloques.length} bloques`)
+  ok(scm.get('2,0,0') === 'oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]' && scm.get('0,1,0') === scm.get('2,0,1') && scm.get('1,1,1') === 'stone' && !scm.has('0,0,0'),
+    `schem v${version}: índices en varint de dos bytes y orden x + z·W + y·W·L`)
+}
+console.log('  .schem de WorldEdit (v2 y v3): varint y orden de los bloques')
+
 // --- 8. girar -----------------------------------------------------------------------------------------------------------------
 const cas = imp.importar(sint.casita(), { id: 'casita', registry }).estructura
 const cuatro = [1, 1, 1, 1].reduce((p, v) => estructuras.girar(p, v), cas)

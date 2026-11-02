@@ -1,5 +1,5 @@
-// Importa un .litematic (Litematica) o un .nbt (bloque de estructura del juego), NBT con gzip, al catálogo: bot/estructuras/<id>.json y bot/materiales/<id>.json.
-// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic|.nbt ID [ALIAS[,ALIAS…]] [--front=este]   (o make import-structure)
+// Importa un .litematic (Litematica), un .nbt (bloque de estructura del juego) o un .schem (WorldEdit/Sponge v2-v3), NBT con gzip, al catálogo: bot/estructuras/<id>.json y bot/materiales/<id>.json.
+// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic|.nbt|.schem ID [ALIAS[,ALIAS…]] [--front=este]   (o make import-structure)
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -93,13 +93,41 @@ function deNbt(raiz) {
   return { dim, paleta, puestos, nombres }
 }
 
-// buf: el archivo entero (.litematic o .nbt, con gzip). opts: { id, alias, fuente, frente, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
+// .schem de WorldEdit (Sponge, 2026-11-02): v2 con Palette {"minecraft:x[…]": índice} y BlockData en la raíz; v3 dentro de
+// Schematic.Blocks (Palette y Data). Los índices van en varint (7 bits por byte) y en orden x + z·Width + y·Width·Length.
+function deSchem(raiz) {
+  const s = raiz.Schematic || raiz
+  const bl = s.Blocks || s
+  const pal = bl.Palette, datos = bl.Data || bl.BlockData
+  if (!pal || !datos) throw new Error('el .schem no trae Palette y BlockData (o Blocks.Data)')
+  const [W, H, L] = [s.Width, s.Height, s.Length]
+  const estados = [], nombres = []
+  for (const [texto, i] of Object.entries(pal)) {
+    estados[i] = estadoDeTexto(texto)
+    nombres.push([String(texto).replace(/^minecraft:/, '').split('[')[0], estructuras.nombre(estados[i])])
+  }
+  const paleta = [], idx = new Map(), puestos = new Map()
+  let p = 0
+  for (let n = 0; n < W * H * L; n++) {
+    let v = 0, despl = 0, b
+    do { b = datos[p++] & 0xff; v |= (b & 0x7f) << despl; despl += 7 } while (b & 0x80)
+    const estado = estados[v]
+    if (!estado || AIRE.has(estructuras.nombre(estado)) || estructuras.nombre(estado) === 'structure_void') continue
+    const x = n % W, z = Math.floor(n / W) % L, y = Math.floor(n / (W * L))
+    if (!idx.has(estado)) { idx.set(estado, paleta.length); paleta.push(estado) }
+    puestos.set(`${x},${y},${z}`, idx.get(estado))
+  }
+  return { dim: [W, H, L], paleta, puestos, nombres }
+}
+
+// buf: el archivo entero (.litematic, .nbt o .schem, con gzip). opts: { id, alias, fuente, frente, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
 function importar(buf, opts) {
   const registry = opts.registry || require(path.join(BOT, 'node_modules', 'minecraft-data'))(VERSION)
   const raiz = nbt.simplify(nbt.parseUncompressed(zlib.gunzipSync(buf)))
   // 2026-11-02: también los .nbt de los bloques de estructura del juego (size, palette, blocks), además de los .litematic (Regions)
-  const leido = raiz.Regions ? deLitematic(raiz) : (raiz.blocks && (raiz.palette || raiz.palettes)) ? deNbt(raiz) : null
-  if (!leido) throw new Error('el archivo no es un .litematic (Regions) ni un .nbt de estructura (size, palette, blocks)')
+  const esSchem = (raiz.Schematic && raiz.Schematic.Blocks) || (raiz.Palette && raiz.BlockData)
+  const leido = raiz.Regions ? deLitematic(raiz) : (raiz.blocks && (raiz.palette || raiz.palettes)) ? deNbt(raiz) : esSchem ? deSchem(raiz) : null
+  if (!leido) throw new Error('el archivo no es un .litematic (Regions), un .nbt de estructura (size, palette, blocks) ni un .schem (Palette, BlockData)')
   const { dim, paleta, puestos, nombres } = leido
   const desconocidos = new Set(), renombrados = new Set()
   for (const [viejo, nombre] of nombres) {

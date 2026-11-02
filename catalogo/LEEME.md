@@ -12,10 +12,10 @@ Vale cualquiera de estos dos formatos:
 | Formato | De dónde sale |
 |---|---|
 | `.litematic` | Litematica (mod de cliente): selecciona la zona y guárdala. También las que se descargan de webs de esquemas. |
+| `.schem` | WorldEdit (`//schem save`), y la mayoría de webs de esquemas. Versiones 2 y 3 del formato (Sponge). |
 | `.nbt` | El **bloque de estructura** del juego (modo «Guardar»: quedan en `<mundo>/generated/minecraft/structures/`), o las de los datapacks y del propio juego (aldeas, etc.). |
 
-Otros formatos (`.schem` de WorldEdit, `.schematic` antiguo, `.mcstructure` de Bedrock) no se leen: ábrelos en Litematica y
-guárdalos como `.litematic`.
+Otros formatos (`.schematic` antiguo, `.mcstructure` de Bedrock) no se leen: ábrelos en Litematica y guárdalos como `.litematic`.
 
 Webs donde descargar construcciones (busca las que den `.litematic` o `.nbt`):
 
@@ -46,8 +46,13 @@ make structures                       # la lista: id, tamaño, bloques, material
 - Si sale «bloques que no existen en 1.21.11: …», la plantilla es de otra versión con bloques que ya no están: cámbialos en el juego
   y vuelve a guardarla.
 
-Esto crea `bot/estructuras/<id>.json` (la plantilla) y `bot/materiales/<id>.json` (la lista de materiales). Súbelos a git si quieres
-que la plantilla la tengan también los bots del otro PC.
+Esto crea `bot/estructuras/<id>.json` (la plantilla) y `bot/materiales/<id>.json` (la lista de materiales). **El catálogo es de cada
+uno**: `catalogo/` (salvo esta guía, el PDF y lo de las pruebas), `bot/estructuras/` y `bot/materiales/` no van a git. Para darle una
+plantilla al otro, pásale el archivo y que la importe en su PC (puedes organizarlas en subcarpetas: `catalogo/schematic/…`).
+
+**Ojo con el tamaño**: `make structures` dice cuántos bloques tiene. Una casa son cien o doscientos; una construcción con su terreno
+puede tener más de cien mil (lo que el bot tardaría semanas en poner y no cabe en una zona de obras normal). Si el esquema trae la
+colina o el suelo, recórtalo en Litematica o WorldEdit antes de importarlo.
 
 ## 3. Marcar dónde se puede construir (carteles)
 

@@ -49,12 +49,13 @@ A = [ANCHO * 0.47, ANCHO * 0.53]
 
 SECCIONES = [
     ("1. Preparar la plantilla (terminal, en la raíz del proyecto)", [
-        ("cp casa.litematic catalogo/", "Copia la plantilla a <b>catalogo/</b>. Vale <b>.litematic</b> (Litematica) o <b>.nbt</b> (bloque de estructura del "
-         "juego). Los .schem/.schematic/.mcstructure: ábrelos en Litematica y guárdalos como .litematic."),
+        ("cp casa.schem catalogo/", "Copia la plantilla a <b>catalogo/</b> (puedes usar subcarpetas). Vale <b>.litematic</b> (Litematica), <b>.schem</b> "
+         "(WorldEdit) o <b>.nbt</b> (bloque de estructura). El catálogo es <b>local</b>: no va a git; pásale el archivo al otro y que lo importe."),
         ("make import-structure FILE=catalogo/casa.litematic NAME=casa ALIAS=\"casa de roble\"", "La importa al catálogo: id <b>casa</b> (minúsculas, números y _), con un alias para el chat."),
         ("make import-structure FILE=catalogo/torre.nbt NAME=torre FRONT=sur", "<b>FRONT</b>: lado de la entrada si no se deduce bien de la puerta (norte, sur, este, oeste). "
          "<b>FORCE=1</b> pisa una lista de materiales hecha a mano."),
-        ("make structures", "La lista del catálogo: id, tamaño, bloques, materiales y lo que no se consigue."),
+        ("make structures", "La lista del catálogo: id, tamaño, bloques, materiales y lo que no se consigue. Mira los bloques: si trae terreno "
+         "(más de cien mil), recórtalo antes en Litematica o WorldEdit."),
     ]),
     ("2. Zona de obras con carteles (en el juego)", [
         ("Cartel:  [obras]  /  norte", "Dos carteles en esquinas opuestas: primera línea <b>[obras]</b>, segunda el mismo nombre en los dos."),
@@ -98,7 +99,7 @@ SECCIONES = [
     ]),
     ("Webs para descargar estructuras (busca .litematic o .nbt)", [
         ('<link href="https://www.planetminecraft.com/" color="#1f4e79"><u>planetminecraft.com</u></link>', "La mayor comunidad: proyectos con descarga de esquemas, muchos en .litematic. Gratis."),
-        ('<link href="https://www.minecraftmaps.com/schematics" color="#1f4e79"><u>minecraftmaps.com/schematics</u></link>', "Esquemas en .litematic, .schem, .nbt y .mcstructure, con vista 3D y lista de materiales. Gratis."),
+        ('<link href="https://www.minecraftmaps.com/schematics" color="#1f4e79"><u>minecraftmaps.com/schematics</u></link>', "Esquemas en .litematic, .schem y .nbt (y .mcstructure, que no sirve), con vista 3D y lista de materiales. Gratis."),
         ('<link href="https://www.donut.build/" color="#1f4e79"><u>donut.build</u></link>', "Construcciones en .litematic."),
         ('<link href="https://store.abfielder.com/" color="#1f4e79"><u>store.abfielder.com</u></link>', "Granjas y construcciones en .litematic (de pago)."),
         ("data/minecraft/structure/ del jar del servidor", "Las del propio juego en .nbt (casas de aldea, etc.): unzip -p server.jar data/minecraft/structure/village/plains/houses/plains_small_house_1.nbt &gt; catalogo/casa.nbt"),

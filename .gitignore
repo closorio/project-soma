@@ -68,3 +68,16 @@ local.env
 *.local.md
 # zonas por dueño en los mundos de un solo jugador (zonas.js: zonas_<dueño>.json): de cada persona, como los .local
 mundos/*/zonas_*.json
+# catálogo de estructuras local (2026-11-02): las plantillas y lo importado son de cada uno (se comparten aparte); en el repo solo la
+# guía, el PDF y lo que usan las pruebas
+catalogo/*
+!catalogo/.gitkeep
+!catalogo/LEEME.md
+!catalogo/comandos_construccion.pdf
+!catalogo/casita_prueba.litematic
+!catalogo/pruebas/
+bot/estructuras/*
+!bot/estructuras/casita_prueba.json
+bot/materiales/*
+!bot/materiales/casita_prueba.json
+!bot/materiales/granja_piedra.json

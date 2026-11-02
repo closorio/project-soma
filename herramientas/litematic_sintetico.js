@@ -88,7 +88,19 @@ function estructuraNbt(size, paleta, bloques) {
   return zlib.gzipSync(nbt.writeUncompressed(raiz, 'big'))
 }
 
-module.exports = { region, empaquetar, litematic, casita, estructuraNbt }
+// Un .schem de WorldEdit (Sponge v2 o v3): paleta de estados en texto, índices en varint, orden x + z·W + y·W·L (2026-11-02)
+function schem(version, [W, H, L], estados, indices) {
+  const bytes = []
+  for (let v of indices) { do { let b = v & 0x7f; v >>>= 7; if (v) b |= 0x80; bytes.push(b > 127 ? b - 256 : b) } while (v) }
+  const Palette = nbt.comp(Object.fromEntries(estados.map((e, i) => ['minecraft:' + e, nbt.int(i)])))
+  const dims = { Width: nbt.short(W), Height: nbt.short(H), Length: nbt.short(L) }
+  const raiz = version === 3
+    ? nbt.comp({ Schematic: nbt.comp({ Version: nbt.int(3), DataVersion: nbt.int(4671), ...dims, Blocks: nbt.comp({ Palette, Data: nbt.byteArray(bytes) }) }) }, '')
+    : nbt.comp({ Version: nbt.int(2), DataVersion: nbt.int(4671), ...dims, PaletteMax: nbt.int(estados.length), Palette, BlockData: nbt.byteArray(bytes) }, '')
+  return zlib.gzipSync(nbt.writeUncompressed(raiz, 'big'))
+}
+
+module.exports = { region, empaquetar, litematic, casita, estructuraNbt, schem }
 
 if (require.main === module) {
   const [que, salida] = process.argv.slice(2)
