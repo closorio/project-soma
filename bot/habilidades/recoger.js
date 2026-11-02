@@ -1,4 +1,5 @@
-// recoger [radio=8] [filtro]: ir a por los objetos caídos en el radio, del más cercano al más lejano (máx. 8), sin romper bloques.
+// recoger [radio=8] [filtro|-] [max:N] [otra_vez]: ir a por los objetos caídos en el radio, del más cercano al más lejano (máx. N, 8 por
+// defecto), sin romper bloques.
 // Con filtro (p. ej. «_log»), solo los objetos cuyo nombre lo contiene: sin él persigue también huevos, brotes… Éxito si entra algo.
 // F7.7, fuera del mundo del usuario: los inalcanzados se olvidan al minuto (no a los 3), «otra_vez» (la orden «recoge») los vuelve
 // a intentar todos, y un objeto a ≤ 2 bloques al que no llegó andando (en un hueco bajo la pared del pozo, en el hoyo que dejó
@@ -61,8 +62,10 @@ const CERCA_H = 2, CERCA_V = 2
 
 module.exports = async function recoger(bot, args, tarea) {
   const palabras = (args || []).filter(Boolean)
-  const otraVez = SV && palabras.includes('otra_vez')
-  const [radio, filtro] = palabras.filter(a => a !== 'otra_vez')
+  // «otra_vez» (la orden «recoge»): vuelve a intentar lo que dio por inalcanzable; max:N, cuántos objetos como mucho (8 por defecto)
+  const otraVez = palabras.includes('otra_vez')
+  const MAX = Math.min(64, parseInt((palabras.find(a => /^max:\d+$/.test(a)) || 'max:8').slice(4)) || 8)
+  const [radio, f] = palabras.filter(a => a !== 'otra_vez' && !/^max:\d+$/.test(a)), filtro = f === '-' ? null : f
   const R = parseFloat(radio) || 8
   const vale = (e) => !filtro || [filtro, 'objeto'].some(f => nombreObjeto(e).includes(f)) // sin metadatos aún: probar
   const total = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
@@ -79,7 +82,7 @@ module.exports = async function recoger(bot, args, tarea) {
   const fallidos = [] // para diagnosticar «no llegó»: qué objeto y dónde
   const rotos = [] // F7.7: lo que picó para llegar a un objeto encerrado
   await conMovimientos(bot, async () => {
-    for (let k = 0; k < 8; k++) {
+    for (let k = 0; k < MAX; k++) {
       const e = siguiente()
       if (!e || (tarea && tarea.cancelada)) break
       const bajo = bot.blockAt(e.position.offset(0, -0.3, 0))?.name || '?'

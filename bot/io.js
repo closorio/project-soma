@@ -826,8 +826,10 @@ class Personaje {
       case 'tala': return this.talarN(o, tarea, paso)
       case 'recoge': {
         // F7.7: fuera del mundo del usuario, la orden vuelve a intentar también lo que recoger dio por inalcanzable hace poco
-        const [r, d] = await paso('recoger', (o.todo ? '8' : '8 _log') + (mundo.reglasLibres ? ' otra_vez' : ''))
-        const texto = r.exito ? `Recogí ${r.objetos} ${o.todo ? 'cosa' : 'tronco'}${r.objetos === 1 ? '' : 's'}.` : r.causa === 'nada que recoger' ? 'No hay nada que recoger cerca.' : `No pude recoger: ${r.causa}.`
+        // 2026-11-01: «recoge» = todo lo caído a ≤ 16, hasta 32 objetos, reintentando lo que dio por inalcanzable; «recoge los troncos», solo madera
+        const [r, d] = await paso('recoger', (o.troncos ? '16 _log' : '16 -') + ' max:32 otra_vez')
+        const resto = r.quedan ? ` Quedan ${r.quedan} que no alcanzo.` : ''
+        const texto = r.exito ? `Recogí ${r.objetos} ${o.troncos ? 'tronco' : 'cosa'}${r.objetos === 1 ? '' : 's'}.${resto}` : r.causa === 'nada que recoger' ? 'No hay nada que recoger cerca.' : `No pude recoger: ${r.causa}.${resto}`
         return { exito: !!r.exito, texto, pasos: [d] }
       }
       case 'guarda': {

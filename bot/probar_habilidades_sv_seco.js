@@ -377,6 +377,8 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const o = ordenes.interpretar(t); ok(o && o.tipo === 'escolta' && o.a === a, `«${t}» → ${JSON.stringify(o)} (esperaba escolta${a ? ' a ' + a : ''})`)
   }
   ok(ordenes.interpretar('defiéndete').tipo === 'ataca', '«defiéndete» sigue siendo atacar')
+  ok(ordenes.interpretar('recoge').tipo === 'recoge' && !ordenes.interpretar('recoge').troncos, '«recoge» → todo lo caído')
+  ok(ordenes.interpretar('recoge los troncos').troncos && ordenes.interpretar('recoge la madera').troncos, '«recoge los troncos/la madera» → solo troncos')
   for (const [t, modo] of [['defiéndeme', 'pasivo'], ['defiéndeme agresivo', 'agresivo'], ['defiéndeme pasivo', 'pasivo'], ['defiende a Pepe agresiva', 'agresivo']])
     ok(ordenes.interpretar(t).modo === modo, `«${t}» → modo ${ordenes.interpretar(t).modo} (esperaba ${modo})`)
   { const o = ordenes.interpretar('ataca a __Count'); ok(o.tipo === 'ataca' && o.nombre === '__count' && !o.de, `«ataca a __Count» → ${JSON.stringify(o)}`) }

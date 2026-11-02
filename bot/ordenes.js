@@ -171,7 +171,7 @@ function interpretar(texto) {
     const n = numero(t) || 1
     return { tipo: 'tala', n: Math.min(n, MAX_TRONCOS), pedido: n }
   }
-  if (/\b(?:recoge|recoger|recoged|coge|coger|recogelo|recogelos|recolecta)\b/.test(t)) return { tipo: 'recoge', todo: /\btodo\b/.test(t) }
+  if (/\b(?:recoge|recoger|recoged|coge|coger|recogelo|recogelos|recolecta)\b/.test(t)) return { tipo: 'recoge', troncos: /\b(?:troncos?|madera|lena)\b/.test(t) } // 2026-11-01: sin decir troncos, todo lo caído
   if (/\b(?:guarda|guardar|guardad|guardalo|deposita|depositar|vacia)\b|\bal cofre\b/.test(t)) return { tipo: 'guarda' }
   if ((m = t.match(/\b(?:huye|huir|huid|escapa|escapad|alejate|alejaos)\b(?: del? (?:el |la |los |las )?(\w+))?/)))
     return { tipo: 'huye', de: (m[1] && !/^(?:aqui|ahi|alli|aca|este|esta)$/.test(m[1]) && (MOBS[m[1]] || m[1])) || null }
