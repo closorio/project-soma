@@ -1,2 +1,4 @@
 # Carpeta de project-soma (contiene bot/conectar.sh y mundos/<mundo>/personajes.json)
 proyecto: /home/count/codes/project-soma
+# Mundo cuyos personajes (mundos/<mundo>/personajes.json) reciben el color de su puntero al entrar
+mundo: companero
