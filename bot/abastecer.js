@@ -45,7 +45,7 @@ function maderaPreferida(inv, cofre) {
   return Object.entries(cuenta).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 }
 
-function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, evitar = {} } = {}) {
+function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, evitar = {}, conPico = false } = {}) {
   const pasos = [], pedir = {}
   const cofre = { ...(enCofres || {}) }
   // la madera da igual (estructuras.familia): lo de madera que falte, en la que más haya, para no talar ni pedir otra
@@ -112,13 +112,10 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
     if (!hayHorno && !inv.furnace && piedra < 8) conseguir.unshift({ tipo: 'mina', bloque: 'stone', n: 8 - piedra, para: 'furnace' })
   }
   // minar piedra o menas pide pico: si no lleva ninguno, uno de madera antes de minar (Oqva, 2026-11-02: cavó hasta el carbón sin pico)
+  // (otra vez el plan entero con el pico: los troncos y los cofres se cuentan una vez para todo)
   const minaDura = conseguir.some(p => p.tipo === 'mina' && /stone|_ore$/.test(p.bloque))
-  if (minaDura && !Object.keys(inv).some(k => /_pickaxe$/.test(k)) && !faltan.wooden_pickaxe) {
-    const base = { ...inv }
-    for (const [k, v] of Object.entries(cofre)) if (v > 0) base[k] = (base[k] || 0) + v
-    const pico = planear(registry, [['wooden_pickaxe', 1]], base)
-    for (const [h, m] of Object.entries(pico.faltan)) { const como = hoja(h, m); if (como) conseguir.unshift(...como.map(p => ({ ...p, para: 'wooden_pickaxe' }))) }
-    fabricar.unshift({ tipo: 'fabrica', objeto: 'wooden_pickaxe', n: 1, para: 'pico' })
+  if (minaDura && !conPico && !Object.keys(inv).some(k => /_pickaxe$/.test(k))) {
+    return planAbasto(registry, { wooden_pickaxe: 1, ...faltanPedidas }, inv, enCofres, { hayHorno, evitar, conPico: true })
   }
   // juntar lo repetido (dos «tala» o dos «mina stone») y ordenar: sacar, talar, el pico, minar y cazar, fundir, fabricar
   const junta = (lista) => {

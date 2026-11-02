@@ -1880,7 +1880,7 @@ class Personaje {
       const bot = this.bot
       if (origen && require('./obras').enTemporal(origen[0] - 2, origen[2] - 2)) {
         const [x, y, z] = [origen[0] - 2, origen[1], origen[2] - 2]
-        await moverHasta(bot, new goals.GoalNear(x, y, z, 1), () => bot.entity.position.distanceTo(new (require('vec3').Vec3)(x + 0.5, y, z + 0.5)) <= 2, { ms: 60000, tarea, mov: prudentes(bot) })
+        await moverHasta(bot, new goals.GoalNear(x, y, z, 1), () => bot.entity.position.distanceTo(new (require('vec3').Vec3)(x + 0.5, y, z + 0.5)) <= 2, { ms: 60000, tarea, mov: prudentes(bot, { pisarVedadas: true }) }) // como construir.prudentesObra
       } else await this.salirDeVedada(tarea)
       return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]]
     }

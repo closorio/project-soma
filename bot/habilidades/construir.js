@@ -35,6 +35,10 @@ const cuantos = (bot, materia) => deMateria(bot, materia).reduce((a, i) => a + i
 const deMateriaNombre = (nombre, materia) => (materia === 'tablones' ? nombre.endsWith('_planks') : nombre === materia)
 const deRelleno = (bot) => bot.inventory.items().filter(i => RELLENO.test(i.name)).sort((a, b) => ORDEN_RELLENO.indexOf(a.name) - ORDEN_RELLENO.indexOf(b.name))
 const inventario = (bot) => { const m = {}; for (const i of bot.inventory.items()) m[i.name] = (m[i.name] || 0) + i.count; return m }
+// Los movimientos de una obra: los prudentes; si está en una zona de obras de carteles, además cruzando vedadas a pie (para llegar a
+// «norte», dentro de HOGAR, hay que cruzar la franja de HOGAR de fuera de los carteles: con el coste de las vedadas, el navegador se
+// rendía; 2026-11-02, mundo del compañero). Andar solo: romper y poner sigue sin poder hacerse en una vedada fuera de los carteles.
+const prudentesObra = (bot, x, z) => prudentes(bot, obras.enTemporal(x, z) ? { pisarVedadas: true } : undefined)
 const real = (b) => ({ nombre: b.name, props: b.getProperties ? b.getProperties() : {} })
 const vacio = (b) => !b || /^(cave_|void_)?air$/.test(b.name) // una antorcha o una alfombra no ocupan, pero están puestas
 
@@ -179,7 +183,7 @@ async function quitarVegetacion(bot, lista, tarea) {
     if (!b || b.name === 'air') continue
     // el tiempo, según lo lejos que esté (Oqva venía de la mina, a 50 bloques, y no llegó en 20 s)
     const ms = 20000 + bot.entity.position.distanceTo(v) * 1000
-    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 3), () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms, tarea, mov: prudentes(bot) })
+    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 3), () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms, tarea, mov: prudentesObra(bot, x, z) })
     if (r !== 'listo' && bot.entity.position.distanceTo(v) > ALCANCE + 0.5) return `no llego a quitar ${b.name} en ${x},${y},${z}`
     try { await conLimite(bot.dig(b, true), 5000) } catch (e) { return `no pude quitar ${b.name} en ${x},${y},${z}: ${e.message.slice(0, 60)}` }
     await esperar(150)
@@ -190,7 +194,7 @@ async function quitarVegetacion(bot, lista, tarea) {
 // Poner los bloques de una obra ya apuntada (nueva o retomada), en orden, cada uno con su apoyo y su orientación
 async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricados, e, parcial }, tarea) {
   // movimientos: prudentes y sin pisar la huella de la obra (no se encierra ni se sube a lo recién puesto)
-  const mov = prudentes(bot)
+  const mov = prudentesObra(bot, x0, z0)
   const enHuella = (x, z) => x >= x0 && x < x0 + plano.dim[0] && z >= z0 && z < z0 + plano.dim[2]
   mov.exclusionAreasStep.push(b => (b && b.position && enHuella(b.position.x, b.position.z) ? 200 : 0))
   // por capas y, en cada capa, del borde hacia dentro (2026-11-01: el techo empezaba por el centro, sin nada en que apoyarse); las del
@@ -364,7 +368,7 @@ async function ponerSaltando(bot, dest, item, mov, tarea, o) {
   const cerca = () => { const p = bot.entity.position; return Math.hypot(p.x - dest.x - 0.5, p.z - dest.z - 0.5) <= 3.2 && p.y >= dest.y - 3.6 && p.y <= dest.y - 1.4 }
   if (!cerca()) {
     // sin la exclusión de la huella: el centro del techo de la grande (10×10) solo se alcanza desde dentro, entrando por la puerta
-    const r = await moverHasta(bot, new goals.GoalNearXZ(dest.x, dest.z, 2), cerca, { ms: 30000, tarea, mov: prudentes(bot) })
+    const r = await moverHasta(bot, new goals.GoalNearXZ(dest.x, dest.z, 2), cerca, { ms: 30000, tarea, mov: prudentesObra(bot, dest.x, dest.z) })
     if (!cerca()) return { error: `no llego al lado (${r})` }
   }
   try { bot.pathfinder.setGoal(null) } catch (_) {}
@@ -432,7 +436,7 @@ async function subirColumna(cx, dest, tarea) {
   const sitio = sitioColumna(cx, dest)
   if (!sitio) return 'sin sitio fuera de la huella'
   const [x, z] = sitio
-  const r = await moverHasta(bot, new goals.GoalBlock(x, y + 1, z), () => { const p = bot.entity.position.floored(); return p.x === x && p.z === z && p.y === y + 1 }, { ms: 30000, tarea, mov: prudentes(bot) })
+  const r = await moverHasta(bot, new goals.GoalBlock(x, y + 1, z), () => { const p = bot.entity.position.floored(); return p.x === x && p.z === z && p.y === y + 1 }, { ms: 30000, tarea, mov: prudentesObra(bot, x, z) })
   if (r !== 'listo') return `no llego a ${x},${y + 1},${z} (${r})`
   try { bot.pathfinder.setGoal(null) } catch (_) {}
   cx.columna = { x, z, alto: 0 }
