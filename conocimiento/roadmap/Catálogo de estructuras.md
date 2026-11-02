@@ -4,7 +4,7 @@ fase: "F-estructuras"
 estado: en-curso
 responsable: "seppuq"
 actualizado: "2026-11-02"
-siguiente: "Probar el abasto con talar, minar y fundir en terreno natural (la prueba fue desde un cofre) y una casa real de más de 5 de alto"
+siguiente: "Una plantilla grande de verdad (más de 10 de alto) en el mundo compartido, con abasto desde los cofres y talando en terreno natural"
 ---
 # Catálogo de estructuras
 
@@ -18,7 +18,8 @@ abasto por tandas y órdenes del chat (también por el LLM local). La lectura de
 En el server local (2026-11-02), `casita_prueba` (5×5×5: puerta, ventanas, antorcha de pared, tejado de escaleras y losas con
 andamio) quedó 99/99 bloques con su estado dos veces: con todo en la mochila y con el abasto desde un cofre de la base (sacar,
 fabricar, 7 tandas). `deshaz` la dejó vacía. En el mundo del compañero (26.3), Oqva la terminó 98/98 en la zona de
-carteles «norte», dentro de la base, tras arreglar el paso por vedadas, la mesa, el pico, la madera y el andamio. Pendiente: `fabricar oak_planks N` a veces falla («no se pudo») y cuesta tandas.
+carteles «norte», dentro de la base, tras arreglar el paso por vedadas, la mesa, el pico, la madera y el andamio. También importa
+`.nbt` del juego y construye girada («mirando al este»): una casa de aldea, 151/151 en el server local. Guía: `catalogo/LEEME.md`. Pendiente: `fabricar oak_planks N` a veces falla («no se pudo») y cuesta tandas.
 
 ## Siguiente paso
 Ver campo «siguiente». Después, una nota de experimento con bloques bien y mal orientados, tiempo y tandas.
