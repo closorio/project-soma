@@ -38,6 +38,9 @@ function enPermitido(x, z) {
 const temporales = () => leer().temporales || []
 function ponerTemporales(lista) { const d = leer(); d.temporales = lista; guardar(d) }
 const dentroDe = (r, x, z) => x >= Math.min(r.x1, r.x2) && x <= Math.max(r.x1, r.x2) && z >= Math.min(r.z1, r.z2) && z <= Math.max(r.z1, r.z2)
+// ¿Cae (x, z) en una zona de obras de carteles? Dentro, las vedadas no impiden andar ni construir (2026-11-02, pedido del usuario:
+// «los carteles mandan dentro»); talar, minar y los cofres siguen protegidos
+const enTemporal = (x, z) => temporales().some(r => dentroDe(r, x, z))
 // ¿Se puede construir con estas esquinas [[x, z]…]? null si sí; si no, la causa. Con zonas de carteles, solo entera dentro de una de
 // ellas (o del rectángulo de obras, en el mundo del usuario); sin ellas, como siempre: reglas libres o el rectángulo de obras.
 function obraPermitida(esquinas, reglasLibres) {
@@ -91,4 +94,4 @@ const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: 
 // ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
 const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && [...o.bloques, ...(o.andamio || [])].some(b => b[0] === x && b[1] === y && b[2] === z))
 
-module.exports = { leer, guardar, permitido, enPermitido, temporales, ponerTemporales, obraPermitida, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }
+module.exports = { leer, guardar, permitido, enPermitido, temporales, ponerTemporales, enTemporal, obraPermitida, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

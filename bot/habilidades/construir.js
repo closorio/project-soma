@@ -211,7 +211,7 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
     if (actual && bienPuesto(cx, ent, actual)) { puestos++; continue } // ya estaba (una obra retomada)
     if (actual && ent.estado && malYa.has([dest.x, dest.y, dest.z].join()) && actual.name === estructuras.nombre(ent.estado)) { puestos++; continue }
     if (!parcela.libre(actual)) { causa = `ocupado en ${dest.x},${dest.y},${dest.z} (${actual ? actual.name : '?'})`; break }
-    if (zonas.pasoVedado(dest.x, dest.y, dest.z) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break }
+    if ((zonas.pasoVedado(dest.x, dest.y, dest.z) && !obras.enTemporal(dest.x, dest.z)) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break } // los carteles mandan dentro
     const item = itemPara(cx, ent)
     if (!item) { causa = `falta material: ${ent.estado ? estructuras.objetoDe(ent.estado).item : ent.relleno && !materia ? 'tierra o adoquín' : materia}`; break }
     const r = await ponerUno(cx, ent, item, tarea)
@@ -408,7 +408,7 @@ function sitioColumna(cx, dest) {
   const cands = []
   for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
     const x = dest.x + dx, z = dest.z + dz
-    if (enHuella(x, z) || zonas.pasoVedado(x, y + 1, z) || cofres.esCofre(x, y + 1, z)) continue
+    if (enHuella(x, z) || (zonas.pasoVedado(x, y + 1, z) && !obras.enTemporal(x, z)) || cofres.esCofre(x, y + 1, z)) continue
     if (!parcela.solido(bot.blockAt(new Vec3(x, y, z))) || !parcela.libre(bot.blockAt(new Vec3(x, y + 1, z))) || !parcela.libre(bot.blockAt(new Vec3(x, y + 2, z)))) continue
     cands.push([x, z, Math.hypot(dx, dz)])
   }

@@ -42,6 +42,8 @@ const d = obras.leer(); d.permitido = { x1: 200, z1: 200, x2: 220, z2: 220 }; ob
 ok(obras.obraPermitida(esq(205, 205, 5, 5), false) === null && obras.obraPermitida(esq(0, 0, 5, 5), false) === null, 'en el del usuario: el rectángulo o los carteles')
 ok(obras.obraPermitida(esq(195, 195, 5, 5), false) !== null, 'en el del usuario, ni en uno ni en otro: no')
 console.log('  construir solo dentro de las zonas de carteles (y del rectángulo en el mundo del usuario)')
+// dentro de una zona de carteles, las vedadas no impiden construir ni andar (los carteles mandan dentro)
+ok(obras.enTemporal(0, 0) && !obras.enTemporal(100, 100), 'enTemporal')
 
 // 4. vigentes: si un cartel ya no está (o dice otra cosa), la zona se quita; lo no cargado se da por bueno
 const cartel = (texto) => ({ name: 'oak_sign', getSignText: () => [texto, ''] })

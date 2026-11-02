@@ -68,7 +68,11 @@ function aplicar(mov, { pisarVedadas = false } = {}) {
   const vinas = new Set(['cave_vines', 'cave_vines_plant', 'weeping_vines', 'weeping_vines_plant', 'twisting_vines', 'twisting_vines_plant']
     .map(n => (mov.bot.registry.blocksByName || {})[n]).filter(Boolean).map(b => b.id))
   if (vinas.size) mov.exclusionAreasStep.push(b => (b && vinas.has(b.type) ? 25 : 0))
-  if (!pisarVedadas) mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
+  // 2026-11-02: dentro de una zona de obras de carteles aceptada (obras.json: temporales) la vedada no veta el paso
+  // (se leen al crear los movimientos: el navegador lo pregunta en cada casilla)
+  const carteles = require('./obras').temporales()
+  const enCartel = (p) => carteles.some(r => p.x >= Math.min(r.x1, r.x2) && p.x <= Math.max(r.x1, r.x2) && p.z >= Math.min(r.z1, r.z2) && p.z <= Math.max(r.z1, r.z2))
+  if (!pisarVedadas) mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) && !enCartel(b.position) ? 1000 : 0))
   mov.exclusionAreasBreak.push(b => (b && b.position && (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z)) ? 1000 : 0))
   return require('./puertas').aplicar(mov) // 2026-11-01: las puertas de madera son paso (las abre puertas.vigilar)
 }

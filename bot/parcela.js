@@ -82,7 +82,8 @@ function evaluar(bot, x0, z0, [ancho, alto, largo], { margen = 10, desnivelMax =
   const fuera = obras.obraPermitida(esquinas, require('./mundo').reglasLibres)
   if (fuera) return { mal: fuera }
   if (esquinas.some(([x, z]) => zonas.fueraDeTrabajo(x, null, z))) return { mal: 'fuera de la zona de trabajo' }
-  if (!esquinas.every(([x, z]) => lejosDeProtegido(x, z, margen))) return { mal: `a menos de ${margen} de una zona protegida o un cofre` }
+  // dentro de una zona de obras de carteles, la ha elegido el usuario: sin el margen de las protegidas (los cofres, ocupados, no se pisan)
+  if (!esquinas.every(([x, z]) => obras.enTemporal(x, z)) && !esquinas.every(([x, z]) => lejosDeProtegido(x, z, margen))) return { mal: `a menos de ${margen} de una zona protegida o un cofre` }
   const y0 = yRef ?? bot.entity.position.y
   const suelos = new Map()
   for (let x = x0 - 1; x <= x0 + ancho; x++) {
@@ -121,7 +122,7 @@ function evaluarCaja(bot, x0, y0, z0, [ancho, alto, largo], columnas, { mov = nu
   const ocupado = [], quitar = [], relleno = []
   for (let x = x0; x < x0 + ancho; x++) for (let z = z0; z < z0 + largo; z++) {
     for (let y = y0; y < y0 + alto; y++) {
-      if (zonas.pasoVedado(x, y, z) || cofres.esCofre(x, y, z)) return { mal: `protegido en ${x},${y},${z}` }
+      if ((zonas.pasoVedado(x, y, z) && !obras.enTemporal(x, z)) || cofres.esCofre(x, y, z)) return { mal: `protegido en ${x},${y},${z}` }
       const b = bot.blockAt(new Vec3(x, y, z))
       if (!b) return { mal: `sin cargar en ${x},${y},${z}` }
       if (b.name === 'air' || b.name === 'cave_air') continue
