@@ -3,8 +3,9 @@
 // y cofres a ≤ ese radio del personaje. Pisa las zonas vedadas (sin romper ni poner bloques).
 //  1. Armadura: solo las piezas que le faltan (ni puestas ni en el inventario); de todos los soportes, la mejor (sv.valorPieza): con la mano
 //     vacía, un clic derecho en la altura de la pieza se la pasa a la mano (así lo hace el juego), y la equipa.
-//  2. Arma: solo si no tiene ninguna espada ni hacha: abre los cofres y barriles de la zona (los más cercanos a un soporte primero) hasta
-//     encontrar una, y saca la mejor (sv.puntosArma). Un pico no cuenta.
+//  2. Arma: solo si no tiene ninguna espada ni hacha: abre los cofres y barriles que estén a ≤ 4 bloques de un armor stand (los más cercanos
+//     primero) hasta encontrar una, y saca la mejor (sv.puntosArma). Un pico no cuenta.
+// Si le golpean mientras tanto, lo deja en el acto (el que la llamó decide cómo responder).
 // Éxito si pudo mirar (había soportes o cofres): causa «equipado» si tomó algo, «nada mejor» si no. Fallos: sin soportes ni cofres.
 // Devuelve { exito, causa, piezas: [...], arma, soportes, cofres, vistas: [piezas que había], fallos: [por qué no llegó a algo] }.
 const { goals } = require('mineflayer-pathfinder')
@@ -21,7 +22,7 @@ const SLOT = { boots: 2, leggings: 3, chestplate: 4, helmet: 5 } // entity.equip
 const ALTURA = { boots: 0.3, leggings: 0.7, chestplate: 1.2, helmet: 1.8 }
 const RANURA = { helmet: 5, chestplate: 6, leggings: 7, boots: 8 }
 const ES_ARMA = /_(sword|axe)$/
-const MAX_COFRES = 12
+const MAX_COFRES = 12, CERCA_SOPORTE = 4 // solo cofres a ≤ 4 bloques de un armor stand
 
 // El área de búsqueda: { dentro(pos), centro, radio, nombre }
 function area(bot, arg) {
@@ -44,10 +45,13 @@ const soportes = (bot, a) => Object.values(bot.entities)
 const falta = (bot, pieza) => !bot.inventory.slots[RANURA[pieza]] && !bot.inventory.items().some(i => i.name.endsWith('_' + pieza))
 const movs = (bot) => prudentes(bot, { pisarVedadas: true })
 
-async function tomarArmadura(bot, tarea, a, fallos) {
+// ¿Le han golpeado desde que empezó? (sv.estado(bot).golpe lo apunta vigilarGolpes aunque los reflejos estén apagados)
+const golpeado = (bot, t0) => { const g = sv.estado(bot).golpe; return !!g && g.t >= t0 }
+
+async function tomarArmadura(bot, tarea, a, fallos, t0) {
   const piezas = []
   for (const pieza of Object.keys(SLOT)) {
-    if (tarea && tarea.cancelada) return piezas
+    if ((tarea && tarea.cancelada) || golpeado(bot, t0)) return piezas
     if (!falta(bot, pieza)) continue
     // de todos los soportes, el que tenga la mejor de esa pieza
     let s = null, item = null
@@ -56,8 +60,9 @@ async function tomarArmadura(bot, tarea, a, fallos) {
       if (it && it.name.endsWith('_' + pieza) && (!item || sv.valorPieza(it) > sv.valorPieza(item))) { s = x; item = it }
     }
     if (!s) continue
-    const r = await moverHasta(bot, new goals.GoalNear(s.position.x, s.position.y, s.position.z, 2), () => s.position.distanceTo(bot.entity.position) <= 2.5,
+    const r = await moverHasta(bot, new goals.GoalNear(s.position.x, s.position.y, s.position.z, 2), () => s.position.distanceTo(bot.entity.position) <= 2.5 || golpeado(bot, t0),
       { ms: 25000, tarea, entidad: s, mov: movs(bot) })
+    if (golpeado(bot, t0)) return piezas
     if (r !== 'listo') { fallos.push(`no llego al soporte de ${item.name} (${r})`); continue }
     try {
       if (bot.heldItem) await conLimite(bot.unequip('hand'), 3000) // con la mano ocupada el clic intercambia en vez de tomar
@@ -73,24 +78,25 @@ async function tomarArmadura(bot, tarea, a, fallos) {
   return piezas
 }
 
-// Los cofres del área, los más cercanos a algún soporte primero (si no hay soportes, a mí).
+// Los cofres del área a ≤ CERCA_SOPORTE de algún armor stand, los más cercanos a un soporte primero. Sin soportes, ninguno.
 function cofresDe(bot, a, lista) {
-  const refs = lista.length ? lista.map(s => s.position) : [bot.entity.position]
-  const d = (p) => Math.min(...refs.map(r => p.distanceTo(r)))
+  if (!lista.length) return []
+  const d = (p) => Math.min(...lista.map(s => p.offset(0.5, 0.5, 0.5).distanceTo(s.position)))
   return bot.findBlocks({ matching: (b) => CONTENEDORES.has(b.name), point: a.centro, maxDistance: a.radio, count: 200 })
-    .filter(p => a.dentro(p)).sort((x, y) => d(x) - d(y)).slice(0, MAX_COFRES)
+    .filter(p => a.dentro(p) && d(p) <= CERCA_SOPORTE).sort((x, y) => d(x) - d(y)).slice(0, MAX_COFRES)
 }
 
-async function armaDelCofre(bot, tarea, a, lista, fallos) {
+async function armaDelCofre(bot, tarea, a, lista, fallos, t0) {
   if (sv.mejorArma(bot)) return null // ya tiene espada o hacha: solo busca si le falta
   const vistos = new Set()
   for (const pos of cofresDe(bot, a, lista)) {
-    if (tarea && tarea.cancelada) return null
+    if ((tarea && tarea.cancelada) || golpeado(bot, t0)) return null
     const k = `${pos.x},${pos.y},${pos.z}`
     if (vistos.has(k)) continue
     vistos.add(k)
-    const r = await moverHasta(bot, new goals.GoalNear(pos.x, pos.y, pos.z, 2), () => bot.entity.position.offset(0, 1.62, 0).distanceTo(pos.offset(0.5, 0.5, 0.5)) <= 4,
+    const r = await moverHasta(bot, new goals.GoalNear(pos.x, pos.y, pos.z, 2), () => bot.entity.position.offset(0, 1.62, 0).distanceTo(pos.offset(0.5, 0.5, 0.5)) <= 4 || golpeado(bot, t0),
       { ms: 25000, tarea, mov: movs(bot) })
+    if (golpeado(bot, t0)) return null
     if (r !== 'listo') { fallos.push(`no llego al cofre ${k} (${r})`); continue }
     const b = bot.blockAt(pos)
     if (!b || !CONTENEDORES.has(b.name)) continue
@@ -115,12 +121,12 @@ async function armaDelCofre(bot, tarea, a, lista, fallos) {
 }
 
 module.exports = async function equiparSoportes(bot, [arg], tarea) {
-  const a = area(bot, arg)
+  const a = area(bot, arg), t0 = Date.now()
   const lista = soportes(bot, a), fallos = []
   const vistas = lista.flatMap(s => Object.values(SLOT).map(i => (s.equipment || [])[i]).filter(Boolean).map(it => it.name))
-  const piezas = await tomarArmadura(bot, tarea, a, fallos)
+  const piezas = await tomarArmadura(bot, tarea, a, fallos, t0)
   let arma = null
-  try { arma = await armaDelCofre(bot, tarea, a, lista, fallos) } catch (e) { fallos.push('arma: ' + e.message) }
+  try { arma = await armaDelCofre(bot, tarea, a, lista, fallos, t0) } catch (e) { fallos.push('arma: ' + e.message) }
   try { if (arma) await equipar.ponerArma(bot) } catch (_) {}
   await esperar(200)
   const datos = { piezas, arma, soportes: lista.length, vistas, fallos, zona: a.nombre }
