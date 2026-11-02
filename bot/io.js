@@ -28,10 +28,11 @@ const habilidades = require('./habilidades')
 const observacion = require('./observacion')
 const zonas = require('./zonas')
 const CHAT_ZONA = new Set() // órdenes de chat ya atendidas (varios personajes oyen lo mismo)
+const FOTO_RADIO = 16, FOTO_SEG = 8 // «foto»: a cuántos bloques posan y cuánto sostienen la mirada
 const ESQUINAS = new Map() // usuario -> primera esquina de la zona que está marcando
 // «continúa» (2026-11-01): las órdenes de trabajo que se retoman si otra las interrumpe, y con qué les faltaba. Moverse, pelear o
 // comer no se retoman: «continúa» es volver al trabajo
-const ORDENES_TRABAJO = new Set(['tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
+const ORDENES_TRABAJO = new Set(['armate', 'tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
   'fabrica', 'funde', 'pon', 'ilumina', 'baja', 'sube', 'agua', 'vierte', 'duerme'])
 function pendienteDe(o, r) {
   if (!ORDENES_TRABAJO.has(o.tipo)) return null
@@ -41,6 +42,50 @@ function pendienteDe(o, r) {
   return { ...o }
 }
 const textoDe = (p, texto) => (p.tipo === 'tala' ? `tala ${p.n} troncos` : p.tipo === 'mina' ? texto.replace(/\d+/, String(p.n)) : texto)
+// Color de la marca de cada bot en la barra de localización (2026-11-02, pedido del usuario): `colores` de mundos/<mundo>/mundo.json
+// ({ nombre: color }) o estos por defecto. Al entrar, el bot se lo pone con /waypoint; solo vale si es operador en ese server (si no,
+// el server dice que no tiene permiso y lo pone a mano un operador: `waypoint modify NOMBRE color COLOR`). Colores: los de los equipos
+// (red, blue, green, yellow, aqua, light_purple, gold, white…) o un hex (FF8800).
+const COLORES = { Oqva: 'red', Soma: 'blue', Iris: 'green', Eco: 'yellow', Alma: 'light_purple' }
+function colorDe(nombre) {
+  try { const c = JSON.parse(fs.readFileSync(mundo.ruta('mundo.json'), 'utf8')).colores; if (c && c[nombre]) return c[nombre] } catch (_) {}
+  return COLORES[nombre] || null
+}
+function ponerColor(bot, ev) {
+  const color = colorDe(bot.username)
+  if (!color) return
+  const arg = /^[0-9a-f]{6}$/i.test(color) ? `hex ${color}` : color
+  const oir = (m) => { const t = String(m); if (/waypoint|permission|permiso|unknown|desconocid/i.test(t)) { ev(`[color] ${color}: ${t.slice(0, 80)}`); bot.removeListener('messagestr', oir) } }
+  bot.on('messagestr', oir); setTimeout(() => bot.removeListener('messagestr', oir), 5000)
+  setTimeout(() => { try { bot.chat(`/waypoint modify ${bot.username} color ${arg}`) } catch (_) {} }, 1500)
+}
+// Formación del modo guardaespaldas (2026-11-02, pedido del usuario: «en triángulo conmigo al centro»): los guardaespaldas del mismo
+// protegido en este proceso se reparten en un polígono alrededor de él (3: triángulo; 2, uno a cada lado; 4+, en círculo), a RADIO
+// bloques. Orientado al mundo (el primero al norte), no a donde mira el protegido: si girase con su cámara, correrían a cada vistazo.
+// Meta dinámica: se recoloca cuando el protegido se mueve más de 1 bloque.
+const FORMACION_RADIO = 3
+class GoalFormacion extends goals.Goal {
+  constructor(entidad, k, n) { super(); Object.assign(this, { entidad, k, n }); this.fijar() }
+  fijar() {
+    const p = this.entidad.position, a = (2 * Math.PI * this.k) / this.n // k = 0 al norte (−z), y en el sentido de las agujas del reloj
+    Object.assign(this, { x: Math.floor(p.x + FORMACION_RADIO * Math.sin(a)), y: Math.floor(p.y), z: Math.floor(p.z - FORMACION_RADIO * Math.cos(a)), ex: p.x, ez: p.z })
+  }
+  heuristic(n) { return Math.hypot(this.x - n.x, this.z - n.z) + Math.abs(this.y - n.y) }
+  isEnd(n) { return (this.x - n.x) ** 2 + (this.z - n.z) ** 2 <= 1 && Math.abs(this.y - n.y) <= 1 }
+  hasChanged() {
+    const p = this.entidad.position
+    if (Math.hypot(p.x - this.ex, p.z - this.ez) <= 1) return false
+    this.fijar(); return true
+  }
+  isValid() { return this.entidad != null }
+}
+// Mi sitio en la formación: los de este proceso que guardan al mismo, por orden alfabético
+function puestoEnFormacion(yo, protegido) {
+  const lista = [...VIVOS.values()].filter(p => p.guardaespaldas && String(p.guardaespaldas.a).toLowerCase() === String(protegido).toLowerCase())
+    .map(p => p.nombre).sort((a, b) => a.localeCompare(b))
+  const k = lista.indexOf(yo)
+  return k < 0 ? { k: 0, n: 1 } : { k, n: lista.length }
+}
 // El aviso al no talar lo protegido: las zonas por su nombre y, aparte, si hay zonas de trabajo y el tronco cae fuera
 function noTalo(nombres) {
   const otras = nombres.filter(n => n !== zonas.FUERA_DE_TRABAJO)
@@ -76,7 +121,15 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
-const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase() // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+// Nombres de jugador sin distinguir mayúsculas: el server puede decir «Seppuq» aunque en local.mk ponga «seppuq» (2026-11-02)
+class NombresSinMayus extends Set {
+  constructor(it) { super(); this.orig = []; for (const x of it || []) this.add(x) }
+  add(x) { if (!super.has(String(x).toLowerCase())) this.orig.push(x); return super.add(String(x).toLowerCase()) }
+  has(x) { return super.has(String(x).toLowerCase()) }
+  * [Symbol.iterator]() { yield* this.orig }
+}
+const AMOS = new NombresSinMayus((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
 // 2026-11-02: aliados a la hora de pelear (centinela, «protégeme», defensa por defecto): solo los dueños (IO_AMOS) y los que el dueño declare con
 // «Oqva es aliado» / «Oqva no es aliado» (se guardan en mundos/<mundo>/aliados.json). Los demás personajes, aunque sean bots tuyos, no.
 const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
@@ -125,7 +178,7 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   // F7.2
   come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : o.nombre ? `Voy a por ${o.nombre}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
   sal: () => 'Salgo del refugio.', duerme: () => 'Voy a la cama.', dame: (o) => (o.objeto === 'todo' ? 'Te doy lo que llevo.' : `Te doy ${o.n || 'los'} ${o.objeto}.`), fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
-  equipate: () => 'Me equipo.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
+  equipate: () => 'Me equipo.', armate: () => 'Me armo: espada, pico y hacha de piedra.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
   explora: (o) => `Voy a explorar ${o.rumbo === '-' ? 'por ahí' : 'hacia el ' + o.rumbo}, ${o.n} bloques${o.nada ? ', nadando si hace falta' : ''}.`, mina: (o) => `Voy a minar ${o.n} de ${o.bloque}.`,
   construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
@@ -243,6 +296,7 @@ class Personaje {
       }, 2500)
     })
     bot.once('spawn', () => {
+      ponerColor(bot, (t) => this.ev(t))
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
       if (SKIN) bot.chat('/skin set ' + SKIN) // IO_SKIN: una skin del server (SkinsRestorer, p. ej. «sr createcustom»), a cada conexión
@@ -256,7 +310,9 @@ class Personaje {
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
       if (!obedece(u) || (AMOS.size && !AMOS.has(u))) { // con dueños (IO_DUENOS o IO_AMOS), solo atiende por el chat a esos jugadores (órdenes y !zona)
-        if (ordenes.destinatario(t, [...VIVOS.keys()]).a && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
+        const dest = ordenes.destinatario(t, [...VIVOS.keys()]).a
+        if (dest === 'todos') return // 2026-11-02: «todos …» de quien no es su dueño se ignora sin avisar (no contestan todos los bots a la vez)
+        if (dest && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
         return
       }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
@@ -296,8 +352,13 @@ class Personaje {
       if (bot.health < 8) { this.ev(`[mc] salud baja: ${bot.health}`); if (!this.saludBaja) informe.evento(bot, 'salud_baja', bot.health) }
       this.saludBaja = bot.health < 8 // un aviso por cada bajada por debajo de 8, no uno por golpe
     })
-    bot.on('kicked', (r) => { this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80)) })
+    bot.on('kicked', (r) => {
+      this.ev('[mc] expulsado: ' + JSON.stringify(r)); informe.evento(bot, 'expulsado', String(r).slice(0, 80))
+      this.frenado = /throttled/i.test(JSON.stringify(r)) // Paper: conexiones desde la misma IP a < 4 s (2026-11-02)
+    })
     bot.on('error', (e) => this.ev('[mc] error: ' + e.message))
+    // tras «Connection throttled» (Paper, misma IP), una espera al azar de 6-12 s: si no, los bots del mismo proceso reintentan a la
+    // vez y se rechazan unos a otros para siempre (2026-11-02)
     bot.on('end', () => {
       this.tarea.cancelada = true; informe.evento(bot, 'desconectado')
       // IO_RECONECTAR=0 (lo pone bot/conectar.sh, el /connect del juego): solo entra cuando el usuario lo manda, así que si lo echan o el server cae, no vuelve solo
@@ -307,7 +368,9 @@ class Personaje {
         try { persistente.guardar(this.yo.persistente) } catch (_) {}
         return process.exit(0)
       }
-      this.ev('[mc] desconectado; reconectando en 5 s'); setTimeout(() => this.conectar(), 5000)
+      const ms = this.frenado ? 6000 + Math.floor(Math.random() * 6000) : 5000
+      this.frenado = false
+      this.ev(`[mc] desconectado; reconectando en ${Math.round(ms / 1000)} s`); setTimeout(() => this.conectar(), ms)
     })
   }
 
@@ -803,6 +866,12 @@ class Personaje {
       fin.catch(e => this.ev('[orden] fallo: ' + e.message))
       return `Sigo con «${p.texto}».`
     }
+    if (o.tipo === 'foto') { // 2026-11-02: no interrumpe nada; solo posa quien está cerca de quien lo pide (los lejanos callan)
+      const r = await this.posarFoto(quien)
+      if (r.exito && origen.via === 'chat') this.decir(r.texto)
+      this.anotarOrden({ texto, quien, modo: this.modo, exito: r.exito, resultado: r.texto, s: 0 })
+      return r.texto
+    }
     const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true, rol: true }
     if (inmediata[o.tipo]) {
       const modoAntes = this.modo
@@ -818,6 +887,21 @@ class Personaje {
     if (esperarFin) return (await fin).texto
     fin.catch(e => this.ev('[orden] fallo: ' + e.message))
     return (AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.') + (varias ? ` Y luego: ${lista.slice(1).map(x => '«' + x.frase + '»').join(', ')}.` : '')
+  }
+
+  // 2026-11-02 («foto»): si quien lo pide está a menos de FOTO_RADIO bloques, se quita el casco y mira adonde mira él (su yaw y pitch),
+  // sosteniendo la mirada FOTO_SEG segundos por si otro comportamiento la mueve. Sin interrumpir la orden en curso.
+  async posarFoto(quien) {
+    const bot = this.bot, u = this.jugadorDe(quien)
+    const e = u ? bot.players[u]?.entity : jugadorCercano(bot, FOTO_RADIO)
+    if (!e || bot.entity.position.distanceTo(e.position) > FOTO_RADIO) return { exito: false, texto: 'Estoy lejos para la foto.' }
+    const yaw = e.yaw, pitch = e.pitch
+    let casco = false
+    if (bot.inventory.slots[bot.getEquipmentDestSlot('head')]) { try { await bot.unequip('head'); casco = true } catch (err) { this.ev('[foto] no pude quitarme el casco: ' + err.message) } }
+    const t0 = Date.now()
+    await bot.look(yaw, pitch, true).catch(() => {})
+    const mantener = setInterval(() => { if (Date.now() - t0 > FOTO_SEG * 1000) clearInterval(mantener); else bot.look(yaw, pitch, true).catch(() => {}) }, 300)
+    return { exito: true, texto: casco ? 'Sin casco y mirando contigo: foto.' : 'Mirando contigo: foto.' }
   }
 
   // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
@@ -958,7 +1042,7 @@ class Personaje {
   // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
   async equiparAntes(paso) {
     const bot = this.bot
-    const [rs] = await paso('equipar_soportes', ['HOGAR'])
+    const [rs] = await paso('equipar_soportes', [BASE_ZONA])
     if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
     const [re] = await paso('equipar', ['todo'])
     if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
@@ -1130,7 +1214,7 @@ class Personaje {
         // 2026-11-02: no se separa del protegido (por defecto, quien da la orden; un dueño) y, con el esquema del centinela, ataca (acorralado, a
         // puñetazos si no lleva arma) a los hostiles que se le acerquen (≤ GUARDIA_MOBS), a los jugadores no aliados a rango de golpe
         // (≤ GUARDIA_JUGADORES) y a quien le pegue a él o al bot. Es un modo: sobrevive a las órdenes (vuelve solo), a morir y a reiniciar.
-        const prot = o.protegido || o.a || this.jugadorDe(quien) || [...AMOS].find(n => bot.players[n]) || (this.guardaespaldas && this.guardaespaldas.a)
+        const prot = o.protegido || o.a || this.jugadorDe(quien) || Object.keys(bot.players).find(n => AMOS.has(n)) || (this.guardaespaldas && this.guardaespaldas.a)
         const nombre = prot && (Object.keys(bot.players).find(n => n.toLowerCase() === String(prot).toLowerCase()) || prot)
         if (!nombre) return { exito: false, texto: 'No sé a quién proteger: dime «guardaespaldas de NOMBRE».', pasos: [] }
         this.fijarGuardaespaldas(nombre)
@@ -1166,7 +1250,11 @@ class Personaje {
                 continue
               }
               if (!e) { await esperar(1000); continue } // no lo veo (lejos o desconectado): espero a que vuelva
-              const r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              // en formación (triángulo con 3) alrededor del protegido; si no se llega a mi vértice (dentro de un bloque), detrás de él a 2
+              const { k, n } = puestoEnFormacion(this.nombre, nombre)
+              const meta = n > 1 ? new GoalFormacion(e, k, n) : new goals.GoalFollow(e, 2)
+              let r = await moverHasta(bot, meta, () => !!objetivo(), { ms: 60000, tarea, entidad: e, mov: mov() })
+              if (r === 'sin camino' && n > 1) r = await moverHasta(bot, new goals.GoalFollow(e, 2), () => !!objetivo(), { ms: 10000, tarea, entidad: e, mov: mov() })
               if (r === 'sin camino' || r === 'perdido') await esperar(1500)
             } catch (err) { this.ev('[guardaespaldas] error (sigo): ' + err.message); await esperar(1000) }
           }
@@ -1483,9 +1571,65 @@ class Personaje {
         const hecho = Object.entries(r.fabricados || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
         return { exito: !!r.exito, texto: r.exito ? `Fabricado: ${hecho}.` : `No pude fabricar: ${r.causa}.`, pasos: [d] }
       }
+      case 'armate': { // 2026-11-02 (pedido del usuario): espada, pico y hacha de piedra, consiguiendo lo que falte, y equiparse
+        const pasos = [], inv = () => bot.inventory.items(), cuenta = (re) => inv().filter(i => re.test(i.name)).reduce((a, i) => a + i.count, 0)
+        const PIEDRA = /^(cobblestone|cobbled_deepslate|blackstone)$/
+        const faltan = [['espada_piedra', 'stone_sword', 2], ['pico_piedra', 'stone_pickaxe', 3], ['hacha_piedra', 'stone_axe', 3]]
+          .filter(([, item]) => !inv().some(i => i.name === item))
+        const equiparse = async () => { const [, d] = await paso('equipar', ['todo']); pasos.push(d) }
+        if (!faltan.length) { await equiparse(); return { exito: true, texto: 'Ya llevo espada, pico y hacha de piedra: equipado.', pasos } }
+        const talar = async (n) => { const r = await this.talarN({ tipo: 'tala', n }, tarea, paso); pasos.push(...(r.pasos || [])) }
+        // piedra: la que pidan las que faltan; para picarla, un pico (de madera si no hay ninguno)
+        const q = () => faltan.reduce((a, [, , n]) => a + n, 0) - cuenta(PIEDRA)
+        const sinPico = () => !inv().some(i => i.name.endsWith('_pickaxe'))
+        const madera = 3 + (q() > 0 && sinPico() ? 2 : 0) // palos y mesa (+ el pico de madera y otra mesa abajo o lejos)
+        // lo que cuenta es la madera que lleva de verdad: a veces no llega a recoger lo talado (2026-11-02, Oqva se quedó corto)
+        const maderaQueLlevo = () => cuenta(/_log$/) + Math.floor(cuenta(/_planks$/) / 4)
+        for (let i = 0; i < 3 && maderaQueLlevo() < madera && !tarea.cancelada; i++) await talar(madera - maderaQueLlevo())
+        // una mesa fija al lado para todo lo de aquí: fabricar la usa sin ponerla ni quitarla. Si la pone y la recoge en cada
+        // receta, a veces no llega a recogerla y la siguiente gasta 4 tablones en otra (2026-11-02: se quedaba sin madera)
+        const mesaAqui = async () => {
+          if (bot.findBlock({ matching: bot.registry.blocksByName.crafting_table.id, maxDistance: 4 })) return
+          if (!inv().some(i => i.name === 'crafting_table')) { const [, d] = await paso('fabricar', ['mesa']); pasos.push(d) }
+          const [, d2] = await paso('poner', ['mesa']); pasos.push(d2)
+        }
+        if (q() > 0 && sinPico() && !tarea.cancelada) {
+          await mesaAqui()
+          const [r, d] = await paso('fabricar', ['pico_madera']); pasos.push(d)
+          if (!r.exito) return { exito: false, texto: `No pude hacerme un pico de madera: ${r.causa}.`, pasos }
+        }
+        if (q() > 0 && !tarea.cancelada) { const [, d] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d) }
+        if (q() > 0 && !tarea.cancelada) { // sin piedra a la vista: una escalera de 8 hacia abajo (la que baje de las 4 direcciones;
+          // los escalones ya dan piedra), picar allí lo que falte y subir
+          const y0 = bot.entity.position.floored().y
+          for (const rumbo of ['norte', 'este', 'sur', 'oeste']) {
+            if (q() <= 0 || tarea.cancelada) break
+            const [, d1] = await paso('cavar_escalera', [String(y0 - 8), rumbo]); pasos.push(d1)
+            if (bot.entity.position.y < y0 - 2) break // bajó: aquí abajo hay piedra
+          }
+          if (q() > 0 && !tarea.cancelada) { const [, d2] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d2) }
+          // la escalera no recoge lo que pica: la piedra se queda en los escalones (2026-11-02, Soma subió con 1)
+          if (q() > 0 && !tarea.cancelada) { const [, dr] = await paso('recoger', ['12', 'cobble', 'max:24', 'otra_vez']); pasos.push(dr) }
+          if (bot.entity.position.y < y0 - 1) { const [, d3] = await paso('subir_a_superficie', []); pasos.push(d3) }
+          if (q() > 0 && !tarea.cancelada) { const [, dr2] = await paso('recoger', ['12', 'cobble', 'max:24', 'otra_vez']); pasos.push(dr2) }
+        }
+        const hechas = []
+        if (!tarea.cancelada) await mesaAqui()
+        for (const [obj, item] of faltan) {
+          if (tarea.cancelada) break
+          let [r, d] = await paso('fabricar', [obj]); pasos.push(d)
+          if (!r.exito && !/piedra|cobble/i.test(r.causa || '') && (/log|tronco|madera|tabl|planks|palo|stick|no se pudo/i.test(r.causa || ''))) {
+            await talar(2); await mesaAqui(); [r, d] = await paso('fabricar', [obj]); pasos.push(d)
+          }
+          if (inv().some(i => i.name === item)) hechas.push(obj.replace('_piedra', ''))
+        }
+        await equiparse()
+        const no = faltan.map(([obj]) => obj.replace('_piedra', '')).filter(n => !hechas.includes(n))
+        return { exito: !no.length, texto: no.length ? `Me falta: ${no.join(', ')} de piedra${q() > 0 ? ` (no encontré ${q()} de piedra)` : ''}.${hechas.length ? ` Hecho: ${hechas.join(', ')}.` : ''}` : `Armado: espada, pico y hacha de piedra.`, pasos }
+      }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
-        const [rs, ds] = await paso('equipar_soportes', ['HOGAR'])
+        const [rs, ds] = await paso('equipar_soportes', [BASE_ZONA])
         if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
@@ -1849,8 +1993,9 @@ for (const x of lista) {
   PERSONAJES.add(x.nombre)
 }
 registro.sesion.nombres = lista.map(x => x.nombre)
-// Entran de uno en uno (2 s entre ellos) para no saturar el servidor al conectar.
-lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES, x.decisor), 2000 * k))
+// Entran de uno en uno para no saturar el servidor al conectar: 5 s entre ellos, porque Paper rechaza («Connection throttled») las
+// conexiones desde la misma IP a menos de 4 s (connection-throttle de bukkit.yml; 2026-11-02, antes 2 s)
+lista.forEach((x, k) => setTimeout(() => new Personaje(x.nombre, x.puerto, x.perfil, lista.length > 1, x.modo, DESPUES, x.decisor), 5000 * k))
 // Al cerrar el bot (kill PID o Ctrl+C), el tramo de modo libre en curso se apunta en el diario antes de salir.
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
   for (const p of VIVOS.values()) try { p.cerrarTramo('bot cerrado') } catch (_) {}
