@@ -356,3 +356,60 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 02:34:50 · Lola · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
 ## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:34 · Trivino
 - 02:34:50 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:48 · Nico
+- 02:48:24 · Nico · modo órdenes · «acerquense» (chat de __Count) → ✓ Aquí estoy. (0.0 s; pasos: jugador✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:48 · Lola
+- 02:48:26 · Lola · modo órdenes · «acerquense» (chat de __Count) → ✗ No te veo y no sé dónde estás: dime tus coordenadas (F3), p. ej. «ven a 120 64 -30». (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:48 · Teo
+- 02:48:26 · Teo · modo órdenes · «acerquense» (chat de __Count) → ✗ No te veo y no sé dónde estás: dime tus coordenadas (F3), p. ej. «ven a 120 64 -30». (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:48 · Trivino
+- 02:48:26 · Trivino · modo órdenes · «acerquense» (chat de __Count) → ✗ No te veo y no sé dónde estás: dime tus coordenadas (F3), p. ej. «ven a 120 64 -30». (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 02:49:21 · Trivino · modo órdenes · «duerman» (chat de __Count) → ✗ Dejo «duerman» por la orden nueva. (11.8 s; pasos: usar_cama✗(cancelado)) · al terminar: otra orden
+- 02:49:22 · Lola · modo órdenes · «duerman» (chat de __Count) → ✗ Dejo «duerman» por la orden nueva. (11.8 s; pasos: usar_cama✗(cancelado)) · al terminar: otra orden
+- 02:49:22 · Teo · modo órdenes · «duerman» (chat de __Count) → ✗ Dejo «duerman» por la orden nueva. (11.8 s; pasos: usar_cama✗(cancelado)) · al terminar: otra orden
+- 02:49:22 · Nico · modo órdenes · «duerman» (chat de __Count) → ✗ Dejo «duerman» por la orden nueva. (13.0 s; pasos: usar_cama✗(cancelado)) · al terminar: otra orden
+- 02:49:32 · Lola · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (10.2 s) · al terminar: otra orden
+- 02:49:32 · Nico · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (9.6 s) · al terminar: otra orden
+- 02:49:32 · Teo · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (9.8 s) · al terminar: otra orden
+- 02:49:32 · Trivino · modo órdenes · «vengan» (chat de __Count) → ✗ Dejo «vengan» por la orden nueva. (10.6 s) · al terminar: otra orden
+- 02:49:32 · Teo · modo órdenes · «duerman» (chat de __Count) → ✓ Spawn guardado en esta cama. (0.1 s; pasos: usar_cama✓) · al terminar: quieto
+- 02:49:32 · Nico · modo órdenes · «duerman» (chat de __Count) → ✓ Spawn guardado en esta cama. (0.1 s; pasos: usar_cama✓) · al terminar: quieto
+- 02:49:32 · Trivino · modo órdenes · «duerman» (chat de __Count) → ✓ Spawn guardado en esta cama. (0.1 s; pasos: usar_cama✓) · al terminar: quieto
+- 02:49:32 · Lola · modo órdenes · «duerman» (chat de __Count) → ✓ Spawn guardado en esta cama. (0.2 s; pasos: usar_cama✓) · al terminar: quieto
+- 02:50:19 · Lola · modo órdenes · «desactivar guardaespaldas» (chat de __Count) → ✓ Modo guardaespaldas desactivado (cuidaba a __Count). (0.0 s) · al terminar: quieto
+- 02:50:19 · Teo · modo órdenes · «desactivar guardaespaldas» (chat de __Count) → ✓ Modo guardaespaldas desactivado (cuidaba a __Count). (0.0 s) · al terminar: quieto
+- 02:50:20 · Nico · modo órdenes · «desactivar guardaespaldas» (chat de __Count) → ✓ Modo guardaespaldas desactivado (cuidaba a __Count). (0.0 s) · al terminar: quieto
+- 02:50:20 · Trivino · modo órdenes · «desactivar guardaespaldas» (chat de __Count) → ✓ Modo guardaespaldas desactivado (cuidaba a __Count). (0.0 s) · al terminar: quieto
+- 02:50:40 · Teo · modo órdenes · «acerquense» (chat de __Count) → ✓ Aquí estoy. (7.4 s; pasos: jugador✓) · al terminar: quieto
+- 02:50:41 · Trivino · modo órdenes · «acerquense» (chat de __Count) → ✓ Aquí estoy. (7.8 s; pasos: jugador✓) · al terminar: quieto
+- 02:50:41 · Nico · modo órdenes · «acerquense» (chat de __Count) → ✓ Aquí estoy. (8.2 s; pasos: jugador✓) · al terminar: quieto
+- 02:50:42 · Lola · modo órdenes · «acerquense» (chat de __Count) → ✓ Aquí estoy. (8.6 s; pasos: jugador✓) · al terminar: quieto
+- 02:51:08 · Teo · modo órdenes · «quedense quietos» (chat de __Count) → ✓ Me quedo aquí. (0.0 s)
+- 02:51:08 · Lola · modo órdenes · «quedense quietos» (chat de __Count) → ✓ Me quedo aquí. (0.0 s)
+- 02:51:08 · Nico · modo órdenes · «quedense quietos» (chat de __Count) → ✓ Me quedo aquí. (0.0 s)
+- 02:51:09 · Trivino · modo órdenes · «quedense quietos» (chat de __Count) → ✓ Me quedo aquí. (0.0 s)
+- 02:51:33 · Trivino · modo órdenes · «sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:33 · Nico · modo órdenes · «sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:34 · Teo · modo órdenes · «sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:34 · Lola · modo órdenes · «sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:43 · Teo · modo órdenes · «modo sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:43 · Nico · modo órdenes · «modo sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:43 · Lola · modo órdenes · «modo sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:51:43 · Trivino · modo órdenes · «modo sentinela» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:04 · Nico
+- 03:04:18 · Nico · modo órdenes · «acpa» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:04 · Trivino
+- 03:04:18 · Trivino · modo órdenes · «acpa» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:04 · Lola
+- 03:04:19 · Lola · modo órdenes · «acpa» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:04 · Teo
+- 03:04:19 · Teo · modo órdenes · «acpa» (chat de __Count) → ✗ no entendida (0.0 s)
+- 03:04:21 · Nico · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 752, 70, -926. (0.0 s)
+- 03:04:21 · Trivino · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 752, 70, -924. (0.0 s)
+- 03:04:21 · Teo · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 752, 70, -926. (0.0 s)
+- 03:04:21 · Lola · modo órdenes · «acá» (chat de __Count) → ✓ Campamento en 753, 70, -926. (0.0 s)
+- 03:04:34 · Trivino · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (5.2 s; pasos: jugador✓) · al terminar: quieto
+- 03:04:34 · Nico · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (5.4 s; pasos: jugador✓) · al terminar: quieto
+- 03:04:34 · Lola · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (5.8 s; pasos: jugador✓) · al terminar: quieto
+- 03:04:35 · Teo · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (6.4 s; pasos: jugador✓) · al terminar: quieto
+- 03:04:46 · Trivino · modo órdenes · «que puedes hacer» (chat de __Count) → ✓ dije lo que sé hacer (0.0 s)
