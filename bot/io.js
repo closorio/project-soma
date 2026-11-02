@@ -994,11 +994,26 @@ class Personaje {
             const r = await viajeLargo(bot, meta, () => !!bot.players[jugador]?.entity, { tarea, mov: prudentes(bot) })
             if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r === 'llegué' ? 'no está allí' : r}).` }
           }
-          const e = bot.players[jugador].entity
-          const [r, d] = await paso('atacar', ['id:' + e.id, '30'])
-          const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se fue.`, 'sin hostil': `No veo a ${jugador} cerca.`,
+          // 2026-11-01: atacar solo coge objetivos a ≤ 16 y se le ve a ~48: antes de pelear se acerca (GoalFollow, hasta 12); si se va de la
+          // vista, vuelve a buscarle donde le vio; y si huye (> 16) durante la pelea, le persigue otra vez (hasta 5 rondas o «para»)
+          let r = { causa: 'sin hostil' }, d = null
+          for (let ronda = 0; ronda < 5 && !(tarea && tarea.cancelada); ronda++) {
+            if (!bot.players[jugador]?.entity) {
+              const visto = require('./jugadores').ultimaVez(bot, jugador)
+              if (!visto) break
+              const v = await viajeLargo(bot, visto.pos, () => !!bot.players[jugador]?.entity, { tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+              if (v !== 'listo') { r = { causa: v === 'llegué' ? 'no está allí' : v }; break }
+            }
+            const e = bot.players[jugador].entity
+            const c = await moverHasta(bot, new goals.GoalFollow(e, 2), () => e.position.distanceTo(bot.entity.position) <= 12, { ms: 120000, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            if (c === 'perdido') continue
+            if (c !== 'listo') { r = { causa: c }; break }
+            ;[r, d] = await paso('atacar', ['id:' + e.id, '30'])
+            if (r.causa !== 'huyó' && r.causa !== 'sin hostil') break
+          }
+          const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se me escapa.`, 'sin hostil': `No alcanzo a ${jugador}.`, cancelado: 'Dejo de perseguirle.',
             'salud baja': 'Estoy muy herido: no peleo.', demasiados: 'Hay demasiados monstruos: no peleo.', 'sin arma': 'No llevo arma: no peleo.' }
-          return { exito: !!r.exito, texto: textos[r.causa] || `No pude: ${r.causa}.`, pasos: [d] }
+          return { exito: !!r.exito, texto: textos[r.causa] || `No pude: ${r.causa}.`, pasos: d ? [d] : [] }
         }
         const [r, d] = await paso('atacar', [o.de || '-', '30'])
         const textos = { muerto: `Lo maté (${r.golpes} golpes).`, 'huyó': 'Se fue.', 'sin hostil': 'No veo ningún monstruo cerca.',
