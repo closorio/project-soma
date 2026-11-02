@@ -1,6 +1,6 @@
 // Abastecer una obra del catálogo (2026-11-02): qué hacer para tener lo que falta, sin tocar el bot (función pura: la prueba
 // bot/probar_abastecer_seco.js). El bucle de io.js («construye X en x y z») lo ejecuta paso a paso con las órdenes de siempre.
-//   planAbasto(registry, faltan, inv, enCofres, { hayHorno }) → { pasos: [{ tipo, …, para }], pedir: { objeto: n } }
+//   planAbasto(registry, faltan, inv, enCofres, { hayHorno, evitar }) → { pasos: [{ tipo, …, para }], pedir: { objeto: n } }
 // Por orden: 1. lo que haya en los cofres de HOGAR (saca); 2. lo que se fabrica, con planificador.planear (sus ingredientes, también de
 // los cofres si están); las hojas que falten, por tabla: troncos → tala; piedra, arena, grava, tierra, arcilla → mina; menas y lingotes →
 // mina (+ funde); cristal → mina arena + funde; lana blanca, cuero, plumas → caza; carbón → mina; 3. el resto (tintes, diamante, lo que
@@ -34,7 +34,8 @@ function hoja(item, n) {
 }
 const fundidos = (pasos) => pasos.filter(p => p.tipo === 'funde').reduce((a, p) => a + p.n, 0)
 
-function planAbasto(registry, faltan, inv, enCofres, { hayHorno = true } = {}) {
+// evitar: { hoja: n } que ya no se encontró cerca (arena, ovejas…): va a pedir en vez de a minar o cazar otra vez
+function planAbasto(registry, faltan, inv, enCofres, { hayHorno = true, evitar = {} } = {}) {
   const pasos = [], pedir = {}
   const cofre = { ...(enCofres || {}) }
   const sacar = (item, n) => { // de los cofres lo que haya, hasta n; devuelve cuánto se sacó
@@ -69,7 +70,7 @@ function planAbasto(registry, faltan, inv, enCofres, { hayHorno = true } = {}) {
     for (const [h, m] of Object.entries(plan.faltan)) hojas[h] = (hojas[h] || 0) + m
   }
   for (const [h, m] of Object.entries(hojas)) {
-    const como = registry.itemsByName[h] && hoja(h, m)
+    const como = registry.itemsByName[h] && !evitar[h] && hoja(h, m)
     if (como) conseguir.push(...como.map(p => ({ ...p, para: h })))
     else pedir[h] = (pedir[h] || 0) + m
   }

@@ -118,7 +118,9 @@ module.exports = async function construir(bot, args, tarea) {
   let e
   if (catalogo && nums.length >= 3) {
     const columnas = [...new Set(plano.bloques.filter(b => b[1] === 0).map(b => `${b[0]},${b[2]}`))].map(k => k.split(',').map(Number))
-    e = parcela.evaluarCaja(bot, nums[0], nums[1], nums[2], plano.dim, columnas, { mov: prudentes(bot) })
+    // sin buscar camino: con el presupuesto corto de hayCamino fallaba según dónde estuviera el bot (2026-11-02, mundo del compañero);
+    // si de verdad no llega, lo dice al ir a poner el primer bloque
+    e = parcela.evaluarCaja(bot, nums[0], nums[1], nums[2], plano.dim, columnas, { mov: prudentes(bot), camino: false })
   } else {
     e = nums.length >= 2 ? parcela.evaluar(bot, nums[0], nums[nums.length >= 3 ? 2 : 1], plano.dim, { mov: prudentes(bot) }) : await parcela.elegirParcela(bot, plano.dim, { mov: prudentes(bot) })
   }

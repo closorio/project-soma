@@ -45,6 +45,8 @@ p = planAbasto(registry, { diamond_block: 1, oak_planks: 4 }, {}, { oak_planks: 
 ok(p.pedir.diamond === 9 && de(p, 'saca', 'objeto', 'oak_planks'), `diamante → pedir: ${JSON.stringify(p.pedir)} ${txt(p)}`)
 p = planAbasto(registry, { red_wool: 2 }, {}, {})
 ok(p.pedir.red_wool === 2 && !p.pasos.length, `lana roja → pedir: ${JSON.stringify(p.pedir)}`)
+p = planAbasto(registry, { glass: 2 }, {}, {}, { evitar: { glass: 2 } })
+ok(p.pedir.glass === 2 && !de(p, 'mina', 'bloque', 'sand'), `lo que no encontró se pide: ${JSON.stringify(p.pedir)} ${txt(p)}`)
 console.log('  lana → cazar, cama, diamante y tintes → pedir')
 
 // 5. puerta, antorchas, escaleras y losas de una casa: todo de troncos (y carbón para la antorcha)

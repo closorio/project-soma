@@ -1809,6 +1809,7 @@ class Personaje {
     }
     const total = estructuras.ordenar(plano).length
     let sinAvance = 0, antes = -1, r = null, mal = 0, pedir = {}, ronda = 0
+    const sinHallar = {} // hojas que no encontró cerca: no se vuelven a buscar, se piden
     while (++ronda <= 40 && !tarea.cancelada) {
       const hechos = puestosEnMundo()
       sinAvance = hechos.size === antes ? sinAvance + 1 : 0
@@ -1825,12 +1826,22 @@ class Personaje {
         const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
         await this.salirDeVedada(tarea)
         const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })
-        const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno })
+        const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno, evitar: sinHallar })
         pedir = plan.pedir
         if (Object.keys(pedir).length) bot.chat(`Para ${plano.nombre} necesito que me traigas ${frase(pedir)} (déjalo en un cofre de ${BASE_ZONA}).`)
         if (!plan.pasos.length) break // solo queda lo que hay que pedir
         bot.chat(`Tanda ${ronda} de ${plano.nombre} (${t.bloques} bloques): voy a por ${frase(falta)}.`)
-        for (const p of plan.pasos) { if (tarea.cancelada) break; pasos.push(...await this.pasoAbasto(p, tarea, paso)) }
+        const noHallo = {}
+        for (const p of plan.pasos) {
+          if (tarea.cancelada) break
+          const ds = await this.pasoAbasto(p, tarea, paso)
+          pasos.push(...ds)
+          // lo que no encuentra cerca (arena, ovejas…): se pide, en vez de repetirlo tanda tras tanda
+          if ((p.tipo === 'mina' || p.tipo === 'cazar') && ds.length && ds.every(d => !d.exito)) for (const k of p.para.split(', ')) noHallo[k] = sinHallar[k] = p.n
+        }
+        if (Object.keys(noHallo).length) {
+          bot.chat(`No encuentro cerca con qué hacer ${frase(noHallo)}: tráemelo (déjalo en un cofre de ${BASE_ZONA}).`)
+        }
       }
       if (tarea.cancelada) break
       const [rr, d] = await paso('construir', obra ? [`retomar=${obra}`, 'parcial'] : [o.estructura, ...origen.map(String), 'parcial'])
@@ -1860,7 +1871,7 @@ class Personaje {
       await this.salirDeVedada(tarea)
       return [d]
     }
-    if (p.tipo === 'fabrica') return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]]
+    if (p.tipo === 'fabrica') { await this.salirDeVedada(tarea); return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]] } // en una vedada no pone la mesa
     const o = p.tipo === 'tala' ? { tipo: 'tala', n: Math.min(p.n, 64), pedido: p.n }
       : p.tipo === 'mina' ? { tipo: 'mina', bloque: p.bloque, n: p.n }
         : p.tipo === 'funde' ? { tipo: 'funde', entrada: p.entrada, n: p.n } : { tipo: 'cazar', animal: p.animal, n: p.n }
