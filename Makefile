@@ -50,7 +50,14 @@ BOT_DECIDER ?= capataz@$(ROLE_)
 # la orden al puerto de un bot, con el texto en la URL bien codificado
 pedir = curl -s --max-time 30 "127.0.0.1:$(strip $(1))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "$(2)")"; echo
 
-.PHONY: help install install-bot install-python server-download server-start server-stop server-save server-status \
+# Versionado (herramientas/version.sh): `make version` enseña la versión y la que toca; `make publicar` la etiqueta (TIPO=major|minor|parche
+# para forzarla; HACER=1 para hacerlo de verdad: sube la etiqueta a origin y, si es major, abre la PR hacia el main de tu fork)
+version:
+	@herramientas/version.sh actual; herramientas/version.sh siguiente
+publicar:
+	@herramientas/version.sh publicar $(TIPO) $(if $(HACER),--hacer,)
+
+.PHONY: version publicar help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
         order go move-log zone zones zone-delete test validate-profiles bench-smoke bench-k bench-prepare
