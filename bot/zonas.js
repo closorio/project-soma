@@ -63,6 +63,11 @@ const NO_ROMPER = /_(log|wood)$|^(chest|trapped_chest|barrel)$/
 function aplicar(mov, { pisarVedadas = false } = {}) {
   for (const b of mov.bot.registry.blocksArray) if (NO_ROMPER.test(b.name)) mov.blocksCantBreak.add(b.id)
   // F8.1: el navegador a veces pasa un bloque sin posición (chunk sin cargar) y la excepción tumbaba el proceso de los cuatro bots
+  // 2026-11-02: las enredaderas (bayas luminosas, lloronas, retorcidas) se trepan en el juego, pero la física de mineflayer no lo sabe (solo
+  // ladder, vine y scaffolding): dentro de ellas el bot cae como si no estuviera y el server lo recoloca. Se rodean si se puede (coste, no veto).
+  const vinas = new Set(['cave_vines', 'cave_vines_plant', 'weeping_vines', 'weeping_vines_plant', 'twisting_vines', 'twisting_vines_plant']
+    .map(n => (mov.bot.registry.blocksByName || {})[n]).filter(Boolean).map(b => b.id))
+  if (vinas.size) mov.exclusionAreasStep.push(b => (b && vinas.has(b.type) ? 25 : 0))
   if (!pisarVedadas) mov.exclusionAreasStep.push(b => (b && b.position && pasoVedado(b.position.x, b.position.y, b.position.z) ? 1000 : 0))
   mov.exclusionAreasBreak.push(b => (b && b.position && (talaProtegida(b.position.x, b.position.y, b.position.z) || cofres.esCofre(b.position.x, b.position.y, b.position.z)) ? 1000 : 0))
   return require('./puertas').aplicar(mov) // 2026-11-01: las puertas de madera son paso (las abre puertas.vigilar)

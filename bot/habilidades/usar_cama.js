@@ -9,7 +9,7 @@ const { Vec3 } = require('vec3')
 const fs = require('fs')
 const path = require('path')
 const mundo = require('../mundo')
-const { conLimite, esperar, moverHasta, prudentes } = require('./comun')
+const { conLimite, esperar, moverHasta, prudentes, hayCamino } = require('./comun')
 const { sitioCama } = require('./dormir')
 const fabricar = require('./fabricar')
 const sv = require('./sv')
@@ -77,6 +77,23 @@ function buscarSitio(bot) {
   return cand.sort((a, c) => a.distanceTo(b) - c.distanceTo(b))[0] || null
 }
 
+// Una casilla de pie junto a la cama (a ≤ 2, alturas -1..+1) a la que SÍ hay camino con esos movimientos: con una meta «cerca de la cama» el
+// navegador podía quedarse en el otro lado de una pared o de una escalera (cerca en línea recta, lejos andando). Las más cercanas al bot
+// primero, hasta 8 comprobaciones de 400 ms. null si ninguna (se vuelve a «cerca de la cama»).
+function celdaDeAcceso(bot, v, mov) {
+  const libre = (p) => { const k = bot.blockAt(p); return !!k && k.boundingBox === 'empty' && !sv.esLiquido(k) && !k.name.endsWith('_bed') }
+  const cand = []
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 1; dy++) {
+    const s = v.offset(dx, dy, dz)
+    if (libre(s) && libre(s.offset(0, 1, 0)) && sv.solido(bot.blockAt(s.offset(0, -1, 0))) && !(bot.blockAt(s.offset(0, -1, 0)) || {}).name?.endsWith('_bed')) cand.push(s)
+  }
+  const yo = bot.entity.position
+  for (const s of cand.sort((a, b) => a.distanceTo(yo) - b.distanceTo(yo)).slice(0, 8)) {
+    try { if (hayCamino(bot, new goals.GoalBlock(s.x, s.y, s.z), 400, mov)) return s } catch (_) {}
+  }
+  return null
+}
+
 // La que lleve (o una recién fabricada), en dos casillas libres a su lado; devuelve su posición o { causa }
 async function ponerCama(bot, tarea) {
   let cama = bot.inventory.items().find(i => i.name.endsWith('_bed'))
@@ -130,7 +147,10 @@ async function unaCama(bot, r, descartadas, tarea, t0) {
   const cerca = () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= 3
   if (!cerca()) {
     // pisando las zonas vedadas (las camas suelen estar en HOGAR, y con la penalización normal el navegador daba vueltas o se rendía); sin romper ni poner
-    const fin = await moverHasta(bot, new goals.GoalNear(v.x, v.y, v.z, 2), cerca, { ms: 45000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
+    const mov = prudentes(bot, { pisarVedadas: true })
+    const acceso = celdaDeAcceso(bot, v, mov)
+    const meta = acceso ? new goals.GoalBlock(acceso.x, acceso.y, acceso.z) : new goals.GoalNear(v.x, v.y, v.z, 2)
+    const fin = await moverHasta(bot, meta, cerca, { ms: 45000, tarea, mov })
     if (!cerca()) return { exito: false, causa: fin === 'cancelado' ? 'cancelado' : 'no llego', ...datos() }
   }
   try { bot.pathfinder.setGoal(null) } catch (_) {}
