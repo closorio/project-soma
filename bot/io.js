@@ -1621,7 +1621,7 @@ class Personaje {
         const stock = { ...(r.items || {}) }
         for (const it of bot.inventory.items()) stock[it.name] = (stock[it.name] || 0) + it.count
         const falta = mat.faltan(plan, stock)
-        const donde = r.cofres ? `${r.cofres} cofre${r.cofres === 1 ? '' : 's'} de ${r.zona}${r.noAbiertos ? ` (${r.noAbiertos} sin abrir)` : ''} y mi inventario` : `mi inventario (${r.causa === 'sin cofres' ? `no hay cofres en ${r.zona}` : `no abrí ningún cofre de ${r.zona}`})`
+        const donde = r.cofres ? `${r.cofres} cofre${r.cofres === 1 ? '' : 's'} de ${r.zona}${r.noAbiertos ? ` (${r.noAbiertos} sin abrir)` : ''}${r.lejosEnY ? ` (dejo ${r.lejosEnY} a más de 10 bloques de altura)` : ''} y mi inventario` : `mi inventario (${r.causa === 'sin cofres' ? `no hay cofres en ${r.zona}` : `no abrí ningún cofre de ${r.zona}`})`
         if (!falta.length) return { exito: true, texto: `Con ${donde} tengo todo para ${plan.nombre}.`, pasos: [d] }
         bot.chat(`Para ${plan.nombre} me falta, mirando ${donde}:`)
         for (const f of mat.frases(falta)) bot.chat(f)
