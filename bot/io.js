@@ -93,7 +93,7 @@ const AGRESOR_ESCOLTA_MS = 10000 // un golpe al protegido de hace más de 10 s y
 const NULA = /^(ya estaba|sin amenaza|sin árbol|nada que recoger|no veo|sin tronco al alcance)/ // decisiones que no cambian nada
 const PALABRAS = { ordenes: 'órdenes', libre: 'libre' }
 // Lo que dice al aceptar una orden con acción (por el chat, y la respuesta inmediata de `orden` por el puerto).
-const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
+const AVISOS = { ven: () => 'Voy.', sigueme: () => 'Te sigo.', recupera: () => 'Voy a por mis cosas.', escolta: (o) => (o.a ? `Cubro a ${o.a}` : 'Te cubro') + (o.modo === 'agresivo' ? ', a por todo lo hostil.' : '.'), quedate: () => 'Me quedo aquí.', recoge: () => 'Recojo lo que hay cerca.',
   tala: (o) => `Voy a talar ${o.n} tronco${o.n > 1 ? 's' : ''}.`, guarda: () => 'Voy al cofre.',
   huye: (o) => (o.de ? `Me alejo de ${o.de}.` : 'Me alejo de la amenaza.'),
   // F7.2
@@ -173,6 +173,17 @@ class Personaje {
       if (!(this.enCurso || this.enHabilidad || this.libre) || r === 'goal_updated' || r === 'goal_moved' || Date.now() - rehechas.t < 2000) return
       rehechas.t = Date.now(); this.ev(`[mov] ruta rehecha: ${r} en ${bot.entity.position.floored()}`)
     })
+    bot.on('messagestr', (m) => { // la causa de la muerte: el mensaje del server que me nombra, en los 3 s siguientes
+      const u = this.ultimaMuerte
+      if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username)) u.causa = m
+    })
+    bot.on('spawn', () => {
+      if (!this.recuperarPendiente) return
+      this.recuperarPendiente = false
+      const lleva = bot.inventory.items().reduce((a, i) => a + i.count, 0) // con keepInventory reaparece con todo: no vuelve
+      if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) return
+      setTimeout(() => this.ordenar('recupera tus cosas', { de: 'auto' }).catch(e => this.ev('[recupera] fallo: ' + e.message)), 2000)
+    })
     bot.once('spawn', () => {
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
@@ -208,6 +219,10 @@ class Personaje {
     bot.on('playerLeft', (p) => this.ev(`[mc] ${p.username} salió`))
     bot.on('death', () => {
       this.ev(`[mc] ${this.visible} ha muerto`); informe.evento(bot, 'muerto', bot.entity?.position?.floored().toArray())
+      // 2026-11-01: recuperar las cosas al reaparecer (case 'recupera'); IO_RECUPERAR=no lo apaga. Muerto recuperando: no vuelve.
+      const objetos = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+      this.ultimaMuerte = { pos: bot.entity.position.clone(), t: Date.now(), causa: null, objetos, segunda: !!this.recuperando }
+      this.recuperarPendiente = process.env.IO_RECUPERAR !== 'no' && !this.recuperando && objetos > 0
       try { persistente.anotarMuerte(bot) } catch (e) { this.ev('[memoria] no se pudo guardar la muerte: ' + e.message) }
     })
     bot.on('health', () => {
@@ -822,6 +837,32 @@ class Personaje {
         } finally { bot.removeListener('entityHurt', alGolpe) }
         const textos = { 'tiempo agotado': 'Llevo diez minutos cubriéndote: paro aquí.', perdido: 'Te he perdido de vista.', 'sin camino': 'No encuentro camino para seguirte.' }
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de cubrirte.' }
+      }
+      case 'recupera': {
+        // 2026-11-01 (A4 reducido): volver donde murió y recoger lo suyo. No lo intenta con lava, fuego o vacío, pasados 270 s (los objetos
+        // desaparecen a los 300), a > 150 bloques ni si murió ya recuperando. Corta con ≥ 3 hostiles a la vista o la vida < 10.
+        const m = this.ultimaMuerte
+        if (!m) return { exito: false, texto: 'No he muerto desde que entré.' }
+        const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
+        if (m.segunda) return { exito: false, texto: `Morí recuperando mis cosas en ${donde}: no vuelvo.` }
+        if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) return { exito: false, texto: `Morí en ${donde} (${m.causa}): no hay nada que recuperar.` }
+        if (edad > 270) return { exito: false, texto: `Morí hace ${Math.round(edad)} s: mis cosas ya habrán desaparecido.` }
+        if (d > 150) return { exito: false, texto: `Morí a ${Math.round(d)} bloques, en ${donde}: demasiado lejos.` }
+        this.decir(`He muerto en ${donde}${m.causa ? ` (${m.causa})` : ''}; voy a por mis cosas.`)
+        const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
+        const antes = bot.inventory.items().reduce((a, i) => a + i.count, 0)
+        this.recuperando = true
+        try {
+          const r = await moverHasta(bot, new goals.GoalNear(m.pos.x, m.pos.y, m.pos.z, 2), () => bot.entity.position.distanceTo(m.pos) <= 3 || peligro(), { ms: Math.max(10000, (270 - edad) * 1000), tarea, mov: prudentes(bot) })
+          if (r !== 'listo') return { exito: false, texto: `No llego a donde morí (${r}).` }
+          if (peligro()) return { exito: false, texto: 'Hay demasiado peligro donde morí: lo dejo.' }
+          for (let k = 0; k < 4 && !tarea.cancelada && !peligro(); k++) {
+            const q = await this.ejecutarHabilidad('recoger', ['8', '-', 'max:40', 'otra_vez'], tarea)
+            if (!q.exito || !q.quedan) break
+          }
+        } finally { this.recuperando = false }
+        const n = bot.inventory.items().reduce((a, i) => a + i.count, 0) - antes
+        return { exito: n > 0, texto: n > 0 ? `Recuperé ${Math.min(n, m.objetos)}/${m.objetos}.` : 'No encontré mis cosas.' }
       }
       case 'tala': return this.talarN(o, tarea, paso)
       case 'recoge': {

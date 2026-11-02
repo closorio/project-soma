@@ -16,7 +16,7 @@ const AYUDA = 'Puedo: ven, sígueme, quédate, tala N troncos, recoge, guarda en
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, equípate, apártate, caza; y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
-  'desatáscate, caza N ovejas, recoge agua, vierte el agua; y continúa (sigue con lo que dejaste a medias).'
+  'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
 const BLOQUES = { piedra: 'stone', piedras: 'stone', roca: 'stone', tierra: 'dirt', arena: 'sand', grava: 'gravel', mineral: 'mineral', minerales: 'mineral',
   carbon: 'coal_ore', hierro: 'iron_ore', cobre: 'copper_ore', andesita: 'andesite', granito: 'granite', diorita: 'diorite', arenisca: 'sandstone' }
@@ -119,6 +119,8 @@ function interpretar(texto) {
       /\b(?:usa|usad|usar|utiliza) (?:la|esa|esta|tu) cama\b|\b(?:ven|ve|vete|id|anda) a (?:la|tu) cama\b|^a la cama\b|\bguarda (?:el|tu) (?:spawn|punto de reaparicion)\b/.test(t))
     return { tipo: 'duerme' }
   if (/^(?:come|comed|comer|comete|cena|desayuna|almuerza)\b|\b(?:come|comete) algo\b/.test(t)) return { tipo: 'come' }
+  // 2026-11-01: volver a por sus cosas tras morir (también lo lanza solo al reaparecer)
+  if (/\b(?:recupera|recuperad)\b|\bve a por tus cosas\b|\brecoge tu loot\b/.test(t)) return { tipo: 'recupera' }
   // 2026-11-01: guardaespaldas defensivo (le sigue y solo pelea con quien le pega a él o al bot); antes que «ataca»
   // «… agresivo»: también va a por los hostiles que tenga cerca el protegido; «pasivo» (o nada): solo a por quien pegue
   const modoEscolta = /\bagresiv[oa]s?\b/.test(t) ? 'agresivo' : 'pasivo'
