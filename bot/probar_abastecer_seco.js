@@ -34,6 +34,11 @@ ok(de(p, 'mina', 'bloque', 'stone') && de(p, 'mina', 'bloque', 'stone').n === 8 
 ok(p.pasos.findIndex(x => x.tipo === 'funde') > p.pasos.findIndex(x => x.tipo === 'mina'), 'fundir después de minar')
 p = planAbasto(registry, { glass: 6 }, { coal: 2, cobblestone: 8 }, {}, { hayHorno: false })
 ok(!de(p, 'tala') && !de(p, 'mina', 'bloque', 'stone'), `con carbón y piedra no se tala ni se mina piedra: ${txt(p)}`)
+p = planAbasto(registry, { coal: 2 }, {}, {})
+ok(de(p, 'fabrica', 'objeto', 'wooden_pickaxe') && p.pasos.findIndex(x => x.objeto === 'wooden_pickaxe') < p.pasos.findIndex(x => x.tipo === 'mina'), `sin pico, uno de madera antes de minar: ${txt(p)}`)
+ok(de(p, 'tala') && p.pasos.findIndex(x => x.tipo === 'tala') < p.pasos.findIndex(x => x.objeto === 'wooden_pickaxe'), 'y los troncos para el pico, antes')
+p = planAbasto(registry, { coal: 2 }, { stone_pickaxe: 1 }, {})
+ok(!de(p, 'fabrica', 'objeto', 'wooden_pickaxe'), 'con pico, no')
 console.log('  cristal: arena + horno + combustible')
 
 // 4. lana → cazar; cama → lana + tablones; diamante → pedir; tinte → pedir

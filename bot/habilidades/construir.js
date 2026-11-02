@@ -177,7 +177,9 @@ async function quitarVegetacion(bot, lista, tarea) {
     if (tarea && tarea.cancelada) return 'cancelado'
     const v = new Vec3(x, y, z), b = bot.blockAt(v)
     if (!b || b.name === 'air') continue
-    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 3), () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms: 20000, tarea, mov: prudentes(bot) })
+    // el tiempo, según lo lejos que esté (Oqva venía de la mina, a 50 bloques, y no llegó en 20 s)
+    const ms = 20000 + bot.entity.position.distanceTo(v) * 1000
+    const r = await moverHasta(bot, new goals.GoalNear(x, y, z, 3), () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms, tarea, mov: prudentes(bot) })
     if (r !== 'listo' && bot.entity.position.distanceTo(v) > ALCANCE + 0.5) return `no llego a quitar ${b.name} en ${x},${y},${z}`
     try { await conLimite(bot.dig(b, true), 5000) } catch (e) { return `no pude quitar ${b.name} en ${x},${y},${z}: ${e.message.slice(0, 60)}` }
     await esperar(150)

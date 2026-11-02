@@ -111,7 +111,16 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
     const piedra = (inv.cobblestone || 0) + (inv.cobbled_deepslate || 0)
     if (!hayHorno && !inv.furnace && piedra < 8) conseguir.unshift({ tipo: 'mina', bloque: 'stone', n: 8 - piedra, para: 'furnace' })
   }
-  // juntar lo repetido (dos «tala» o dos «mina stone») y ordenar: sacar, conseguir (talar, minar, cazar), fundir, fabricar
+  // minar piedra o menas pide pico: si no lleva ninguno, uno de madera antes de minar (Oqva, 2026-11-02: cavó hasta el carbón sin pico)
+  const minaDura = conseguir.some(p => p.tipo === 'mina' && /stone|_ore$/.test(p.bloque))
+  if (minaDura && !Object.keys(inv).some(k => /_pickaxe$/.test(k)) && !faltan.wooden_pickaxe) {
+    const base = { ...inv }
+    for (const [k, v] of Object.entries(cofre)) if (v > 0) base[k] = (base[k] || 0) + v
+    const pico = planear(registry, [['wooden_pickaxe', 1]], base)
+    for (const [h, m] of Object.entries(pico.faltan)) { const como = hoja(h, m); if (como) conseguir.unshift(...como.map(p => ({ ...p, para: 'wooden_pickaxe' }))) }
+    fabricar.unshift({ tipo: 'fabrica', objeto: 'wooden_pickaxe', n: 1, para: 'pico' })
+  }
+  // juntar lo repetido (dos «tala» o dos «mina stone») y ordenar: sacar, talar, el pico, minar y cazar, fundir, fabricar
   const junta = (lista) => {
     const out = []
     for (const p of lista) {
@@ -120,8 +129,9 @@ function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, e
     }
     return out
   }
-  const PESO = { saca: 0, tala: 1, mina: 1, cazar: 1, funde: 2, fabrica: 3 }
-  const todo = junta([...pasos, ...conseguir, ...fabricar]).sort((a, b) => PESO[a.tipo] - PESO[b.tipo])
+  const PESO = { saca: 0, tala: 1, mina: 2, cazar: 2, funde: 3, fabrica: 4 }
+  const peso = (p) => (p.tipo === 'fabrica' && /_pickaxe$/.test(p.objeto) ? 1.5 : PESO[p.tipo])
+  const todo = junta([...pasos, ...conseguir, ...fabricar]).sort((a, b) => peso(a) - peso(b))
   return { pasos: todo, pedir }
 }
 

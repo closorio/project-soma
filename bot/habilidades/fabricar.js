@@ -77,13 +77,17 @@ function siguienteFabricacion(e) {
   return null
 }
 
+// 2026-11-02: dentro de una zona de obras de carteles la mesa se puede poner (y se recoge al acabar) aunque la zona sea vedada o quede
+// fuera de las de trabajo: en el mundo del compañero TALLER (trabajo) está entera dentro de HOGAR (vedada) y no cabía en ningún sitio
+const mesaEnCartel = (v) => { const obras = require('../obras'); return obras.enTemporal(v.x, v.z) && !obras.esDeObra(v.x, v.y, v.z) && !require('../cofres').esCofre(v.x, v.y, v.z) }
+
 // Un sitio a mi lado para la mesa: casilla libre (y libre encima) con suelo firme, que se pueda tocar.
 async function ponerMesa(bot) {
   const b = nodo(bot), mesa = bot.inventory.items().find(i => i.name === 'crafting_table')
   if (!mesa) return null
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
-    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !(sv.puedeTocar(v.x, v.y, v.z) || mesaEnCartel(v))) continue
     try {
       await conLimite(bot.equip(mesa, 'hand'), 3000)
       await conLimite(bot.placeBlock(suelo, new Vec3(0, 1, 0)), 3000)

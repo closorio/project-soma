@@ -1833,7 +1833,7 @@ class Personaje {
         const noHallo = {}
         for (const p of plan.pasos) {
           if (tarea.cancelada) break
-          const ds = await this.pasoAbasto(p, tarea, paso)
+          const ds = await this.pasoAbasto(p, tarea, paso, origen)
           pasos.push(...ds)
           // lo que no encuentra cerca (arena, ovejas…): se pide, en vez de repetirlo tanda tras tanda
           if ((p.tipo === 'mina' || p.tipo === 'cazar') && ds.length && ds.every(d => !d.exito)) for (const k of p.para.split(', ')) noHallo[k] = sinHallar[k] = p.n
@@ -1864,13 +1864,22 @@ class Personaje {
   }
 
   // Un paso del abasto con la orden de siempre (tala, mina, funde, cazar) o la habilidad (saca y fabrica, con su cantidad)
-  async pasoAbasto(p, tarea, paso) {
+  async pasoAbasto(p, tarea, paso, origen) {
     if (p.tipo === 'saca') { // de los cofres que contó revisar_cofres; luego fuera de la zona (si es vedada, desde dentro no se fabrica ni se va a la obra)
       const d = (await paso('sacar_del_cofre', [p.objeto, String(p.n), `zona=${BASE_ZONA}`]))[1]
       await this.salirDeVedada(tarea)
       return [d]
     }
-    if (p.tipo === 'fabrica') { await this.salirDeVedada(tarea); return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]] } // en una vedada no pone la mesa
+    if (p.tipo === 'fabrica') {
+      // la mesa: en una zona de carteles se puede poner (fabricar.mesaEnCartel); si la obra está en una, se fabrica a su lado, fuera de la
+      // huella; si no, fuera de la vedada en la que esté (en ella no se pone)
+      const bot = this.bot
+      if (origen && require('./obras').enTemporal(origen[0] - 2, origen[2] - 2)) {
+        const [x, y, z] = [origen[0] - 2, origen[1], origen[2] - 2]
+        await moverHasta(bot, new goals.GoalNear(x, y, z, 1), () => bot.entity.position.distanceTo(new (require('vec3').Vec3)(x + 0.5, y, z + 0.5)) <= 2, { ms: 60000, tarea, mov: prudentes(bot) })
+      } else await this.salirDeVedada(tarea)
+      return [(await paso('fabricar', [p.objeto, String(p.n)]))[1]]
+    }
     const o = p.tipo === 'tala' ? { tipo: 'tala', n: Math.min(p.n, 64), pedido: p.n }
       : p.tipo === 'mina' ? { tipo: 'mina', bloque: p.bloque, n: p.n }
         : p.tipo === 'funde' ? { tipo: 'funde', entrada: p.entrada, n: p.n } : { tipo: 'cazar', animal: p.animal, n: p.n }
