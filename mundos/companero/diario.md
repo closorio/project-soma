@@ -101,3 +101,56 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 19:14:01 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (47.7 s; pasos: usar_cama✓) · al terminar: quieto
 ## Modos libre y órdenes (F4) · sesión del bot 2026-11-01 19:17 · Trivino
 - 19:17:52 · Trivino · modo órdenes · «ataca» (chat de __Count) → ✗ No llevo arma: no peleo. (0.0 s; pasos: atacar✗(sin arma)) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-01 19:23 · Trivino
+- 19:23:07 · Trivino · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (0.4 s; pasos: jugador✓) · al terminar: quieto
+- 19:23:41 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✗ No tengo nada que equipar. (0.0 s; pasos: equipar✗(nada que equipar)) · al terminar: quieto
+- 19:24:07 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: chainmail_helmet, chainmail_chestplate, chainmail_boots. (0.3 s; pasos: equipar✓) · al terminar: quieto
+- 19:24:38 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_chestplate, iron_boots. (0.2 s; pasos: equipar✓) · al terminar: quieto
+- 19:25:22 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: lo que llevaba. (0.0 s; pasos: equipar✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-01 19:26 · Trivino
+- 19:26:40 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: lo que llevaba. (0.0 s; pasos: equipar✓) · al terminar: quieto
+- 19:27:49 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: lo que llevaba. (0.0 s; pasos: equipar✓) · al terminar: quieto
+- 19:28:17 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (0.0 s; pasos: equipar✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-01 19:29 · Trivino
+- 19:29:25 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✗ No pude usar la cama: la cama está ocupada. (2.0 s; pasos: usar_cama✗(la cama está ocupada)) · al terminar: quieto
+- 19:29:50 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (6.8 s; pasos: usar_cama✓) · al terminar: quieto
+- 20:26:19 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✓ Ya es de día. Spawn guardado en la cama. (29.0 s; pasos: usar_cama✓) · al terminar: quieto
+- 20:33:58 · Trivino · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (3.2 s; pasos: jugador✓) · al terminar: quieto
+- 20:34:18 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword, iron_helmet, iron_chestplate, iron_leggings, iron_boots. (0.4 s; pasos: equipar✓) · al terminar: quieto
+- 20:34:21 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (0.0 s; pasos: equipar✓) · al terminar: quieto
+- 20:35:01 · Trivino · modo órdenes · «sigueme» (chat de __Count) → ✗ Dejo «sigueme» por la orden nueva. (27.4 s) · al terminar: otra orden
+- 20:35:01 · Trivino · modo órdenes · «quieto» (chat de __Count) → ✓ Me quedo aquí. (0.0 s) · al terminar: quieto
+- 20:35:31 · Trivino · modo órdenes · «ataca a Oqva» (chat de __Count) → ✗ Estoy muy herido: no peleo. (2.8 s; pasos: atacar✗(salud baja)) · al terminar: quieto
+- 20:35:41 · Trivino · modo órdenes · «ataca a Oqva» (chat de __Count) → ✗ Estoy muy herido: no peleo. (0.0 s; pasos: atacar✗(salud baja)) · al terminar: quieto
+- 20:35:58 · Trivino · modo órdenes · «come» (chat de __Count) → ✓ Comido: 1 bocado (hambre 20 de 20). (1.8 s; pasos: comer✓) · al terminar: quieto
+- 20:35:59 · Trivino · modo órdenes · «come» (chat de __Count) → ✗ No tengo hambre. (0.0 s; pasos: comer✗(sin hambre)) · al terminar: quieto
+- 20:36:13 · Trivino · modo órdenes · «ataca a Oqva» (chat de __Count) → ✓ Derribé a Oqva (5 golpes). (3.2 s; pasos: atacar✓) · al terminar: quieto
+- 20:36:58 · Trivino · modo órdenes · «ataca a seppuq» (chat de __Count) → ✓ Derribé a seppuq (4 golpes). (2.7 s; pasos: atacar✓) · al terminar: quieto
+- 20:37:14 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✗ No hay cama (no veo ninguna cama y no puedo hacer una (faltan materiales: white_wool 3)) ni estoy refugiado: dime «refúgiate» o dame 3 de lana. (0.0 s; pasos: usar_cama✗(no veo ninguna cama y no puedo hacer una (faltan materiales) dormir✗(sin cama y sin refugio)) · al terminar: quieto
+- 20:37:38 · Trivino · modo órdenes · «sigueme» (chat de __Count) → ✗ Dejo «sigueme» por la orden nueva. (16.8 s) · al terminar: otra orden
+- 20:37:38 · Trivino · modo órdenes · «quieto» (chat de __Count) → ✓ Me quedo aquí. (0.0 s) · al terminar: quieto
+- 20:41:03 · Trivino · modo órdenes · «que haces» (chat de __Count) → ✓ dije mi estado (0.0 s)
+- 20:42:21 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: tiempo agotado. (60.0 s; pasos: jugador✗(tiempo agotado)) · al terminar: quieto
+- 20:43:32 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: tiempo agotado. (60.1 s; pasos: jugador✗(tiempo agotado)) · al terminar: quieto
+- 20:56:10 · Trivino · modo órdenes · «riete de esos bobos» (chat de __Count) → ✗ no entendida (0.0 s)
+- 20:56:22 · Trivino · modo órdenes · «me quieres?» (chat de __Count) → ✗ no entendida (0.0 s)
+- 20:56:33 · Trivino · modo órdenes · «cuanto es 2+2» (chat de __Count) → ✗ no entendida (0.0 s)
+- 20:58:41 · Trivino · modo órdenes · «construye anor londo» (chat de __Count) → ✗ no entendida (0.0 s)
+- 21:04:01 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: tiempo agotado. (60.0 s; pasos: jugador✗(tiempo agotado)) · al terminar: quieto
+- 21:09:38 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: tiempo agotado. (60.1 s; pasos: jugador✗(tiempo agotado)) · al terminar: quieto
+- 21:47:00 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: sin camino. (2.0 s; pasos: jugador✗(sin camino)) · al terminar: quieto
+- 21:47:31 · Trivino · modo órdenes · «consigue carbon» (chat de __Count) → ✗ Llevo 0 de 1 tronco: no veo árboles fuera de las zonas protegidas. (5.7 s; pasos: picar✓ recoger✗(no llegó)) · al terminar: quieto
+- 21:47:38 · Trivino · modo órdenes · «quieto» (chat de __Count) → ✓ Me quedo aquí. (0.0 s) · al terminar: quieto
+- 21:47:53 · Trivino · modo órdenes · «desconectate» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-01 23:51 · Trivino
+- 23:51:56 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (2.8 s; pasos: equipar_soportes✓ equipar✓) · al terminar: quieto
+- 23:52:00 · Trivino · modo órdenes · «protejeme» (chat de __Count) → ✗ no entendida (0.0 s)
+- 23:52:50 · Trivino · modo órdenes · «defiendeme» (chat de __Count) → ✗ Dejo «defiendeme» por la orden nueva. (43.5 s) · al terminar: otra orden
+- 23:53:02 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (11.2 s; pasos: equipar_soportes✓ equipar✓) · al terminar: quieto
+- 23:54:12 · Trivino · modo órdenes · «ven» (chat de __Count) → ✗ No llego: sin camino. (1.6 s; pasos: jugador✗(sin camino)) · al terminar: quieto
+- 23:54:19 · Trivino · modo órdenes · «destrabate» (chat de __Count) → ✗ no entendida (0.0 s)
+- 23:54:25 · Trivino · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (8.8 s; pasos: jugador✓) · al terminar: quieto
+- 23:54:37 · Trivino · modo órdenes · «ven» (chat de __Count) → ✓ Aquí estoy. (2.0 s; pasos: jugador✓) · al terminar: quieto
+- 23:55:15 · Trivino · modo órdenes · «defiendeme» (chat de __Count) → ✗ Dejo «defiendeme» por la orden nueva. (35.9 s) · al terminar: otra orden
+- 23:56:02 · Trivino · modo órdenes · «ataca a seppuq» (chat de __Count) → ✗ Dejo «ataca a seppuq» por la orden nueva. (47.0 s) · al terminar: otra orden
+- 23:56:14 · Trivino · modo órdenes · «ataca a seppuq» (chat de __Count) → ✗ Dejo «ataca a seppuq» por la orden nueva. (12.0 s) · al terminar: otra orden
