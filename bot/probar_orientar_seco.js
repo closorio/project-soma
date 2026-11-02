@@ -73,7 +73,7 @@ console.log('  losas (abajo, arriba, doble), troncos por eje, antorcha de suelo,
 const real = (estado) => { const [, n, p] = /^([a-z_]+)(?:\[(.*)\])?$/.exec(estado); return { nombre: n, props: Object.fromEntries((p || '').split(',').filter(Boolean).map(kv => kv.split('='))) } }
 ok(coincide('oak_stairs[facing=north,half=top,shape=straight]', real('oak_stairs[facing=north,half=top,shape=inner_left,waterlogged=false]')), 'coincide: la forma de la escalera no cuenta')
 ok(!coincide('oak_stairs[facing=north,half=top]', real('oak_stairs[facing=north,half=bottom]')), 'coincide: half sí cuenta')
-ok(!coincide('oak_planks', real('spruce_planks')), 'coincide: el nombre cuenta')
+ok(coincide('oak_planks', real('spruce_planks')) && !coincide('oak_planks', real('stone')), 'coincide: la madera da igual; el material, no')
 ok(coincide('oak_sign[rotation=4]', real('oak_sign[rotation=9]')), 'coincide: la rotación no cuenta')
 ok(coincide('oak_trapdoor[facing=east,half=top,open=true]', { nombre: 'oak_trapdoor', props: { facing: 'east', half: 'top', open: true } }), 'coincide: props booleanas de prismarine-block')
 console.log('  coincide')

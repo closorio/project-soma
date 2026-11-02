@@ -5,7 +5,7 @@
 // (trampilla abierta). Reglas del juego (1.21): escaleras, puertas, camas y puertas de valla miran hacia donde mira el jugador; cofres,
 // hornos, repetidores y casi todo lo demás con facing, hacia el jugador; lo de pared (antorchas, carteles, escaleras de mano, botones)
 // sale de la cara en la que se hace clic; la mitad (half/type) la decide la altura del clic en la cara; el eje (axis), la cara.
-const { parse } = require('../estructuras')
+const { parse, mismoMaterial } = require('../estructuras')
 
 const YAW = { north: 0, west: Math.PI / 2, south: Math.PI, east: -Math.PI / 2 }
 const VEC = { north: [0, 0, -1], south: [0, 0, 1], west: [-1, 0, 0], east: [1, 0, 0], up: [0, 1, 0], down: [0, -1, 0] }
@@ -87,10 +87,10 @@ function orientar(estado, dest, solido) {
   return r
 }
 
-// ¿El bloque puesto es el de la plantilla? Mismo nombre y mismas props clave (las que la plantilla trae). `real`: { nombre, props }
+// ¿El bloque puesto es el de la plantilla? Mismo nombre (o la misma pieza en otra madera) y mismas props clave (las que la plantilla trae). `real`: { nombre, props }
 function coincide(esperado, real) {
   const e = parse(esperado)
-  if (!real || real.nombre !== e.nombre) return false
+  if (!real || !mismoMaterial(real.nombre, e.nombre)) return false // la madera da igual (estructuras.familia)
   return CLAVE.every(k => e.props[k] === undefined || String(real.props[k]) === e.props[k])
 }
 

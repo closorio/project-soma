@@ -1797,7 +1797,7 @@ class Personaje {
       const hechos = new Set()
       for (const [dx, dy, dz, i] of plano.bloques) {
         const b = bot.blockAt(new Vec3(origen[0] + dx, origen[1] + dy, origen[2] + dz))
-        if (b && b.name === estructuras.nombre(plano.paleta[i])) hechos.add(`${dx},${dy},${dz}`)
+        if (b && estructuras.mismoMaterial(b.name, estructuras.nombre(plano.paleta[i]))) hechos.add(`${dx},${dy},${dz}`)
       }
       return hechos
     }
@@ -1818,10 +1818,9 @@ class Personaje {
       // la tanda: lo que cabe en los huecos de la mochila, más las ranuras que ya ocupa lo de la obra
       const inv = {}
       for (const it of bot.inventory.items()) inv[it.name] = (inv[it.name] || 0) + it.count
-      const deObra = bot.inventory.items().filter(it => plano.materiales[it.name]).length
+      const deObra = bot.inventory.items().filter(it => Object.keys(plano.materiales).some(k => estructuras.mismoMaterial(k, it.name))).length
       const t = abastecer.tanda(bot.registry, plano, hechos, Math.max(4, bot.inventory.emptySlotCount() - 4 + deObra))
-      const falta = {}
-      for (const [k, n] of Object.entries(t.objetos)) if (n > (inv[k] || 0)) falta[k] = n - (inv[k] || 0)
+      const falta = estructuras.faltaCon(t.objetos, inv) // la madera, de cualquier tipo
       if (Object.keys(falta).length) {
         const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
         await this.salirDeVedada(tarea)

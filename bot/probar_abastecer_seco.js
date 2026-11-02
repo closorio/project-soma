@@ -56,6 +56,21 @@ ok(de(p, 'mina', 'bloque', 'coal_ore') && de(p, 'mina', 'bloque', 'coal_ore').n 
 ok(p.pasos.filter(x => x.tipo === 'tala').length === 1, 'una sola tala para todo')
 console.log('  puerta, antorchas, escaleras y losas: una tala, el carbón y la fabricación')
 
+// 6b. la madera da igual: con abedul en el cofre, la plantilla de roble se hace de abedul (sin talar)
+p = planAbasto(registry, { oak_planks: 20, oak_stairs: 4 }, {}, { birch_log: 10 })
+ok(de(p, 'saca', 'objeto', 'birch_log') && de(p, 'fabrica', 'objeto', 'birch_planks') && de(p, 'fabrica', 'objeto', 'birch_stairs') && !de(p, 'tala'), `abedul en el cofre: ${txt(p)}`)
+p = planAbasto(registry, { oak_planks: 10 }, {}, { spruce_planks: 64 })
+ok(p.pasos.length === 1 && de(p, 'saca', 'objeto', 'spruce_planks').n === 10, `tablones de abeto del cofre: ${txt(p)}`)
+p = planAbasto(registry, { oak_planks: 8 }, { crimson_stem: 2 }, {})
+ok(de(p, 'fabrica', 'objeto', 'crimson_planks') && !de(p, 'tala'), `madera del Nether: ${txt(p)}`)
+p = planAbasto(registry, { oak_planks: 40 }, { birch_log: 7, oak_log: 3 }, {})
+ok(de(p, 'fabrica', 'objeto', 'birch_planks').n === 28 && de(p, 'fabrica', 'objeto', 'oak_planks').n === 12 && !de(p, 'tala'), `tablones de dos maderas: ${txt(p)}`)
+const E = require('./estructuras')
+ok(E.mismoMaterial('oak_stairs', 'birch_stairs') && !E.mismoMaterial('oak_stairs', 'oak_slab') && !E.mismoMaterial('stone_stairs', 'oak_stairs'), 'mismoMaterial')
+ok(E.mismoMaterial('dark_oak_door', 'cherry_door') && E.familia('stripped_spruce_log') === 'stripped_log' && E.familia('oak_wall_sign') === 'wall_sign', 'familias')
+ok(JSON.stringify(E.faltaCon({ oak_planks: 10, oak_slab: 4 }, { birch_planks: 6, spruce_slab: 9 })) === '{"oak_planks":4}', `faltaCon: ${JSON.stringify(E.faltaCon({ oak_planks: 10, oak_slab: 4 }, { birch_planks: 6, spruce_slab: 9 }))}`)
+console.log('  la madera da igual: se usa la que haya')
+
 // 6. tandas: lo que cabe en la mochila, en orden de colocación
 const plano = estructuras.cargar('casita_prueba')
 const t1 = tanda(registry, plano, new Set(), 36)

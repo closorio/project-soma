@@ -125,6 +125,42 @@ E.ordenar = (plano) => {
   return salida
 }
 
+// --- la madera, intercambiable (2026-11-02, pedido del usuario: «lo funcional primero») -----------------------------------------
+// Tablones, losas, escaleras, puertas, trampillas, vallas, botones, placas, carteles y troncos valen de cualquier madera: la de la
+// plantilla es orientativa. familia('birch_stairs') = 'stairs'; mismoMaterial('oak_stairs', 'birch_stairs') = true.
+const MADERAS = ['dark_oak', 'pale_oak', 'oak', 'spruce', 'birch', 'jungle', 'acacia', 'mangrove', 'cherry', 'bamboo', 'crimson', 'warped']
+const FORMAS = ['planks', 'slab', 'stairs', 'door', 'trapdoor', 'fence_gate', 'fence', 'button', 'pressure_plate', 'wall_hanging_sign',
+  'hanging_sign', 'wall_sign', 'sign', 'log', 'wood', 'stem', 'hyphae']
+const RE_MADERA = new RegExp(`^(stripped_)?(${MADERAS.join('|')})_(${FORMAS.join('|')})$`)
+E.MADERAS = MADERAS
+// La familia de un bloque u objeto de madera («stairs», «stripped_log»…) o null si no es de madera
+E.familia = (nombre) => { const m = RE_MADERA.exec(String(nombre)); return m ? (m[1] || '') + m[3].replace(/^stem$/, 'log').replace(/^hyphae$/, 'wood') : null }
+E.madera = (nombre) => { const m = RE_MADERA.exec(String(nombre)); return m ? m[2] : null }
+E.mismoMaterial = (a, b) => a === b || (!!E.familia(a) && E.familia(a) === E.familia(b))
+// El mismo objeto en otra madera (oak_stairs, birch → birch_stairs), si existe en el registro (las del Nether no tienen log, sino stem)
+E.conMadera = (nombre, madera, registry) => {
+  const m = RE_MADERA.exec(String(nombre))
+  if (!m || !madera) return nombre
+  let forma = m[3]
+  if (/^(crimson|warped)$/.test(madera)) forma = forma.replace(/^log$/, 'stem').replace(/^wood$/, 'hyphae')
+  else forma = forma.replace(/^stem$/, 'log').replace(/^hyphae$/, 'wood')
+  const otro = `${m[1] || ''}${madera}_${forma}`
+  return !registry || registry.itemsByName[otro] ? otro : nombre
+}
+// Lo que falta de `necesito` ({ objeto: n }) con `inv`, juntando por familia lo de madera (cualquier madera vale): { objeto: n }
+E.faltaCon = (necesito, inv) => {
+  const clave = (k) => (E.familia(k) ? 'madera:' + E.familia(k) : k)
+  const hay = {}
+  for (const [k, n] of Object.entries(inv || {})) hay[clave(k)] = (hay[clave(k)] || 0) + n
+  const falta = {}
+  for (const [k, n] of Object.entries(necesito)) {
+    const c = clave(k), usa = Math.min(n, hay[c] || 0)
+    hay[c] = (hay[c] || 0) - usa
+    if (n - usa > 0) falta[k] = n - usa
+  }
+  return falta
+}
+
 // Los objetos que faltan para los bloques pendientes (los que no están en `colocados`, un Set de "dx,dy,dz") descontando el inventario
 E.faltanPara = (plano, colocados, inv) => {
   const quedan = {}
@@ -133,9 +169,7 @@ E.faltanPara = (plano, colocados, inv) => {
     if (colocados && colocados.has(b[0] + ',' + b[1] + ',' + b[2])) continue
     for (const o of cache[b[3]]) quedan[o.item] = (quedan[o.item] || 0) + o.n
   }
-  const falta = {}
-  for (const [item, n] of Object.entries(quedan)) { const f = n - ((inv && inv[item]) || 0); if (f > 0) falta[item] = f }
-  return falta
+  return E.faltaCon(quedan, inv)
 }
 
 // --- el catálogo en disco ------------------------------------------------------------------------------------------------------

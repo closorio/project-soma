@@ -35,9 +35,36 @@ function hoja(item, n) {
 const fundidos = (pasos) => pasos.filter(p => p.tipo === 'funde').reduce((a, p) => a + p.n, 0)
 
 // evitar: { hoja: n } que ya no se encontró cerca (arena, ovejas…): va a pedir en vez de a minar o cazar otra vez
-function planAbasto(registry, faltan, inv, enCofres, { hayHorno = true, evitar = {} } = {}) {
+// La madera de la que más hay (troncos ×4 y tablones, en la mochila y los cofres), o null si no hay ninguna
+function maderaPreferida(inv, cofre) {
+  const cuenta = {}
+  for (const fuente of [inv, cofre]) for (const [k, n] of Object.entries(fuente || {})) {
+    const m = estructuras.madera(k), f = estructuras.familia(k)
+    if (m && /log|wood|planks/.test(f)) cuenta[m] = (cuenta[m] || 0) + n * (f === 'planks' ? 1 : 4)
+  }
+  return Object.entries(cuenta).sort((a, b) => b[1] - a[1])[0]?.[0] || null
+}
+
+function planAbasto(registry, faltanPedidas, inv, enCofres, { hayHorno = true, evitar = {} } = {}) {
   const pasos = [], pedir = {}
   const cofre = { ...(enCofres || {}) }
+  // la madera da igual (estructuras.familia): lo de madera que falte, en la que más haya, para no talar ni pedir otra
+  const madera = maderaPreferida(inv, cofre), faltan = {}
+  // los tablones, repartidos entre los troncos de cada madera que haya (Oqva, 2026-11-02: 7 de abedul y 3 de roble); el resto de piezas
+  // y lo que no cubran los troncos, en la que más haya
+  const troncos = {}
+  for (const fuente of [inv, cofre]) for (const [k, n] of Object.entries(fuente || {})) if (/log|wood/.test(estructuras.familia(k) || '')) troncos[estructuras.madera(k)] = (troncos[estructuras.madera(k)] || 0) + n
+  for (const [k, n] of Object.entries(faltanPedidas)) {
+    let resto = n
+    if (estructuras.familia(k) === 'planks') {
+      for (const [m, t] of Object.entries(troncos).sort((a, b) => b[1] - a[1])) {
+        const usa = Math.min(resto, t * 4), k2 = estructuras.conMadera(k, m, registry)
+        if (usa > 0 && (k2 !== k || estructuras.madera(k) === m)) { // k2 === k en otra madera: esa pieza no existe en ella faltan[k2] = (faltan[k2] || 0) + usa; troncos[m] -= Math.ceil(usa / 4); resto -= usa }
+        if (!resto) break
+      }
+    }
+    if (resto > 0) { const k2 = estructuras.conMadera(k, madera, registry); faltan[k2] = (faltan[k2] || 0) + resto }
+  }
   const sacar = (item, n) => { // de los cofres lo que haya, hasta n; devuelve cuánto se sacó
     const k = Math.min(n, cofre[item] || 0)
     if (k > 0) { cofre[item] -= k; pasos.push({ tipo: 'saca', objeto: item, n: k, para: item }) }
@@ -113,4 +140,4 @@ function tanda(registry, plano, colocados, huecos) {
   return { bloques, objetos }
 }
 
-module.exports = { planAbasto, tanda, hoja }
+module.exports = { planAbasto, tanda, hoja, maderaPreferida }

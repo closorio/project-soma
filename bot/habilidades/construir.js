@@ -86,7 +86,7 @@ function faltanCatalogo(bot, plano, x0, y1, z0, relleno) {
   const colocados = new Set()
   for (const [dx, dy, dz, i] of plano.bloques) {
     const b = bot.blockAt(new Vec3(x0 + dx, y1 + dy, z0 + dz))
-    if (b && b.name === estructuras.nombre(plano.paleta[i])) colocados.add(`${dx},${dy},${dz}`)
+    if (b && estructuras.mismoMaterial(b.name, estructuras.nombre(plano.paleta[i]))) colocados.add(`${dx},${dy},${dz}`)
   }
   const inv = inventario(bot)
   const falta = estructuras.faltanPara(plano, colocados, inv)
@@ -211,7 +211,7 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
     if (Date.now() - t0 > ms) { causa = 'tiempo agotado'; break }
     const actual = bot.blockAt(dest)
     if (actual && bienPuesto(cx, ent, actual)) { puestos++; continue } // ya estaba (una obra retomada)
-    if (actual && ent.estado && malYa.has([dest.x, dest.y, dest.z].join()) && actual.name === estructuras.nombre(ent.estado)) { puestos++; continue }
+    if (actual && ent.estado && malYa.has([dest.x, dest.y, dest.z].join()) && estructuras.mismoMaterial(actual.name, estructuras.nombre(ent.estado))) { puestos++; continue }
     if (!parcela.libre(actual)) { causa = `ocupado en ${dest.x},${dest.y},${dest.z} (${actual ? actual.name : '?'})`; break }
     if ((zonas.pasoVedado(dest.x, dest.y, dest.z) && !obras.enTemporal(dest.x, dest.z)) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break } // los carteles mandan dentro
     const item = itemPara(cx, ent)
@@ -241,7 +241,7 @@ async function cerrarComoPlantilla({ bot, mov }, lista, tarea) {
   for (const { dest, estado } of lista) {
     if (!estado || tarea && tarea.cancelada) continue
     const quiero = estructuras.props(estado).open, b = bot.blockAt(dest)
-    if (quiero === undefined || !b || b.name !== estructuras.nombre(estado) || String(real(b).props.open) === quiero) continue
+    if (quiero === undefined || !b || !estructuras.mismoMaterial(b.name, estructuras.nombre(estado)) || String(real(b).props.open) === quiero) continue
     if (bot.entity.position.distanceTo(dest.offset(0.5, 0.5, 0.5)) > ALCANCE) {
       await moverHasta(bot, new goals.GoalNear(dest.x, dest.y, dest.z, 2), () => bot.entity.position.distanceTo(dest.offset(0.5, 0.5, 0.5)) <= ALCANCE, { ms: 15000, tarea, mov })
     }
@@ -253,7 +253,13 @@ async function cerrarComoPlantilla({ bot, mov }, lista, tarea) {
 // (estructuras.objetoDe: la antorcha de pared es «torch»…) o la materia del plano viejo
 function itemPara({ bot, materia }, ent) {
   if (ent.relleno) return materia ? deMateria(bot, materia)[0] : deRelleno(bot)[0]
-  if (ent.estado) { const o = estructuras.objetoDe(ent.estado); return o && bot.inventory.items().find(i => i.name === o.item) }
+  if (ent.estado) {
+    // el objeto de la plantilla o, si es de madera, la misma pieza en cualquier madera (la que más haya)
+    const o = estructuras.objetoDe(ent.estado)
+    if (!o) return null
+    const items = bot.inventory.items()
+    return items.find(i => i.name === o.item) || items.filter(i => estructuras.mismoMaterial(i.name, o.item)).sort((a, b) => b.count - a.count)[0]
+  }
   return deMateria(bot, materia)[0]
 }
 function bienPuesto({ materia }, ent, b) {
@@ -323,8 +329,8 @@ async function comprobar(cx, ent, o, otros) {
   if (vacio(b)) return { error: 'no se puso' }
   if (ent.estado) {
     const quiero = estructuras.parse(ent.estado)
-    if (o.clics === 2 && b.name === quiero.nombre && real(b).props.type !== 'double') {
-      const it = itemPara(cx, ent)
+    if (o.clics === 2 && estructuras.mismoMaterial(b.name, quiero.nombre) && real(b).props.type !== 'double') {
+      const it = bot.inventory.items().find(i => i.name === b.name) || itemPara(cx, ent) // la otra mitad, de la misma madera
       if (it) {
         try {
           if (!bot.heldItem || bot.heldItem.type !== it.type) { await bot.equip(it, 'hand'); await esperar(100) }
@@ -333,10 +339,10 @@ async function comprobar(cx, ent, o, otros) {
         await esperar(300); b = bot.blockAt(dest)
       }
     }
-    if (o.abrir && b.name === quiero.nombre && String(real(b).props.open) !== 'true') { try { await bot.activateBlock(b) } catch (_) {} await esperar(300); b = bot.blockAt(dest) }
+    if (o.abrir && estructuras.mismoMaterial(b.name, quiero.nombre) && String(real(b).props.open) !== 'true') { try { await bot.activateBlock(b) } catch (_) {} await esperar(300); b = bot.blockAt(dest) }
   }
   if (bienPuesto(cx, ent, b)) return { bien: true, nombre: b.name }
-  if (ent.estado && b.name === estructuras.nombre(ent.estado)) {
+  if (ent.estado && estructuras.mismoMaterial(b.name, estructuras.nombre(ent.estado))) {
     if (otros <= 0) return { bien: true, nombre: b.name, mal: true }
     try { await conLimite(bot.dig(b, true), 6000) } catch (_) {}
     await esperar(200)
