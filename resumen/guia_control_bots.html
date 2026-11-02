@@ -33,7 +33,7 @@
 
 <div class="oro"><b>Regla de oro:</b> lo que empieza por «Oqva, …» o «!zona …» se escribe en el <b>chat de Minecraft</b>. Lo que empieza por <code>make …</code> se escribe en la <b>terminal del PC</b>, dentro de la carpeta <code>project-soma</code>.</div>
 
-<div class="nuevo"><b>Novedades de esta versión</b> (marcadas con <span class="n">NUEVO</span>): guardaespaldas («defiéndeme», pasivo o agresivo), atacar a un jugador por su nombre, «recoge» recoge todo, recupera sus cosas al morir, come para curarse, solo obedece a su dueño y los bots ya salen despedidos al recibir un golpe.</div>
+<div class="nuevo"><b>Novedades de esta versión</b> (marcadas con <span class="n">NUEVO</span>): cola de órdenes, bucles y reintentos («y luego», «sin parar», «3 veces», «cola», «para todo»), guardaespaldas («defiéndeme», pasivo o agresivo), atacar a un jugador por su nombre, «recoge» recoge todo, recupera sus cosas al morir, come para curarse, solo obedece a su dueño y los bots ya salen despedidos al recibir un golpe.</div>
 
 <h2>1. Conectar el bot</h2>
 <h3>Una sola vez</h3>
@@ -142,6 +142,23 @@ export IO_DUENOS = seppuq,__Count    # tú y otro</pre>
 <tr><td><code>refúgiate</code> · <code>sal del refugio</code></td><td>Se encierra para pasar la noche · sale</td></tr>
 <tr><td><code>espera al día</code></td><td>Igual que «duerme»</td></tr>
 </table>
+
+<h3>Encadenar, repetir y la cola <span class="n">NUEVO</span></h3>
+<p>Una orden nueva sustituye a la que hace (la anterior queda para «continúa»). Para que espere su turno, encadénala. Si algo falla por
+algo pasajero (sin camino, te pierde de vista, no ve al objetivo, demasiados monstruos), lo vuelve a intentar solo, esperando cada vez
+más (2, 5, 15, 30 s) y, si hace falta, antes se desatasca, huye o come. Si muere, primero recupera sus cosas y luego <b>sigue con lo que hacía</b>.</p>
+<table>
+<tr><th>Escribe</th><th>Qué hace</th></tr>
+<tr><td><code>tala 5 y luego guarda en el cofre</code> · <code>…, después …</code></td><td>Hace la primera y deja las demás en cola, en orden</td></tr>
+<tr><td><code>ataca a NOMBRE sin parar</code> · <code>… en bucle</code> · <code>… siempre</code></td><td>La repite hasta que digas «para» (si falla, reintenta; se rinde tras 30 fallos seguidos)</td></tr>
+<tr><td><code>recoge 3 veces</code> · <code>repite … 3 veces</code></td><td>La hace ese número de veces</td></tr>
+<tr><td><code>ataca al zombi hasta que muera</code> · <code>… hasta lograrlo</code></td><td>Reintenta hasta que le salga bien</td></tr>
+<tr><td><code>cola</code> · <code>qué tienes pendiente</code></td><td>Te dice lo que hace ahora, lo urgente y lo que tiene en cola</td></tr>
+<tr><td><code>para</code> · <code>continúa</code></td><td>Corta lo que hace y deja la cola en espera · sigue con la cola</td></tr>
+<tr><td><code>salta</code></td><td>Deja lo que hace y pasa a lo siguiente de la cola</td></tr>
+<tr><td><code>para todo</code> · <code>olvida la cola</code></td><td>Corta y vacía la cola entera</td></tr>
+</table>
+<p>La cola vive mientras el bot está encendido: sobrevive a morir y a reconectar, no a reiniciarlo.</p>
 
 <h3>Lo que hace solo <span class="n">NUEVO</span></h3>
 <table>
