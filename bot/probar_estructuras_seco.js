@@ -165,5 +165,51 @@ const faroles = go.filter(b => /lantern\[hanging=true/.test(g.paleta[b[3]]))
 ok(faroles.length > 0 && faroles.every(b => gi.get([b[0], b[1] + 1, b[2]].join()) < gi.get(b.slice(0, 3).join())), 'mansion: un farol colgante va antes que su techo')
 console.log(`  reales: simple (y, z negativas) y mansion (z negativa, 1.16): puertas, cofre doble, ${trampillas.length} trampillas y ${faroles.length} faroles en su sitio`)
 
+// --- 7. .nbt de estructura (bloque de estructura del juego) -------------------------------------------------------------------
+const N = sint.estructuraNbt([3, 2, 3], [['air'], ['oak_planks'], ['structure_void'], ['jigsaw', { orientation: 'north_up' }],
+  ['oak_door', { facing: 'west', half: 'lower', hinge: 'left', open: 'false', powered: 'false' }],
+  ['oak_door', { facing: 'west', half: 'upper', hinge: 'left', open: 'false', powered: 'false' }]],
+[[0, 0, 0, 1], [1, 0, 0, 1], [2, 0, 0, 0], [0, 0, 1, 2], [1, 0, 1, 3, { final_state: 'minecraft:stone' }], [2, 0, 1, 3, { final_state: 'minecraft:air' }],
+  [2, 0, 2, 4], [2, 1, 2, 5]])
+const en = imp.importar(N, { id: 'nbt_prueba', registry }).estructura, enm = casillas(en)
+ok(en.dim.join() === '3,2,3' && en.bloques.length === 5, `nbt: ${en.dim} ${en.bloques.length} bloques`)
+ok(enm.get('1,0,1') === 'stone' && !enm.has('2,0,1') && !enm.has('0,0,1') && !enm.has('2,0,0'), 'jigsaw → su final_state; structure_void y aire, fuera')
+ok(en.frente === 'east', `entrada al lado de fuera de la puerta (facing=west → este): ${en.frente}`)
+ok(imp.importar(N, { id: 'nbt_prueba', registry, frente: 'north' }).estructura.frente === 'north', 'FRONT= manda sobre la puerta')
+const JAR = path.join(__dirname, '..', 'servidor-local', 'versions', '26.1.2', 'server-26.1.2.jar')
+if (fs.existsSync(JAR)) { // una casa de aldea de verdad (no se guarda en el repo: es del juego)
+  const casa = require('child_process').execFileSync('unzip', ['-p', JAR, 'data/minecraft/structure/village/plains/houses/plains_small_house_1.nbt'])
+  const ca = imp.importar(casa, { id: 'plains_small_house_1', registry }).estructura, cam = casillas(ca)
+  const pu = ca.bloques.filter(b => /_door\[.*half=lower/.test(ca.paleta[b[3]]))
+  ok(ca.dim.join() === '7,7,7' && ca.bloques.length === 153 && pu.length === 1 && /half=upper/.test(cam.get([pu[0][0], pu[0][1] + 1, pu[0][2]].join()) || ''), `casa de aldea: ${ca.dim} ${ca.bloques.length}`)
+  ok(!ca.paleta.some(p => /jigsaw|structure_void/.test(p)) && ca.frente === 'west', `casa de aldea: sin jigsaw y con la entrada al oeste (${ca.frente})`)
+  console.log('  .nbt real del juego: plains_small_house_1 (7×7×7, 153 bloques)')
+}
+console.log('  .nbt: palette y blocks, jigsaw con su final_state, structure_void fuera, entrada por la puerta o FRONT=')
+
+// --- 8. girar -----------------------------------------------------------------------------------------------------------------
+const cas = imp.importar(sint.casita(), { id: 'casita', registry }).estructura
+const cuatro = [1, 1, 1, 1].reduce((p, v) => estructuras.girar(p, v), cas)
+ok(JSON.stringify(cuatro.bloques) === JSON.stringify(cas.bloques) && JSON.stringify(cuatro.paleta) === JSON.stringify(cas.paleta), 'cuatro vueltas = la original')
+for (const [dir, x, z, f] of [['south', 2, 4, 'north'], ['west', 0, 2, 'east'], ['north', 2, 0, 'south'], ['east', 4, 2, 'west']]) {
+  const g = estructuras.girar(cas, estructuras.vueltasPara(cas, dir)), gm = casillas(g)
+  const p = g.bloques.find(b => /_door\[.*half=lower/.test(g.paleta[b[3]]))
+  ok(g.frente === dir && p[0] === x && p[2] === z && estructuras.props(g.paleta[p[3]]).facing === f, `mirando al ${dir}: la puerta en ${p.slice(0, 3)} con facing ${estructuras.props(g.paleta[p[3]]).facing}`)
+  // la antorcha de pared sigue pegada a su muro y la escalera del tejado sigue mirando hacia fuera de la casa
+  const t = g.bloques.find(b => /wall_torch/.test(g.paleta[b[3]])), tf = estructuras.props(g.paleta[t[3]]).facing
+  const V = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] }
+  ok(gm.has([t[0] - V[tf][0], t[1], t[2] - V[tf][1]].join()), `mirando al ${dir}: la antorcha sigue en su muro`)
+}
+ok(estructuras.girarEstado('oak_log[axis=x]', 1) === 'oak_log[axis=z]' && estructuras.girarEstado('oak_log[axis=y]', 1) === 'oak_log[axis=y]', 'troncos: x ↔ z')
+ok(estructuras.girarEstado('oak_fence[east=true,north=false,south=false,west=true]', 1) === 'oak_fence[east=false,north=true,south=true,west=false]', 'vallas: conexiones giradas')
+ok(estructuras.girarEstado('oak_sign[rotation=14]', 1) === 'oak_sign[rotation=2]' && estructuras.girarEstado('rail[shape=ascending_north]', 1) === 'rail[shape=ascending_east]', 'carteles y raíles')
+ok(estructuras.girarEstado('rail[shape=north_west]', 1) === 'rail[shape=north_east]' && estructuras.girarEstado('rail[shape=north_south]', 1) === 'rail[shape=east_west]', 'raíles en curva y rectos')
+ok(estructuras.girarEstado('oak_door[facing=north,half=lower,hinge=left,open=false,powered=false]', 2) === 'oak_door[facing=south,half=lower,hinge=left,open=false,powered=false]', 'la bisagra no cambia')
+ok(estructuras.girar(cas, 1).dim.join() === cas.dim.join() && estructuras.girar({ ...cas, dim: [5, 3, 2], bloques: [[4, 0, 1, 0]], paleta: ['stone'] }, 1).dim.join() === '2,3,5', 'la caja gira: x ↔ z')
+estructuras.DIR = path.join(__dirname, 'estructuras') // el catálogo de verdad (casita_prueba): el temporal ya se borró
+const ord = require('./ordenes').interpretar('construye casita_prueba en 300 64 -20 mirando al este')
+ok(ord.dir === 'east' && ord.pos.join() === '300,64,-20' && require('./ordenes').interpretar('construye casita_prueba aquí girada 90').giro === 90, `órdenes: mirando al este, girada 90 (${JSON.stringify(ord)})`)
+console.log('  girar: puerta, antorcha, troncos, vallas, carteles y raíles en las 4 direcciones; órdenes con dirección')
+
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

@@ -172,6 +172,59 @@ E.faltanPara = (plano, colocados, inv) => {
   return E.faltaCon(quedan, inv)
 }
 
+// --- girar (2026-11-02: «construye casa en x y z mirando al este») --------------------------------------------------------------
+// Vueltas de 90° en el sentido de las agujas del reloj, visto desde arriba (norte arriba): norte → este → sur → oeste. La caja gira entera:
+// (x, z) → (Z−1−z, x) y dim x↔z; la esquina que da el usuario sigue siendo la de x, y, z mínimos de la caja ya girada. Con los bloques
+// gira su estado: facing, axis, rotation (carteles y estandartes de suelo, cabezas), las conexiones north/east/south/west (vallas,
+// paneles, muros, enredaderas, redstone) y la forma de los raíles; hinge, half, type y la forma de las escaleras no dependen del giro.
+const HORARIO = ['north', 'east', 'south', 'west']
+const girarDir = (d, v) => (HORARIO.includes(d) ? HORARIO[(HORARIO.indexOf(d) + v) % 4] : d)
+function girarRail(forma, v) {
+  const p = forma.split('_')
+  if (p[0] === 'ascending') return 'ascending_' + girarDir(p[1], v)
+  const [a, b] = p.map(d => girarDir(d, v))
+  const set = new Set([a, b])
+  if (set.has('north') && set.has('south')) return 'north_south'
+  if (set.has('east') && set.has('west')) return 'east_west'
+  return (set.has('north') ? 'north' : 'south') + '_' + (set.has('east') ? 'east' : 'west')
+}
+E.girarEstado = (estado, vueltas) => {
+  const v = ((vueltas % 4) + 4) % 4
+  if (!v) return estado
+  const { nombre, props } = parse(estado)
+  const n = {}
+  for (const [k, val] of Object.entries(props)) {
+    if (HORARIO.includes(k)) n[girarDir(k, v)] = val // conexiones: el valor de north pasa a la dirección girada
+    else if (k === 'facing') n[k] = girarDir(val, v)
+    else if (k === 'axis' && v % 2 && (val === 'x' || val === 'z')) n[k] = val === 'x' ? 'z' : 'x'
+    else if (k === 'rotation') n[k] = String((parseInt(val) + 4 * v) % 16)
+    else if (k === 'shape' && /rail$/.test(nombre)) n[k] = girarRail(val, v)
+    else n[k] = val
+  }
+  const claves = Object.keys(n).sort()
+  return claves.length ? `${nombre}[${claves.map(k => `${k}=${n[k]}`).join(',')}]` : nombre
+}
+// El lado de la entrada del plano: el que trae (frente, del importador) o el de fuera de su primera puerta (su facing mira hacia
+// dentro); sin puerta, sur. Para plantillas importadas antes de que existiera «frente»
+E.frenteDe = (plano) => {
+  if (plano.frente) return plano.frente
+  const OPUESTA = { north: 'south', south: 'north', east: 'west', west: 'east' }
+  const p = plano.bloques.map(b => parse(plano.paleta[b[3]])).find(e => /_door$/.test(e.nombre) && e.props.half === 'lower')
+  return (p && OPUESTA[p.props.facing]) || 'south'
+}
+// El plano girado (uno nuevo; el del catálogo no se toca). frente gira con él.
+E.girar = (plano, vueltas) => {
+  const v = ((vueltas % 4) + 4) % 4
+  if (!v) return plano
+  let [X, , Z] = plano.dim
+  let bloques = plano.bloques.map(b => b.slice())
+  for (let i = 0; i < v; i++) { bloques = bloques.map(([x, y, z, k]) => [Z - 1 - z, y, x, k]); [X, Z] = [Z, X] }
+  return { ...plano, dim: [X, plano.dim[1], Z], paleta: plano.paleta.map(e => E.girarEstado(e, v)), bloques, frente: girarDir(E.frenteDe(plano), v), giro: v }
+}
+// Las vueltas que llevan la entrada (frente) del plano a `dir` (north|east|south|west)
+E.vueltasPara = (plano, dir) => (HORARIO.indexOf(dir) - HORARIO.indexOf(E.frenteDe(plano)) + 4) % 4
+E.HORARIO = HORARIO
+
 // --- el catálogo en disco ------------------------------------------------------------------------------------------------------
 E.ids = () => (fs.existsSync(E.DIR) ? fs.readdirSync(E.DIR).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)).sort() : [])
 // Una casa grande pesa megas y porAlias se mira con cada mensaje del chat: se guarda lo leído y se relee solo si cambia el archivo

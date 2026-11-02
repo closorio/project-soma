@@ -74,7 +74,21 @@ function casita() {
   return litematic([r], 'casita_prueba')
 }
 
-module.exports = { region, empaquetar, litematic, casita }
+// Un .nbt de estructura (bloque de estructura del juego): size, palette [[nombre, props]], blocks [[x, y, z, i, nbt?]] (2026-11-02)
+function estructuraNbt(size, paleta, bloques) {
+  const entrada = ([n, props]) => (props
+    ? { Name: nbt.string('minecraft:' + n), Properties: nbt.comp(Object.fromEntries(Object.entries(props).map(([k, v]) => [k, nbt.string(v)]))) }
+    : { Name: nbt.string('minecraft:' + n) })
+  const bloque = ([x, y, z, i, extra]) => ({ pos: nbt.list(nbt.int([x, y, z])), state: nbt.int(i),
+    ...(extra ? { nbt: nbt.comp(Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, nbt.string(v)]))) } : {}) })
+  const raiz = nbt.comp({
+    DataVersion: nbt.int(4671), size: nbt.list(nbt.int(size)), entities: nbt.list(nbt.comp([])),
+    palette: nbt.list(nbt.comp(paleta.map(entrada))), blocks: nbt.list(nbt.comp(bloques.map(bloque))),
+  }, '')
+  return zlib.gzipSync(nbt.writeUncompressed(raiz, 'big'))
+}
+
+module.exports = { region, empaquetar, litematic, casita, estructuraNbt }
 
 if (require.main === module) {
   const [que, salida] = process.argv.slice(2)

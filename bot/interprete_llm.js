@@ -25,7 +25,7 @@ const SISTEMA =
 function sistema() {
   const ids = require('./estructuras').ids()
   return ids.length ? SISTEMA + ' Estructuras que sabe construir (se nombran por su id): ' + ids.join(', ') +
-    '; p. ej. «hazme la ' + ids[0].replace(/_/g, ' ') + ' en 10 64 -5» → construye ' + ids[0] + ' en 10 64 -5 · «qué te falta para ' + ids[0] + '» → qué falta para ' + ids[0] + '.' : SISTEMA
+    '; p. ej. «hazme la ' + ids[0].replace(/_/g, ' ') + ' en 10 64 -5» → construye ' + ids[0] + ' en 10 64 -5 · «la ' + ids[0].replace(/_/g, ' ') + ' en 10 64 -5 con la puerta hacia el este» → construye ' + ids[0] + ' en 10 64 -5 mirando al este · «qué te falta para ' + ids[0] + '» → qué falta para ' + ids[0] + '.' : SISTEMA
 }
 
 const activo = () => !!process.env.SOMA_OLLAMA_MODELO

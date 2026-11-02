@@ -1,5 +1,5 @@
-// Importa un .litematic (Litematica, NBT con gzip) al catálogo: bot/estructuras/<id>.json y bot/materiales/<id>.json.
-// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic ID [ALIAS[,ALIAS…]]   (o make import-structure)
+// Importa un .litematic (Litematica) o un .nbt (bloque de estructura del juego), NBT con gzip, al catálogo: bot/estructuras/<id>.json y bot/materiales/<id>.json.
+// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic|.nbt ID [ALIAS[,ALIAS…]] [--front=este]   (o make import-structure)
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -38,13 +38,11 @@ function desempaquetar(longs, n, paleta) {
   return salida
 }
 
-// buf: el .litematic entero. opts: { id, alias, fuente, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
-function importar(buf, opts) {
-  const registry = opts.registry || require(path.join(BOT, 'node_modules', 'minecraft-data'))(VERSION)
-  const raiz = nbt.simplify(nbt.parseUncompressed(zlib.gunzipSync(buf)))
-  const regiones = Object.entries(raiz.Regions || {})
-  if (!regiones.length) throw new Error('el archivo no tiene Regions: ¿es un .litematic?')
-
+// Lo leído de un archivo: { dim, paleta: [estado…], puestos: Map("x,y,z" → índice de paleta), nombres: [[nombre en el archivo, normalizado]] }
+// con el origen en la esquina mínima y sin aire. Los dos formatos acaban igual.
+function deLitematic(raiz) {
+  const regiones = Object.entries(raiz.Regions)
+  if (!regiones.length) throw new Error('el .litematic no tiene regiones')
   // cada región: caja absoluta [min, max] (Size puede ser negativo: se toma el valor absoluto y se corrige con Position)
   const cajas = regiones.map(([nombre, r]) => {
     const min = ['x', 'y', 'z'].map(a => r.Position[a] + (r.Size[a] < 0 ? r.Size[a] + 1 : 0))
@@ -54,16 +52,9 @@ function importar(buf, opts) {
   const min = [0, 1, 2].map(i => Math.min(...cajas.map(c => c.min[i])))
   const max = [0, 1, 2].map(i => Math.max(...cajas.map(c => c.min[i] + c.tam[i] - 1)))
   const dim = [0, 1, 2].map(i => max[i] - min[i] + 1)
-
-  const paleta = [], idx = new Map(), desconocidos = new Set(), renombrados = new Set(), puestos = new Map()
+  const paleta = [], idx = new Map(), puestos = new Map(), nombres = []
   for (const { r, min: m, tam: [X, Y, Z] } of cajas) {
-    const estados = r.BlockStatePalette.map(e => {
-      const estado = estadoDe(e), nombre = estructuras.nombre(estado)
-      if (!registry.blocksByName[nombre]) desconocidos.add(nombre)
-      const viejo = String(e.Name).replace(/^minecraft:/, '')
-      if (viejo !== nombre) renombrados.add(`${viejo} → ${nombre}`)
-      return estado
-    })
+    const estados = r.BlockStatePalette.map(e => { const estado = estadoDe(e); nombres.push([String(e.Name).replace(/^minecraft:/, ''), estructuras.nombre(estado)]); return estado })
     const ind = desempaquetar(r.BlockStates, X * Y * Z, estados.length)
     for (let y = 0; y < Y; y++) for (let z = 0; z < Z; z++) for (let x = 0; x < X; x++) {
       const estado = estados[ind[y * X * Z + z * X + x]]
@@ -71,6 +62,49 @@ function importar(buf, opts) {
       if (!idx.has(estado)) { idx.set(estado, paleta.length); paleta.push(estado) }
       puestos.set(`${m[0] + x - min[0]},${m[1] + y - min[1]},${m[2] + z - min[2]}`, idx.get(estado))
     }
+  }
+  return { dim, paleta, puestos, nombres }
+}
+
+// "minecraft:oak_door[facing=east,half=lower]" (como lo trae el final_state de un jigsaw) → el estado normalizado
+function estadoDeTexto(t) {
+  const { nombre, props } = estructuras.parse(String(t).replace(/^minecraft:/, ''))
+  return estadoDe({ Name: nombre, Properties: props })
+}
+
+// .nbt de estructura (bloque de estructura del juego): size [x, y, z], palette (o palettes: la primera), blocks [{ pos, state, nbt }].
+// structure_void (no toca el mundo) y aire se saltan; un jigsaw se cambia por su final_state, como hace el juego al generarla.
+function deNbt(raiz) {
+  const pal = raiz.palette || raiz.palettes[0]
+  const dim = [0, 1, 2].map(i => raiz.size[i])
+  const estados = pal.map(e => estadoDe(e))
+  const paleta = [], idx = new Map(), puestos = new Map(), nombres = pal.map((e, i) => [String(e.Name).replace(/^minecraft:/, ''), estructuras.nombre(estados[i])])
+  for (const b of raiz.blocks) {
+    let estado = estados[b.state]
+    if (estructuras.nombre(estado) === 'jigsaw') {
+      estado = estadoDeTexto((b.nbt && b.nbt.final_state) || 'minecraft:air')
+      nombres.push([estructuras.nombre(estado), estructuras.nombre(estado)]) // también se valida lo que sale del jigsaw
+    }
+    const n = estructuras.nombre(estado)
+    if (AIRE.has(n) || n === 'structure_void') continue
+    if (!idx.has(estado)) { idx.set(estado, paleta.length); paleta.push(estado) }
+    puestos.set(b.pos.join(','), idx.get(estado))
+  }
+  return { dim, paleta, puestos, nombres }
+}
+
+// buf: el archivo entero (.litematic o .nbt, con gzip). opts: { id, alias, fuente, frente, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
+function importar(buf, opts) {
+  const registry = opts.registry || require(path.join(BOT, 'node_modules', 'minecraft-data'))(VERSION)
+  const raiz = nbt.simplify(nbt.parseUncompressed(zlib.gunzipSync(buf)))
+  // 2026-11-02: también los .nbt de los bloques de estructura del juego (size, palette, blocks), además de los .litematic (Regions)
+  const leido = raiz.Regions ? deLitematic(raiz) : (raiz.blocks && (raiz.palette || raiz.palettes)) ? deNbt(raiz) : null
+  if (!leido) throw new Error('el archivo no es un .litematic (Regions) ni un .nbt de estructura (size, palette, blocks)')
+  const { dim, paleta, puestos, nombres } = leido
+  const desconocidos = new Set(), renombrados = new Set()
+  for (const [viejo, nombre] of nombres) {
+    if (!registry.blocksByName[nombre]) desconocidos.add(nombre)
+    if (viejo !== nombre) renombrados.add(`${viejo} → ${nombre}`)
   }
   if (desconocidos.size) throw new Error(`bloques que no existen en ${VERSION}: ${[...desconocidos].sort().join(', ')}`)
 
@@ -89,8 +123,13 @@ function importar(buf, opts) {
   }
   const ordenado = Object.fromEntries(Object.entries(materiales).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)))
   const nombre = opts.nombre || opts.id.replace(/_/g, ' ')
+  // el frente (2026-11-02): el lado de la entrada, para «construye … mirando al este». El dado (FRONT=) o el de fuera de la primera
+  // puerta (la mitad baja mira hacia dentro: su facing es hacia donde mira quien entra); sin puerta, sur
+  const OPUESTA = { north: 'south', south: 'north', east: 'west', west: 'east' }
+  const puerta = bloques.map(b => estructuras.parse(paleta[b[3]])).find(e => /_door$/.test(e.nombre) && e.props.half === 'lower')
+  const frente = opts.frente || (puerta && OPUESTA[puerta.props.facing]) || 'south'
   const estructura = {
-    id: opts.id, nombre, alias: opts.alias || [], fuente: opts.fuente || '', dim, paleta, bloques,
+    id: opts.id, nombre, alias: opts.alias || [], fuente: opts.fuente || '', dim, frente, paleta, bloques,
     materiales: ordenado, sinConseguir: [...sinConseguir].sort(), notas,
   }
   if (renombrados.size) estructura.renombrados = [...renombrados].sort() // nombres de una versión anterior, cambiados al importar
@@ -122,18 +161,23 @@ module.exports = { importar, escribir, serializar, desempaquetar, estadoDe, RENO
 
 if (require.main === module) {
   const args = process.argv.slice(2), forzar = args.includes('--force')
-  const [archivo, id, alias] = args.filter(a => a !== '--force')
+  // --front=norte|sur|este|oeste (FRONT= en make): el lado de la entrada, si no se deduce bien de la puerta
+  const DIR = { norte: 'north', sur: 'south', este: 'east', oeste: 'west', north: 'north', south: 'south', east: 'east', west: 'west' }
+  const front = (args.find(a => a.startsWith('--front=')) || '').slice(8).toLowerCase()
+  if (front && !DIR[front]) { console.error('FRONT: norte, sur, este u oeste'); process.exit(1) }
+  const [archivo, id, alias] = args.filter(a => a !== '--force' && !a.startsWith('--front='))
   if (!archivo || !id || !/^[a-z0-9_]+$/.test(id)) {
     console.error('uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FORCE=1]   (NAME: minúsculas, números y _)')
     process.exit(1)
   }
   try {
     const r = importar(fs.readFileSync(archivo), {
-      id, fuente: path.basename(archivo), alias: (alias || '').split(',').map(s => s.trim()).filter(Boolean),
+      id, fuente: path.basename(archivo), alias: (alias || '').split(',').map(s => s.trim()).filter(Boolean), frente: DIR[front],
     })
     escribir(r, estructuras.DIR, path.join(BOT, 'materiales'), forzar)
     const e = r.estructura
-    console.log(`${id}: ${e.dim.join('×')}, ${e.bloques.length} bloques, ${Object.keys(e.materiales).length} materiales` +
+    const ES = { north: 'norte', south: 'sur', east: 'este', west: 'oeste' }
+    console.log(`${id}: ${e.dim.join('×')}, ${e.bloques.length} bloques, ${Object.keys(e.materiales).length} materiales, entrada al ${ES[e.frente]}` +
       (e.sinConseguir.length ? `, sin conseguir: ${e.sinConseguir.join(', ')}` : '') + (e.renombrados ? `, renombrados: ${e.renombrados.join(', ')}` : ''))
   } catch (err) {
     console.error('ERROR: ' + err.message)

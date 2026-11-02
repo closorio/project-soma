@@ -1,4 +1,4 @@
-// construir PLANO [x z | x y z] [materia=tablones] [nombre=…] [parcial] [comprobar] (F6; catálogo 2026-11-02): levantar un plano pequeño
+// construir PLANO [x z | x y z] [materia=tablones] [nombre=…] [parcial] [comprobar] [giro=N] (F6; catálogo 2026-11-02): levantar un plano pequeño
 // (bot/planos.js: pilar, muro, plataforma, cabana, cabana_techada) o una estructura del catálogo (bot/estructuras/<id>.json,
 // importada de un .litematic) dentro del rectángulo de obras (obras.json: permitido), lejos de las zonas protegidas y de los cofres.
 // Con x z, es la esquina noroeste y la altura la pone el suelo; con x y z (catálogo), la esquina de x, y y z mínimos tal cual: la caja
@@ -81,8 +81,8 @@ async function fabricarTablones(bot, necesarios) {
 // Un plano viejo (planos.js, un solo material) en el formato del catálogo: todos sus bloques con la paleta [materia], en su orden
 const adaptar = (p, materia) => ({ id: p.nombre, nombre: p.nombre, dim: p.dim, paleta: [materia], bloques: p.bloques.map(b => [b.dx, b.dy, b.dz, 0]), viejo: true })
 // El plano de una obra: el del catálogo si existe (las obras del catálogo guardan materia = null), si no el de planos.js
-const planoDe = (nombre, materia) => {
-  if (!materia) { const e = estructuras.cargar(nombre); if (e) return e }
+const planoDe = (nombre, materia, giro = 0) => {
+  if (!materia) { const e = estructuras.cargar(nombre); if (e) return estructuras.girar(e, giro) }
   return planos.PLANOS[nombre] ? adaptar(planos.PLANOS[nombre](materia || 'tablones'), materia || 'tablones') : null
 }
 // Lo que falta para los bloques del catálogo que no están ya bien puestos (y el relleno), con el inventario
@@ -108,7 +108,10 @@ module.exports = async function construir(bot, args, tarea) {
   if (retomar) return retomarObra(bot, retomar, tarea, parcial)
   const nombrePlano = palabras[0] || 'cabana'
   const nums = palabras.slice(1).filter(a => /^-?\d+$/.test(a)).map(Number)
-  const catalogo = estructuras.cargar(nombrePlano)
+  // giro=N (2026-11-02): N vueltas de 90° a la derecha, para «… mirando al este» (estructuras.girar); la obra lo guarda para retomarla
+  const giro = parseInt((palabras.find(a => a.startsWith('giro=')) || '').slice(5)) || 0
+  const cargada = estructuras.cargar(nombrePlano)
+  const catalogo = cargada && estructuras.girar(cargada, giro)
   const materia = catalogo ? null : palabras.slice(1).find(a => /_planks$|^tablones$|^cobblestone$|^stone$|^dirt$|_log$/.test(a)) || 'tablones'
   const nombre = (palabras.find(a => a.startsWith('nombre=')) || '').slice(7) || nombrePlano
   if (!catalogo && !planos.PLANOS[nombrePlano]) return { exito: false, causa: `plano desconocido: ${nombrePlano} (hay: ${[...planos.nombres(), ...estructuras.ids()].join(', ')})` }
@@ -147,6 +150,7 @@ module.exports = async function construir(bot, args, tarea) {
     }
   }
   const id = obras.nueva(bot.username, nombre, plano.id, [x0, y + 1, z0], materia)
+  if (giro) obras.marcar(id, { giro })
   if (e.quitar && e.quitar.length) {
     const r = await quitarVegetacion(bot, e.quitar, tarea)
     if (r) { obras.cerrar(id, 'a medias'); return { exito: false, causa: r, obra: id, plano: plano.id, origen: [x0, y + 1, z0], puestos: 0 } }
@@ -158,7 +162,7 @@ async function retomarObra(bot, idObra, tarea, parcial) {
   const ob = obras.leer().obras.find(o => o.id === idObra)
   if (!ob || ob.estado === 'deshecha' || ob.estado === 'terminada') return { exito: false, causa: `no hay obra a medias ${idObra}` }
   if (obras.enCurso() && obras.enCurso().id !== ob.id) return { exito: false, causa: `hay otra obra en curso (${obras.enCurso().id})` }
-  const plano = planoDe(ob.plano, ob.materia)
+  const plano = planoDe(ob.plano, ob.materia, ob.giro || 0)
   if (!plano) return { exito: false, causa: `no tengo el plano ${ob.plano}` }
   const [x0, y1, z0] = ob.origen, y = y1 - 1, materia = ob.materia
   let fabricados = 0
@@ -210,26 +214,36 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
   const maxMs = plano.viejo ? MAX_MS : MAX_MS_CATALOGO
   const ms = Math.min(maxMs, (60 + 10 * lista.length) * 1000), t0 = Date.now()
   let puestos = 0, causa = null, ultimo = null, mal = 0
-  for (const ent of lista) {
-    const { dest } = ent
-    if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
-    if (Date.now() - t0 > ms) { causa = 'tiempo agotado'; break }
-    const actual = bot.blockAt(dest)
-    if (actual && bienPuesto(cx, ent, actual)) { puestos++; continue } // ya estaba (una obra retomada)
-    // la misma pieza ya puesta con otro estado (una puerta que alguien abrió, una mal orientada de antes): hecha; cerrarComoPlantilla
-    // deja al final puertas y trampillas como en la plantilla (2026-11-02: «ocupado en … (oak_door)» al retomar la casita)
-    if (actual && ent.estado && estructuras.mismoMaterial(actual.name, estructuras.nombre(ent.estado))) { puestos++; continue }
-    if (!parcela.libre(actual)) { causa = `ocupado en ${dest.x},${dest.y},${dest.z} (${actual ? actual.name : '?'})`; break }
-    if ((zonas.pasoVedado(dest.x, dest.y, dest.z) && !obras.enTemporal(dest.x, dest.z)) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break } // los carteles mandan dentro
-    const item = itemPara(cx, ent)
-    if (!item) { causa = `falta material: ${ent.estado ? estructuras.objetoDe(ent.estado).item : ent.relleno && !materia ? 'tierra o adoquín' : materia}`; break }
-    const r = await ponerUno(cx, ent, item, tarea)
-    if (!r.bien) { causa = `no pude colocar en ${dest.x},${dest.y},${dest.z}: ${r.error || 'sin apoyo'}`; break }
-    obras.anotarPuesto(id, [dest.x, dest.y, dest.z, r.nombre])
-    if (r.mal) { mal++; obras.anotarMal(id, [dest.x, dest.y, dest.z, ent.estado]) }
-    ultimo = r.nombre
-    puestos++
+  // 2026-11-02: un bloque que aún no tiene en qué apoyarse (la escalera de la esquina de un alero, que vuela y solo se apoya en las de
+  // al lado) se aparta y se vuelve a por él cuando se han puesto los demás; la obra solo para si en una vuelta no se pone ninguno
+  let cola = lista, diferidos = []
+  for (let vuelta = 0; cola.length && !causa; vuelta++) {
+    diferidos = []
+    for (const ent of cola) {
+      const { dest } = ent
+      if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
+      if (Date.now() - t0 > ms) { causa = 'tiempo agotado'; break }
+      const actual = bot.blockAt(dest)
+      if (actual && bienPuesto(cx, ent, actual)) { puestos++; continue } // ya estaba (una obra retomada)
+      // la misma pieza ya puesta con otro estado (una puerta que alguien abrió, una mal orientada de antes): hecha; cerrarComoPlantilla
+      // deja al final puertas y trampillas como en la plantilla (2026-11-02: «ocupado en … (oak_door)» al retomar la casita)
+      if (actual && ent.estado && estructuras.mismoMaterial(actual.name, estructuras.nombre(ent.estado))) { puestos++; continue }
+      if (!parcela.libre(actual)) { causa = `ocupado en ${dest.x},${dest.y},${dest.z} (${actual ? actual.name : '?'})`; break }
+      if ((zonas.pasoVedado(dest.x, dest.y, dest.z) && !obras.enTemporal(dest.x, dest.z)) || cofres.esCofre(dest.x, dest.y, dest.z)) { causa = `protegido en ${dest.x},${dest.y},${dest.z}`; break } // los carteles mandan dentro
+      const item = itemPara(cx, ent)
+      if (!item) { causa = `falta material: ${ent.estado ? estructuras.objetoDe(ent.estado).item : ent.relleno && !materia ? 'tierra o adoquín' : materia}`; break }
+      const r = await ponerUno(cx, ent, item, tarea)
+      if (!r.bien && r.error === 'sin apoyo' && !plano.viejo) { diferidos.push(ent); continue }
+      if (!r.bien) { causa = `no pude colocar en ${dest.x},${dest.y},${dest.z}: ${r.error || 'sin apoyo'}`; break }
+      obras.anotarPuesto(id, [dest.x, dest.y, dest.z, r.nombre])
+      if (r.mal) { mal++; obras.anotarMal(id, [dest.x, dest.y, dest.z, ent.estado]) }
+      ultimo = r.nombre
+      puestos++
+    }
+    if (causa || diferidos.length === cola.length) break
+    cola = diferidos
   }
+  if (!causa && diferidos.length) { const d = diferidos[0].dest; causa = `no pude colocar en ${d.x},${d.y},${d.z}: sin apoyo (${diferidos.length} sin nada en que apoyarse)` }
   const andamio = await quitarAndamio(cx, tarea)
   if (!plano.viejo && !(tarea && tarea.cancelada)) await cerrarComoPlantilla(cx, lista, tarea)
   const pendientes = lista.length - puestos

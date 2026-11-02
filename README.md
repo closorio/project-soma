@@ -109,6 +109,11 @@ defecto**; se activa por máquina con `SOMA_OLLAMA_MODELO` en `local.env`. Detal
   commits (`feat` sube el minor, `fix` y el resto el parche, `!` o `BREAKING CHANGE` el major). Línea base `v1.0.0`. Por eso importa
   escribir bien el tipo del commit. Cada versión major se publica con una PR hacia el `main` del fork de Count.
 
+## Construir estructuras
+
+Los bots construyen plantillas `.litematic` o `.nbt` donde digas y mirando hacia donde quieras («Oqva, construye casa_roble en
+300 64 -20 mirando al este»), consiguiendo ellos los materiales. Paso a paso, con los carteles de obras: [catalogo/LEEME.md](catalogo/LEEME.md).
+
 ## Configuración: qué es de quién
 
 En un mundo compartido (el server de count) cada dato tiene un solo dueño, así que ningún pull trae ni borra lo del otro:

@@ -5,7 +5,7 @@
 //   modo libre · modo órdenes · al terminar quieto|libre · perfil NOMBRE · estado · ayuda
 //   F7.2 (supervivencia): come · ataca [al zombi] · refúgiate · sal (del refugio) · duerme / espera al día · fabrica [una espada de
 //   piedra] · equípate · apártate · caza (busca comida)
-//   2026-11-02 (catálogo): construye ESTRUCTURA en x y z | aquí · qué falta para ESTRUCTURA · lista de estructuras · deshaz ESTRUCTURA
+//   2026-11-02 (catálogo): construye ESTRUCTURA en x y z | aquí [mirando al este | girada 90] · qué falta para ESTRUCTURA · lista de estructuras · deshaz ESTRUCTURA
 //   2026-11-02 (carteles de obras): lee los carteles · acepta los carteles · olvida los carteles
 const NUMEROS = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
   once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
@@ -237,8 +237,13 @@ function interpretar(texto) {
   const deCat = /\b(?:construye|construir|construid|levanta|levantar|edifica|monta|haz(?:me)?|hacer|falta|faltan|materiales|necesitas)\b/.test(t) && deCatalogo(t)
   if (deCat) {
     if (/\b(?:que (?:te |le )?falta|que faltan?|materiales|que necesitas)\b/.test(t)) return { tipo: 'materiales', plano: deCat, zona: BASE }
-    const c = coords(texto)
-    return { tipo: 'construye', estructura: deCat, plano: deCat, ...(c.en ? { pos: c.en } : {}), aqui: /\baqui\b/.test(t) }
+    // la esquina, en cualquier sitio de la frase (puede ir «mirando al este» detrás); hacia dónde, con la entrada a ese lado o girada N grados
+    const c = String(texto).match(/\b(?:en|a)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\b/i)
+    const DIR = { norte: 'north', sur: 'south', este: 'east', oeste: 'west' }
+    const d = t.match(/\b(?:mirando|mire|orientada|orientado|de cara|con la (?:entrada|puerta)|con su (?:entrada|puerta)|la (?:entrada|puerta)) (?:al |hacia el |hacia |a |el )?(norte|sur|este|oeste)\b/)
+    const g = t.match(/\b(?:girada|girado|gira(?:la|lo)?|rotada|rotado|rota(?:la|lo)?) (90|180|270)\b/)
+    return { tipo: 'construye', estructura: deCat, plano: deCat, ...(c ? { pos: c.slice(1, 4).map(Number) } : {}), aqui: /\baqui\b/.test(t),
+      ...(d ? { dir: DIR[d[1]] } : {}), ...(g ? { giro: Number(g[1]) } : {}) }
   }
   // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
   if (/\bgranja de piedra\b|\bstone farm\b|\bgenerador de piedra\b/.test(t) && /\b(?:haz(?:me)?|hacer|construye|construir|monta|necesito|materiales|que (?:te )?falta|prepara)\b/.test(t))

@@ -78,6 +78,8 @@ function quitarAndamio(id, [x, y, z]) {
   o.andamio = o.andamio.filter(b => !(b[0] === x && b[1] === y && b[2] === z))
   guardar(d)
 }
+// Datos sueltos de una obra (2026-11-02: el giro de una del catálogo, para retomarla igual)
+function marcar(id, datos) { const d = leer(), o = buscarId(d, id); if (o) { Object.assign(o, datos); guardar(d) } }
 function reabrir(id) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = 'en curso'; o.fin = null; guardar(d) } } // «continúa»
 function cerrar(id, estado) { const d = leer(), o = buscarId(d, id); if (o) { o.estado = estado; o.fin = fecha(); guardar(d) } }
 function anotarMinado(personaje, [x, y, z], tipo, herramienta) {
@@ -94,4 +96,4 @@ const lista = () => leer().obras.map(o => ({ id: o.id, nombre: o.nombre, plano: 
 // ¿Es este bloque de una obra en pie? (minar no lo rompe: para eso está deshacer)
 const esDeObra = (x, y, z) => leer().obras.some(o => o.estado !== 'deshecha' && [...o.bloques, ...(o.andamio || [])].some(b => b[0] === x && b[1] === y && b[2] === z))
 
-module.exports = { leer, guardar, permitido, enPermitido, temporales, ponerTemporales, enTemporal, obraPermitida, nueva, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }
+module.exports = { leer, guardar, permitido, enPermitido, temporales, ponerTemporales, enTemporal, obraPermitida, nueva, marcar, anotarPuesto, quitarPuesto, anotarAndamio, quitarAndamio, anotarMal, reabrir, cerrar, anotarMinado, obra, enCurso, lista, esDeObra, RUTA }

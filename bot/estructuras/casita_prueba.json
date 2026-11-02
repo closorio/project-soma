@@ -4,6 +4,7 @@
  "alias": ["casita de prueba"],
  "fuente": "casita_prueba.litematic",
  "dim": [5,5,5],
+ "frente": "south",
  "paleta": [
   "oak_planks",
   "oak_slab[type=double,waterlogged=false]",

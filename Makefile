@@ -97,7 +97,7 @@ help:
 	@echo "  order TEXT=\"…\"      \"tala 5 troncos\", \"ven\", \"caza 3 ovejas\", \"vuelve al campamento\"…"
 	@echo "  go POS=\"x y z\"      que vaya a esas coordenadas (las de F3): cuando está lejos y «ven» no te ve"
 	@echo "  zone NAME=… AREA=\"x1 z1 x2 z2\" [TYPE=trabajo|no_talar]   zona por coordenadas · zones (lista) · zone-delete NAME=…"
-	@echo "  import-structure FILE=… NAME=… [ALIAS=\"…\"] [FORCE=1]   importa un .litematic (catalogo/) a bot/estructuras/ · structures (lista)"
+	@echo "  import-structure FILE=… NAME=… [ALIAS=\"…\"] [FRONT=…] [FORCE=1]   importa un .litematic o .nbt (catalogo/) a bot/estructuras/ · structures (lista)"
 	@echo "  launcher-start · launcher-stop   lanzador: el /connect del servidor de otro PC lanza aquí tus bots (SOMA_LANZADOR_CLAVE en local.mk)"
 	@echo "  share WORLD=companero   sube a git tu jugadores/<tú>.json (tus bots y zonas del mundo compartido) para que lo vean los demás"
 	@echo "  move-log [WORLD=…]  ¿el server lo recoloca? ¿por qué rehace la ruta? (cuando no avanza)"
@@ -392,8 +392,8 @@ share:
 
 # catálogo de estructuras: .litematic → bot/estructuras/<id>.json y bot/materiales/<id>.json (offline, sin juego)
 import-structure:
-	@test -n "$(strip $(FILE))" -a -n "$(strip $(NAME))" || { echo 'uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FORCE=1]'; exit 1; }
-	@node herramientas/importar_estructura.js "$(strip $(FILE))" "$(strip $(NAME))" "$(ALIAS)" $(if $(strip $(FORCE)),--force)
+	@test -n "$(strip $(FILE))" -a -n "$(strip $(NAME))" || { echo 'uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FRONT=este] [FORCE=1]   (FILE: .litematic o .nbt)'; exit 1; }
+	@node herramientas/importar_estructura.js "$(strip $(FILE))" "$(strip $(NAME))" "$(ALIAS)" $(if $(strip $(FORCE)),--force) $(if $(strip $(FRONT)),--front=$(strip $(FRONT)))
 
 structures:
 	@node bot/estructuras.js

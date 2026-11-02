@@ -1876,20 +1876,23 @@ class Personaje {
   // «continúa» la retoma (o.obra). Lo que no saca de los cofres ni consigue lo pide: «déjalo en un cofre de HOGAR».
   async construirCatalogo(o, tarea, paso) {
     const bot = this.bot, estructuras = require('./estructuras'), abastecer = require('./abastecer'), { Vec3 } = require('vec3')
-    const plano = estructuras.cargar(o.estructura)
-    if (!plano) return { exito: false, texto: `No tengo la estructura ${o.estructura}.`, pasos: [] }
+    const cargado = estructuras.cargar(o.estructura)
+    if (!cargado) return { exito: false, texto: `No tengo la estructura ${o.estructura}.`, pasos: [] }
     const frase = (m) => Object.entries(m).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
     const pasos = []
     let obra = o.retomar || null, origen = null
-    if (obra) { const ob = require('./obras').leer().obras.find(x => x.id === obra); origen = ob && ob.origen }
+    // 2026-11-02: hacia dónde mira: «mirando al este» (o.dir: la entrada a ese lado) o «girada 90» (o.giro); una obra retomada, su giro
+    let giro = o.dir ? estructuras.vueltasPara(cargado, o.dir) : Math.round((o.giro || 0) / 90) % 4
+    if (obra) { const ob = require('./obras').leer().obras.find(x => x.id === obra); origen = ob && ob.origen; if (ob && ob.giro != null) giro = ob.giro }
     if (!origen) {
       if (o.pos) origen = o.pos
       else if (o.aqui) { const p = bot.entity.position.floored(); origen = [p.x + 2, p.y, p.z + 2] }
       else return { exito: false, texto: `Dime dónde: «construye ${o.estructura} en x y z» (la esquina de abajo) o «… aquí».`, pasos }
       // la misma estructura en el mismo sitio, a medias (el reintento de la agenda o la orden repetida): se retoma, no se empieza otra
       const previa = [...require('./obras').leer().obras].reverse().find(x => x.plano === o.estructura && String(x.origen) === String(origen))
-      if (previa && !['terminada', 'deshecha'].includes(previa.estado)) obra = previa.id // la última en ese sitio; si se deshizo, otra nueva
+      if (previa && !['terminada', 'deshecha'].includes(previa.estado)) { obra = previa.id; giro = previa.giro || 0 } // la última en ese sitio; si se deshizo, otra nueva
     }
+    const plano = estructuras.girar(cargado, giro)
     const puestosEnMundo = () => {
       const hechos = new Set()
       for (const [dx, dy, dz, i] of plano.bloques) {
@@ -1900,7 +1903,7 @@ class Personaje {
     }
     // antes de ir a por material, que el sitio valga (dentro de las zonas de obras, vacío, con suelo)
     if (!obra) {
-      const [rv, dv] = await paso('construir', [o.estructura, ...origen.map(String), 'comprobar'])
+      const [rv, dv] = await paso('construir', [o.estructura, ...origen.map(String), 'comprobar', `giro=${giro}`])
       pasos.push(dv)
       if (!rv.exito) return { exito: false, texto: `No puedo construir ${plano.nombre} en ${origen.join(' ')}: ${rv.causa}.`, pasos }
     }
@@ -1943,10 +1946,11 @@ class Personaje {
         }
       }
       if (tarea.cancelada) break
-      const [rr, d] = await paso('construir', obra ? [`retomar=${obra}`, 'parcial'] : [o.estructura, ...origen.map(String), 'parcial'])
+      const [rr, d] = await paso('construir', obra ? [`retomar=${obra}`, 'parcial'] : [o.estructura, ...origen.map(String), 'parcial', `giro=${giro}`])
       pasos.push(d); r = rr; mal += r.mal || 0
       if (r.obra) { obra = r.obra; o.obra = obra } // para «continúa»
-      if (r.exito) return { exito: true, texto: `Construido: ${plano.nombre} en ${r.origen.join(', ')} (${total} bloques en ${ronda} tanda${ronda === 1 ? '' : 's'}${mal ? `; ${mal} con otra orientación` : ''}).`, pasos }
+      const ES = { north: 'norte', south: 'sur', east: 'este', west: 'oeste' }
+      if (r.exito) return { exito: true, texto: `Construido: ${plano.nombre} en ${r.origen.join(', ')}, con la entrada al ${ES[plano.frente]} (${total} bloques en ${ronda} tanda${ronda === 1 ? '' : 's'}${mal ? `; ${mal} con otra orientación` : ''}).`, pasos }
       if (!/^falta material/.test(r.causa || '')) break
     }
     const hechos = puestosEnMundo().size
