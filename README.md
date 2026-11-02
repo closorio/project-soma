@@ -87,6 +87,12 @@ copian aquí, para que no se desincronicen.
 Cómo está hecho un rol: el perfil v2 (`perfiles/v2/<rol>.json`, con su catálogo `_etapas.json`) lo lee el capataz
 (`bot/capataz.js`). Mira `casual.json` como ejemplo, y valida con `make validate-profiles`.
 
+## Órdenes en lenguaje libre (opcional)
+
+Con Ollama local, el bot puede entender frases que el parser no reconoce («quédense quietos», «sentinela»). Está **apagado por
+defecto**; se activa por máquina con `SOMA_OLLAMA_MODELO` en `local.env`. Detalle y cómo comprobarlo:
+`conocimiento/decisiones/2026-11-02-ordenes-con-llm-local-opcional.md`.
+
 ## Reglas de trabajo a dos
 
 - **Hub** (`compartido/README.md`): publica `estado` al empezar, al decidir algo que afecte al otro y al terminar. Lo

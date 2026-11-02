@@ -6,16 +6,40 @@
 // no pude poner la cama · no llego · monstruos cerca · la cama está ocupada · despertado · cancelado.
 const { goals } = require('mineflayer-pathfinder')
 const { Vec3 } = require('vec3')
-const { conLimite, esperar, moverHasta } = require('./comun')
+const fs = require('fs')
+const path = require('path')
+const mundo = require('../mundo')
+const { conLimite, esperar, moverHasta, prudentes, hayCamino } = require('./comun')
 const { sitioCama } = require('./dormir')
 const fabricar = require('./fabricar')
 const sv = require('./sv')
 
 const MAX_S = 720
-// 2026-11-02 (pedido del usuario: con 4 camas, todos iban a la misma y dos se quedaban sin dormir): cada bot del proceso se reserva
-// una cama (la cabecera, 'x,y,z' → nombre) y los demás eligen otra; la próxima vez vuelve a la suya. Las ocupadas (alguien dormido)
-// se saltan, y si al acostarse está ocupada prueba la siguiente.
-const RESERVAS = new Map()
+// 2026-11-02 (pedido del usuario: con 4 camas, todos iban a la misma y dos se quedaban sin dormir): cada bot se reserva una cama (la
+// cabecera, 'x,y,z' → nombre) y los demás eligen otra; la próxima vez vuelve a la suya. Las ocupadas (alguien dormido) se saltan, y si al
+// acostarse está ocupada prueba la siguiente. Con cada bot en su propio proceso (bot/conectar.sh, /connect) un Map en memoria no lo ve nadie
+// más: las reservas van a un fichero compartido (servidor-supervivencia/logs/camas-<mundo>.json) y caducan a los 30 min.
+const CADUCA_MS = 30 * 60 * 1000
+class Reservas {
+  constructor(ruta = path.join(__dirname, '..', '..', 'servidor-supervivencia', 'logs', `camas-${mundo.nombre}.json`), ahora = Date.now) {
+    this.ruta = ruta; this.ahora = ahora
+  }
+  leer() {
+    let d = {}
+    try { d = JSON.parse(fs.readFileSync(this.ruta, 'utf8')) } catch (_) {}
+    for (const [k, v] of Object.entries(d)) if (!v || this.ahora() - v.t > CADUCA_MS) delete d[k]
+    return d
+  }
+  guardar(d) {
+    try { fs.mkdirSync(path.dirname(this.ruta), { recursive: true }); const tmp = `${this.ruta}.${process.pid}.tmp`; fs.writeFileSync(tmp, JSON.stringify(d)); fs.renameSync(tmp, this.ruta) } catch (_) {}
+  }
+  get(k) { const v = this.leer()[k]; return v ? v.bot : undefined }
+  has(k) { return this.get(k) !== undefined }
+  set(k, bot) { const d = this.leer(); d[k] = { bot, t: this.ahora() }; this.guardar(d); return this }
+  delete(k) { const d = this.leer(); const habia = k in d; delete d[k]; this.guardar(d); return habia }
+  * [Symbol.iterator]() { for (const [k, v] of Object.entries(this.leer())) yield [k, v.bot] }
+}
+const RESERVAS = new Reservas()
 const DIR = { north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0] }
 const clave = (v) => `${v.x},${v.y},${v.z}`
 // Las camas a ≤ r, una por cama (su cabecera), de la más cercana a la más lejana: [{ v, ocupada }]
@@ -53,6 +77,23 @@ function buscarSitio(bot) {
   return cand.sort((a, c) => a.distanceTo(b) - c.distanceTo(b))[0] || null
 }
 
+// Una casilla de pie junto a la cama (a ≤ 2, alturas -1..+1) a la que SÍ hay camino con esos movimientos: con una meta «cerca de la cama» el
+// navegador podía quedarse en el otro lado de una pared o de una escalera (cerca en línea recta, lejos andando). Las más cercanas al bot
+// primero, hasta 8 comprobaciones de 400 ms. null si ninguna (se vuelve a «cerca de la cama»).
+function celdaDeAcceso(bot, v, mov) {
+  const libre = (p) => { const k = bot.blockAt(p); return !!k && k.boundingBox === 'empty' && !sv.esLiquido(k) && !k.name.endsWith('_bed') }
+  const cand = []
+  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) for (let dy = -1; dy <= 1; dy++) {
+    const s = v.offset(dx, dy, dz)
+    if (libre(s) && libre(s.offset(0, 1, 0)) && sv.solido(bot.blockAt(s.offset(0, -1, 0))) && !(bot.blockAt(s.offset(0, -1, 0)) || {}).name?.endsWith('_bed')) cand.push(s)
+  }
+  const yo = bot.entity.position
+  for (const s of cand.sort((a, b) => a.distanceTo(yo) - b.distanceTo(yo)).slice(0, 8)) {
+    try { if (hayCamino(bot, new goals.GoalBlock(s.x, s.y, s.z), 400, mov)) return s } catch (_) {}
+  }
+  return null
+}
+
 // La que lleve (o una recién fabricada), en dos casillas libres a su lado; devuelve su posición o { causa }
 async function ponerCama(bot, tarea) {
   let cama = bot.inventory.items().find(i => i.name.endsWith('_bed'))
@@ -65,7 +106,7 @@ async function ponerCama(bot, tarea) {
   if (!sitio) { // aquí no cabe (terreno irregular): la casilla más cercana a ≤ 6 desde la que sí, y allí
     const d = buscarSitio(bot)
     if (!d) return { causa: 'sin sitio para la cama' }
-    await moverHasta(bot, new goals.GoalBlock(d.x, d.y, d.z), () => bot.entity.position.floored().equals(d), { ms: 15000, tarea })
+    await moverHasta(bot, new goals.GoalBlock(d.x, d.y, d.z), () => bot.entity.position.floored().equals(d), { ms: 15000, tarea, mov: prudentes(bot, { pisarVedadas: true }) })
     sitio = sitioCama(bot)
     if (!sitio) return { causa: 'sin sitio para la cama' }
   }
@@ -105,7 +146,11 @@ async function unaCama(bot, r, descartadas, tarea, t0) {
   }
   const cerca = () => bot.entity.position.distanceTo(v.offset(0.5, 0.5, 0.5)) <= 3
   if (!cerca()) {
-    const fin = await moverHasta(bot, new goals.GoalNear(v.x, v.y, v.z, 2), cerca, { ms: 30000, tarea })
+    // pisando las zonas vedadas (las camas suelen estar en HOGAR, y con la penalización normal el navegador daba vueltas o se rendía); sin romper ni poner
+    const mov = prudentes(bot, { pisarVedadas: true })
+    const acceso = celdaDeAcceso(bot, v, mov)
+    const meta = acceso ? new goals.GoalBlock(acceso.x, acceso.y, acceso.z) : new goals.GoalNear(v.x, v.y, v.z, 2)
+    const fin = await moverHasta(bot, meta, cerca, { ms: 45000, tarea, mov })
     if (!cerca()) return { exito: false, causa: fin === 'cancelado' ? 'cancelado' : 'no llego', ...datos() }
   }
   try { bot.pathfinder.setGoal(null) } catch (_) {}
@@ -130,3 +175,5 @@ async function unaCama(bot, r, descartadas, tarea, t0) {
   }
   return { exito: true, causa: 'amanece', ...base, ...datos() }
 }
+
+module.exports.Reservas = Reservas

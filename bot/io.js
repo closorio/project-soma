@@ -80,6 +80,7 @@ const depositar = require('./habilidades/depositar')
 const cofres = require('./cofres')
 const arbolado = require('./arbolado')
 const ordenes = require('./ordenes')
+const interpreteLlm = require('./interprete_llm')
 const agenda = require('./agenda') // 2026-11-01: cola de órdenes, bucles, reintentos e interrupciones que se reanudan
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
@@ -120,6 +121,8 @@ const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_AL
 const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
 // IO_PROPIOS=Nombre1,Nombre2: los bots del usuario (de otros procesos de esta misma máquina). Con los de este proceso (VIVOS), cuentan como dueños.
 const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.trim()).filter(Boolean))
+// El brand del cliente (lo que todo cliente le dice al server al conectar): «soma-bot;dueno=NOMBRE». ASCII, sin espacios.
+const marcaDeBot = () => `soma-bot;dueno=${[...AMOS][0] || ''}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
 const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
 const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
@@ -225,6 +228,7 @@ class Personaje {
   conectar() {
     const bot = this.bot = mineflayer.createBot({
       host: SERVIDOR.host, port: SERVIDOR.port, username: this.nombre, auth: 'offline', version: SERVIDOR.version,
+      brand: marcaDeBot(), // el server (plugin SomaConnect) los reconoce como bots por este brand
     })
     if (mundo.tickEnd) require('./tick_end').instalar(bot) // A0 del asistente: 26.3 expulsa sin client_tick_end
     require('./colisiones').vigilar(bot) // 2026-11-02: no se apilan: las hitboxes que se solapan se empujan, como en vanilla
@@ -813,7 +817,12 @@ class Personaje {
   // Orden en lenguaje sencillo (ordenes.js), del chat del juego o del puerto. Devuelve el texto de la respuesta; con esperarFin,
   // la del final de la orden (si no, la de aceptarla: la orden sigue en marcha). Las respuestas también salen por el chat.
   async ordenar(texto, origen, esperarFin = false) {
-    const lista = ordenes.interpretarVarias(texto) // 2026-11-01: «X y luego Y», con su repetición (agenda.js)
+    let lista = ordenes.interpretarVarias(texto) // 2026-11-01: «X y luego Y», con su repetición (agenda.js)
+    // 2026-11-02: si el parser no la entiende, un LLM local la reformula y el parser la valida (interprete_llm.js; SOMA_OLLAMA_MODELO)
+    if (!lista && interpreteLlm.activo()) {
+      const r = await interpreteLlm.reformular(texto)
+      lista = r && ordenes.interpretarVarias(r)
+    }
     const o = lista && lista[0]
     // quién manda: el chat (con su usuario), la mente (puerto con de=mente), u otro por el puerto (Ío, pruebas)
     const quien = origen.via === 'chat' ? `chat de ${origen.usuario}` : origen.de === 'mente' ? 'mente' : origen.de ? `puerto (${origen.de})` : 'puerto'
