@@ -309,3 +309,33 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 02:16:25 · Teo · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
 - 02:16:25 · Lola · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
 - 02:16:25 · Trivino · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:20 · Trivino
+- 02:20:56 · Trivino · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (19.6 s) · al terminar: otra orden
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:22 · Nico
+- 02:22:22 · Nico · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 02:24:21 · Nico · modo órdenes · «foto» (chat de __Count) → ✓ Mirando contigo: foto. (0.0 s)
+- 02:24:21 · Trivino · modo órdenes · «foto» (chat de __Count) → ✗ Estoy lejos para la foto. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:24 · Lola
+- 02:24:21 · Lola · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:24 · Teo
+- 02:24:21 · Teo · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+- 02:24:29 · Nico · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (0.2 s; pasos: equipar_soportes✓ equipar✓) · al terminar: quieto
+- 02:24:29 · Teo · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (0.3 s; pasos: equipar_soportes✓ equipar✓) · al terminar: quieto
+- 02:24:29 · Lola · modo órdenes · «equipate» (chat de __Count) → ✓ Equipado: iron_sword. (0.3 s; pasos: equipar_soportes✓ equipar✓) · al terminar: quieto
+- 02:24:29 · Trivino · modo órdenes · «equipate» (chat de __Count) → ✗ No tengo nada que equipar. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✗(nada que equipar)) · al terminar: quieto
+- 02:24:42 · Trivino · modo órdenes · «foto» (chat de __Count) → ✗ Estoy lejos para la foto. (0.0 s)
+- 02:24:42 · Teo · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+- 02:24:42 · Nico · modo órdenes · «foto» (chat de __Count) → ✓ Mirando contigo: foto. (0.0 s)
+- 02:24:42 · Lola · modo órdenes · «foto» (chat de __Count) → ✓ Sin casco y mirando contigo: foto. (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:26 · Lola
+- 02:26:26 · Lola · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:26 · Teo
+- 02:26:26 · Teo · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:26 · Nico
+- 02:26:26 · Nico · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:26 · Trivino
+- 02:26:26 · Trivino · modo órdenes · «los bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:33 · Lola · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:33 · Nico · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:33 · Teo · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:26:33 · Trivino · modo órdenes · «bots de seppuq son aliados» (chat de __Count) → ✗ no entendida (0.0 s)

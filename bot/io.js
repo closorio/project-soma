@@ -42,6 +42,23 @@ function pendienteDe(o, r) {
   return { ...o }
 }
 const textoDe = (p, texto) => (p.tipo === 'tala' ? `tala ${p.n} troncos` : p.tipo === 'mina' ? texto.replace(/\d+/, String(p.n)) : texto)
+// Color de la marca de cada bot en la barra de localización (2026-11-02, pedido del usuario): `colores` de mundos/<mundo>/mundo.json
+// ({ nombre: color }) o estos por defecto. Al entrar, el bot se lo pone con /waypoint; solo vale si es operador en ese server (si no,
+// el server dice que no tiene permiso y lo pone a mano un operador: `waypoint modify NOMBRE color COLOR`). Colores: los de los equipos
+// (red, blue, green, yellow, aqua, light_purple, gold, white…) o un hex (FF8800).
+const COLORES = { Oqva: 'red', Soma: 'blue', Iris: 'green', Eco: 'yellow', Alma: 'light_purple' }
+function colorDe(nombre) {
+  try { const c = JSON.parse(fs.readFileSync(mundo.ruta('mundo.json'), 'utf8')).colores; if (c && c[nombre]) return c[nombre] } catch (_) {}
+  return COLORES[nombre] || null
+}
+function ponerColor(bot, ev) {
+  const color = colorDe(bot.username)
+  if (!color) return
+  const arg = /^[0-9a-f]{6}$/i.test(color) ? `hex ${color}` : color
+  const oir = (m) => { const t = String(m); if (/waypoint|permission|permiso|unknown|desconocid/i.test(t)) { ev(`[color] ${color}: ${t.slice(0, 80)}`); bot.removeListener('messagestr', oir) } }
+  bot.on('messagestr', oir); setTimeout(() => bot.removeListener('messagestr', oir), 5000)
+  setTimeout(() => { try { bot.chat(`/waypoint modify ${bot.username} color ${arg}`) } catch (_) {} }, 1500)
+}
 // El aviso al no talar lo protegido: las zonas por su nombre y, aparte, si hay zonas de trabajo y el tronco cae fuera
 function noTalo(nombres) {
   const otras = nombres.filter(n => n !== zonas.FUERA_DE_TRABAJO)
@@ -77,7 +94,15 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
-const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase() // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+// Nombres de jugador sin distinguir mayúsculas: el server puede decir «Seppuq» aunque en local.mk ponga «seppuq» (2026-11-02)
+class NombresSinMayus extends Set {
+  constructor(it) { super(); this.orig = []; for (const x of it || []) this.add(x) }
+  add(x) { if (!super.has(String(x).toLowerCase())) this.orig.push(x); return super.add(String(x).toLowerCase()) }
+  has(x) { return super.has(String(x).toLowerCase()) }
+  * [Symbol.iterator]() { yield* this.orig }
+}
+const AMOS = new NombresSinMayus((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
 // 2026-11-02: aliados a la hora de pelear (centinela, «protégeme», defensa por defecto): solo los dueños (IO_AMOS) y los que el dueño declare con
 // «Oqva es aliado» / «Oqva no es aliado» (se guardan en mundos/<mundo>/aliados.json). Los demás personajes, aunque sean bots tuyos, no.
 const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
@@ -244,6 +269,7 @@ class Personaje {
       }, 2500)
     })
     bot.once('spawn', () => {
+      ponerColor(bot, (t) => this.ev(t))
       bot.pathfinder.setMovements(zonas.aplicar(new Movements(bot)))
       this.ev(`[mc] ${this.visible} ha aparecido en ` + bot.entity.position.floored())
       if (SKIN) bot.chat('/skin set ' + SKIN) // IO_SKIN: una skin del server (SkinsRestorer, p. ej. «sr createcustom»), a cada conexión
@@ -987,7 +1013,7 @@ class Personaje {
   // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
   async equiparAntes(paso) {
     const bot = this.bot
-    const [rs] = await paso('equipar_soportes', ['HOGAR'])
+    const [rs] = await paso('equipar_soportes', [BASE_ZONA])
     if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
     const [re] = await paso('equipar', ['todo'])
     if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
@@ -1159,7 +1185,7 @@ class Personaje {
         // 2026-11-02: no se separa del protegido (por defecto, quien da la orden; un dueño) y, con el esquema del centinela, ataca (acorralado, a
         // puñetazos si no lleva arma) a los hostiles que se le acerquen (≤ GUARDIA_MOBS), a los jugadores no aliados a rango de golpe
         // (≤ GUARDIA_JUGADORES) y a quien le pegue a él o al bot. Es un modo: sobrevive a las órdenes (vuelve solo), a morir y a reiniciar.
-        const prot = o.protegido || o.a || this.jugadorDe(quien) || [...AMOS].find(n => bot.players[n]) || (this.guardaespaldas && this.guardaespaldas.a)
+        const prot = o.protegido || o.a || this.jugadorDe(quien) || Object.keys(bot.players).find(n => AMOS.has(n)) || (this.guardaespaldas && this.guardaespaldas.a)
         const nombre = prot && (Object.keys(bot.players).find(n => n.toLowerCase() === String(prot).toLowerCase()) || prot)
         if (!nombre) return { exito: false, texto: 'No sé a quién proteger: dime «guardaespaldas de NOMBRE».', pasos: [] }
         this.fijarGuardaespaldas(nombre)
@@ -1570,7 +1596,7 @@ class Personaje {
       }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
-        const [rs, ds] = await paso('equipar_soportes', ['HOGAR'])
+        const [rs, ds] = await paso('equipar_soportes', [BASE_ZONA])
         if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
