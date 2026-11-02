@@ -402,6 +402,15 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     const bz = { entity: ents[0], entities: ents, yo: {} }
     const cerca = (ign) => { const x = require('./habilidades/sv').amenazaCerca(bz, amigoP, 10, ign); return x && x.id }
     ok(cerca() === 3, `agresivo: el zombi a 4 (no el creeper a 1, ni la vaca, ni el zombi a 30): ${cerca()}`)
+    { // curarse comiendo: poca vida, hambre sin llenar y comida buena en el inventario
+      const SVm = require('./habilidades/sv'), reg = require('minecraft-data')('26.1')
+      const cb = (health, food, items) => ({ entity: {}, health, food, registry: reg, inventory: { items: () => items.map(name => ({ name })) } })
+      ok(SVm.debeComerPorSalud(cb(8, 17, ['bread'])), 'curarse: salud 8, hambre 17, con pan → come')
+      ok(!SVm.debeComerPorSalud(cb(8, 17, [])), 'curarse: sin comida → no')
+      ok(!SVm.debeComerPorSalud(cb(8, 17, ['rotten_flesh'])), 'curarse: solo carne podrida → no')
+      ok(!SVm.debeComerPorSalud(cb(8, 20, ['bread'])), 'curarse: hambre llena → no (se cura sola)')
+      ok(!SVm.debeComerPorSalud(cb(18, 10, ['bread'])), 'curarse: con vida de sobra → no (eso es hambre, no curarse)')
+    }
     ok(cerca(new Set([3])) === 7, `agresivo: ignorando el zombi, el esqueleto: ${cerca(new Set([3]))}`)
   }
 

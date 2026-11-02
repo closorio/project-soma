@@ -140,6 +140,12 @@ function esAgresor(bot, victima, fuente, protegido) {
   return !NUNCA_ATACAR.has(fuente.name)
 }
 
+// Curarse comiendo (2026-11-01, pedido del usuario): con poca vida (≤ SALUD_COMER) y la barra de hambre sin llenar, comer hasta
+// llenarla, porque la vida solo se recupera con el hambre ≥ 18 (rápido a 20). Solo si lleva comida buena. Va siempre, con o sin
+// reflejos (io.js: en reposo, tras cada habilidad y escoltando).
+const SALUD_COMER = 12
+const debeComerPorSalud = (bot) => !!bot.entity && bot.health > 0 && bot.health <= SALUD_COMER && bot.food < 20 && comidas(bot).length > 0
+
 // «defiéndeme agresivo»: el hostil vivo más cercano al protegido (a ≤ radio de él y a ≤ 16 del bot), sin los de NUNCA_ATACAR ni
 // los de `ignorar` (ids con los que atacar acaba de negarse). null si no hay.
 function amenazaCerca(bot, protegido, radio = 10, ignorar = new Set()) {
@@ -178,5 +184,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

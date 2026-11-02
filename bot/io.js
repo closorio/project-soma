@@ -313,6 +313,10 @@ class Personaje {
         if (['huir', 'atacar', 'refugiarse'].includes(nombre)) reflejos.anotar(this.bot, nombre, r)
         if (!tarea.cancelada) { const p = this.reflejosSv(nombre, tarea); this.ocupado = p; const hechos = await p; if (hechos.length) r.reflejos = hechos }
       }
+      if (nombre !== 'comer' && !tarea.cancelada && sv.debeComerPorSalud(this.bot)) { // 2026-11-01: con poca vida, come (si lleva)
+        this.ev(`[curarse] salud ${Math.round(this.bot.health)}, hambre ${this.bot.food}: como`)
+        r.curarse = await this.ejecutarHabilidad('comer', ['20'], tarea)
+      }
       return r
     } finally { this.enHabilidad-- }
   }
@@ -352,7 +356,15 @@ class Personaje {
   // cada REPOSO_MS y en cuanto le golpea un monstruo.
   reposo() {
     const bot = this.bot
-    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity || !sv.activos(bot)) return
+    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity) return
+    if (sv.debeComerPorSalud(bot)) { // 2026-11-01: con poca vida, comer (si lleva), con o sin reflejos
+      const tarea = this.tareaReflejo = { cancelada: false }
+      this.ev(`[curarse] salud ${Math.round(bot.health)}, hambre ${bot.food}: como`)
+      this.reflejando = this.ejecutarHabilidad('comer', ['20'], tarea).catch(e => this.ev('[curarse] error: ' + e.message))
+        .finally(() => { this.reflejando = null; if (this.tareaReflejo === tarea) this.tareaReflejo = null })
+      return
+    }
+    if (!sv.activos(bot)) return
     let x = null
     try { x = reflejos.siguiente(bot, {}) } catch (e) { this.ev('[reflejo] error: ' + e.message); return }
     if (!x) return
@@ -795,12 +807,13 @@ class Personaje {
             const queda = SIGUEME_MAX - (Date.now() - t0)
             if (queda <= 0) { r = 'tiempo agotado'; break }
             // entra tras él en las zonas vedadas (GoalFollow, no GoalSeguirFuera): pisa, pero no rompe ni pone
-            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => objetivo() !== null, { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
+            if (sv.debeComerPorSalud(bot)) { await this.ejecutarHabilidad('comer', ['20'], tarea); continue } // poca vida: come y sigue
+            const marcha = moverHasta(bot, new goals.GoalFollow(e, 2), () => objetivo() !== null || sv.debeComerPorSalud(bot), { ms: queda, tarea, entidad: e, mov: prudentes(bot, { pisarVedadas: true }) })
             this.ocupado = marcha
             r = await marcha
             if (r !== 'listo') break
             const id = objetivo()
-            if (id === null) continue
+            if (id === null) continue // (o le toca comer: lo hace al empezar la vuelta)
             const p = await this.ejecutarHabilidad('atacar', ['id:' + id, '20', 'vedadas'], tarea)
             if (p && !p.exito) ignorar.set(id, Date.now() + 5000)
             if (p && !p.exito && !negado && /creeper|salud|demasiados|sin arma/.test(p.causa || '')) { negado = true; bot.chat(`No peleo: ${p.causa}.`) }
