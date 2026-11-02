@@ -13,7 +13,7 @@ const esLoPuesto = (k, item) => !!k && (k.name === item || k.name === item.repla
   k.name === item.replace(/^furnace$/, 'lit_furnace'))
 
 async function colocar(bot, dest, item) {
-  if (!sv.puedeTocar(dest.x, dest.y, dest.z)) return { exito: false, causa: 'casilla protegida' }
+  if (!sv.puedePoner(dest.x, dest.y, dest.z)) return { exito: false, causa: 'casilla protegida' }
   let k = bot.blockAt(dest)
   if (esLoPuesto(k, item)) return { exito: true, causa: 'ya estaba', pos: [dest.x, dest.y, dest.z] }
   if (k && !REEMPLAZABLE.test(k.name)) return { exito: false, causa: `ocupada (${k.name})` }
@@ -61,7 +61,7 @@ function sitiosAlLado(bot) {
   const b = nodo(bot), out = []
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
-    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !sv.puedePoner(v.x, v.y, v.z)) continue
     out.push(v)
   }
   return out

@@ -60,7 +60,7 @@ function sitioCama(bot, b = nodo(bot)) {
   const libre = (v) => { const k = bot.blockAt(v); return !!k && k.boundingBox === 'empty' && !sv.esLiquido(k) }
   for (const [dx, dz] of LADOS) {
     const pie = b.offset(dx, 0, dz), cab = b.offset(2 * dx, 0, 2 * dz)
-    if ([pie, cab].every(v => libre(v) && libre(v.offset(0, 1, 0)) && sv.solido(bot.blockAt(v.offset(0, -1, 0))) && sv.puedeTocar(v.x, v.y, v.z))) return { pie, cab }
+    if ([pie, cab].every(v => libre(v) && libre(v.offset(0, 1, 0)) && sv.solido(bot.blockAt(v.offset(0, -1, 0))) && sv.puedePoner(v.x, v.y, v.z))) return { pie, cab }
   }
   return null
 }
@@ -113,6 +113,7 @@ async function dormirEnCama(bot, segundos, tarea) {
 module.exports = async function dormir(bot, [segundos], tarea) {
   const cama = bot.inventory.items().some(i => i.name.endsWith('_bed'))
   if (encerrado(bot)) return esperarAlDia(bot, segundos, tarea)
+  if (cama) await require('./hogar')(bot, tarea) // la cama se pone en el hogar, si lo hay y llega
   if (cama) return dormirEnCama(bot, segundos, tarea)
   if (nochePasada(bot)) return { exito: false, causa: 'es de día', modo: null, hora: [sv.hora(bot), sv.hora(bot)], comido: 0, s: 0 }
   return { exito: false, causa: 'sin cama y sin refugio', modo: null, hora: [sv.hora(bot), sv.hora(bot)], comido: 0, s: 0 }

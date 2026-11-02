@@ -3,7 +3,7 @@
 // conectar.sh y los bots de todos: qué bots son de quién y qué zonas hay que respetar.
 //   { bots: [{ nombre, skin? }], zonas: [zona…], arboles: [árbol…], base?: "CASASOMA", lanzador?: "IP:puerto" }
 // Las zonas de otro jugador cuentan para todos (vedadas, sin talar y árboles), salvo las de trabajo: esas solo limitan a los bots de su
-// dueño. Un mundo sin carpeta jugadores/ (el del usuario, local, supervivencia) sigue con sus zonas.local.json (zonas.js).
+// dueño; y su hogar, para los demás, es «no talar» (no se rompe nada dentro, pero no es su casa). Un mundo sin carpeta jugadores/ (el del usuario, local, supervivencia) sigue con sus zonas.local.json (zonas.js).
 // Quién soy: el primero de IO_DUENOS (local.mk) o de IO_AMOS (lo pone conectar.sh a cada bot que lanza).
 const fs = require('fs')
 const path = require('path')
@@ -52,7 +52,8 @@ P.zonasDeTodos = () => {
   const zonas = [], arboles = []
   for (const [n, d] of P.leer()) {
     const mio = k(n) === yo
-    for (const z of d.zonas || []) if (mio || z.modo !== 'trabajo') zonas.push({ ...z, dueno: n })
+    // el hogar de otro (zonas.js, modo hogar) es su casa, no la mía: para mis bots cuenta como «no talar» (no se rompe nada; ni se usa)
+    for (const z of d.zonas || []) if (mio || z.modo !== 'trabajo') zonas.push(!mio && z.modo === 'hogar' ? { ...z, modo: 'no_talar', hogarDe: n, dueno: n } : { ...z, dueno: n })
     for (const a of d.arboles || []) arboles.push({ ...a, dueno: n })
   }
   cache.zonas = { yo, de: jugadores, datos: { zonas, arboles } }
@@ -66,7 +67,7 @@ P.guardarMio = (d) => {
   if (!yo) throw new Error('no sé quién soy: pon IO_DUENOS en local.mk')
   const limpio = { ...d }
   delete limpio.nombre
-  limpio.zonas = (limpio.zonas || []).map(({ dueno, ...z }) => z)
+  limpio.zonas = (limpio.zonas || []).map(({ dueno, hogarDe, ...z }) => z)
   limpio.arboles = (limpio.arboles || []).map(({ dueno, ...a }) => a)
   fs.mkdirSync(P.DIR, { recursive: true })
   const nombre = (de(yo) || {}).nombre || yo // el archivo que ya hubiera, con sus mayúsculas

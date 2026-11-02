@@ -105,8 +105,9 @@ const AVISO_LLENOS = { desde: 0 } // los cofres llenos se apuntan una vez en el 
 // cada habilidad como los pide ejecutor.py, duración de un tramo de modo libre y límites de seguridad de las órdenes.
 const VIVOS = new Map()
 const CHAT_ORDEN = new Set()
-const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase()
-const RELLENO_OBRA = require('./habilidades/construir').RELLENO // tierra o adoquín: el andamio de las obras del catálogo // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+const BASE_ZONA = (process.env.IO_BASE || 'HOGAR').toUpperCase() // zona base del dueño (local.mk: IO_BASE), o HOGAR, la de count
+const baseZona = () => (zonas.hogares()[0] || {}).nombre || BASE_ZONA // 2026-11-02: la zona de hogar del dueño, si la marcó
+const RELLENO_OBRA = require('./habilidades/construir').RELLENO // tierra o adoquín: el andamio de las obras del catálogo
 // Nombres de jugador sin distinguir mayúsculas: el server puede decir «Seppuq» aunque en local.mk ponga «seppuq» (2026-11-02)
 class NombresSinMayus extends Set {
   constructor(it) { super(); this.orig = []; for (const x of it || []) this.add(x) }
@@ -124,8 +125,12 @@ for (const b of require('./plantel').mios()) PROPIOS.add(b) // 2026-11-02: en un
 // El brand del cliente (lo que todo cliente le dice al server al conectar): «soma-bot;dueno=NOMBRE». ASCII, sin espacios.
 const marcaDeBot = () => `soma-bot;dueno=${require('./alcance').duenoDe(AMOS)}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
-const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
-const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
+const leerCentinela = (n) => { try { const j = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')); return j.zona ? { zona: j.zona, patrulla: !!j.patrulla } : null } catch (_) { return null } }
+const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona, patrulla: !!c.patrulla }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
+// 2026-11-02: el oficio (tarea repetitiva, empezando por cosechar): sobrevive igual que el centinela. { oficio: 'cosechar', zona }
+const rutaOficio = (n) => path.join(mundo.carpetaDatos, `oficio_${n}.json`)
+const leerOficio = (n) => { try { const j = JSON.parse(fs.readFileSync(rutaOficio(n), 'utf8')); return j.oficio ? { oficio: j.oficio, zona: j.zona || '' } : null } catch (_) { return null } }
+const guardarOficio = (n, c) => { try { if (c) fs.writeFileSync(rutaOficio(n), JSON.stringify({ oficio: c.oficio, zona: c.zona }) + '\n'); else fs.rmSync(rutaOficio(n), { force: true }) } catch (_) {} }
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
@@ -157,6 +162,8 @@ const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiénde
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
 const RANGO_CAMA = { h: 8, v: 5 } // el mismo cuadro con el que el juego no deja dormir (monstruos a ≤ 8 en horizontal y ≤ 5 en vertical)
+const REVISION_HERRERO = 600000, ESPERA_HERRERO = 300000 // oficio herrero: cada cuánto revisa las herramientas de los cofres, y cuánto espera tras quedarse sin material
+const ESPERA_COSECHA = 90000 // oficio cosechar: sin nada maduro, espera esto antes de volver a mirar el campo
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
 const ESCOLTA_REINTENTO_MS = 8000 // y si atacar se negó (creeper, salud baja…), no se le vuelve a pedir en 8 s
@@ -179,7 +186,8 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   aliado: () => 'Entendido.',
   centinela_off: () => 'Vale.', guardaespaldas_off: () => 'Vale.',
   guardaespaldas: (o) => `Modo guardaespaldas: no me separo de ${o.a || 'ti'}.`,
-  centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
+  centinela: (o) => (o.patrulla ? `Patrullo ${o.zona || 'el hogar'}.` : `Modo centinela: vigilo ${o.zona}.`),
+  oficio: (o) => `Mi oficio: ${o.oficio} en ${o.zona || 'el hogar'}.`, oficio_off: () => 'Vale, sin oficio.',
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
   saca: (o) => `Voy al cofre a por ${o.objeto || 'eso'}.`, desatascate: () => 'Busco por dónde salir.', sube: () => 'Subo a la superficie.',
@@ -209,6 +217,7 @@ class Personaje {
     setInterval(() => this.hambre().catch(e => this.ev('[hambre] error: ' + e.message)), 2000) // 2026-11-02: come siempre que tenga hambre y comida
     this.guardaespaldas = leerGuardaespaldas(nombre) // 2026-11-02: igual que el centinela (uno u otro, no los dos)
     this.centinela = this.guardaespaldas ? null : leerCentinela(nombre) // 2026-11-02: el modo centinela sobrevive a las órdenes, a morir, a reconectar y a reiniciar
+    this.oficio = leerOficio(nombre) // 2026-11-02: el oficio se retoma solo, como la guardia (que manda si hay las dos)
     setInterval(() => this.supervisarCentinela(), 3000)
     setInterval(() => this.vigilarSueno(), 1000) // 2026-11-02: dormir contra la guardia, según lo cerca que esté el enemigo
     VIVOS.set(nombre, this)
@@ -975,6 +984,8 @@ class Personaje {
     const vieja = this.agenda.reemplazar(e)
     if (vieja && vieja !== this.enVuelta) this.soltar(vieja, { exito: false, texto: `Dejo «${vieja.texto}» por la orden nueva.` })
     this.cortar('reemplazo')
+    // 2026-11-02: acostado, una orden de moverse («ven») respondía «voy» y seguía en la cama: se despierta antes (no con «duerme» ni al reanudar guardias)
+    if (this.bot.isSleeping && o.tipo !== 'duerme' && !o.reanuda) this.bot.wake().catch(() => {})
     this.supervisar()
     return e.fin
   }
@@ -996,7 +1007,7 @@ class Personaje {
           ultima = await this.vuelta(e) || ultima
         }
       } catch (err) { this.ev('[agenda] fallo: ' + err.message) } finally { this.supervisando = null }
-      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
+      if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas && !this.oficio) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
     })()
     return this.supervisando
   }
@@ -1005,7 +1016,7 @@ class Personaje {
   // Devuelve la entrada si salió de la agenda terminada (para el «al terminar»).
   async vuelta(e) {
     const o = e.o, texto = e.texto
-    const guardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas' // los modos de guardia no se anuncian ni se anotan al retomarlos o dejarlos
+    const guardia = o.tipo === 'centinela' || o.tipo === 'guardaespaldas' || o.tipo === 'oficio' // los modos de guardia no se anuncian ni se anotan al retomarlos o dejarlos
     const previo = this.ocupado
     const tarea = this.nuevaTarea()
     this.enVuelta = e
@@ -1058,7 +1069,7 @@ class Personaje {
   // Antes de montar guardia: lo que falte de los armor stands y cofres de HOGAR y, luego, lo mejor que lleve. Idempotente.
   async equiparAntes(paso) {
     const bot = this.bot
-    const [rs] = await paso('equipar_soportes', [BASE_ZONA])
+    const [rs] = await paso('equipar_soportes', [baseZona()])
     if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
     const [re] = await paso('equipar', ['todo'])
     if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
@@ -1067,11 +1078,12 @@ class Personaje {
 
   // 2026-11-02: el modo centinela no se apaga solo: tras cualquier orden (cumplida o interrumpida), tras morir, reconectar o reiniciar, vuelve a
   // montar guardia. Solo «desactiva centinela» lo quita. Cada 3 s: si hay centinela y no hay orden ni habilidad en marcha, lo retoma.
-  fijarCentinela(zona) {
-    this.centinela = zona ? { zona } : null
+  fijarCentinela(zona, patrulla = false) { // patrulla (2026-11-02): centinela que se mueve libre por la zona en vez de quedarse en su puesto
+    this.centinela = zona ? { zona, patrulla } : null
     guardarCentinela(this.nombre, this.centinela)
     if (zona && this.guardaespaldas) this.fijarGuardaespaldas(null) // un modo u otro
   }
+  fijarOficio(c) { this.oficio = c; guardarOficio(this.nombre, c) }
   fijarGuardaespaldas(a) {
     this.guardaespaldas = a ? { a } : null
     guardarGuardaespaldas(this.nombre, this.guardaespaldas)
@@ -1094,7 +1106,7 @@ class Personaje {
       const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(this.centinela.zona).toLowerCase())
       const yo = bot.entity.position
       const x = zona && sv.intrusos(bot, zona, esAliado, new Map(), { y: yo.y, dy: RANGO_CAMA.v })[0]
-      if (x && Math.hypot(x.position.x - yo.x, x.position.z - yo.z) <= RANGO_CAMA.h) urgencia = { tipo: 'centinela', zona: zona.nombre, una: true, reanuda: true }
+      if (x && Math.hypot(x.position.x - yo.x, x.position.z - yo.z) <= RANGO_CAMA.h) urgencia = { tipo: 'centinela', zona: zona.nombre, patrulla: this.centinela.patrulla, una: true, reanuda: true }
     }
     if (!urgencia) return
     this.ultimaUrgenciaSueno = Date.now()
@@ -1107,11 +1119,12 @@ class Personaje {
 
   supervisarCentinela() {
     const bot = this.bot
-    if (!(this.centinela || this.guardaespaldas) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
+    if (!(this.centinela || this.guardaespaldas || this.oficio) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
-    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, reanuda: true }
-    this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : 'modo centinela', 'reanudar')
+    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : this.centinela ? { tipo: 'centinela', zona: this.centinela.zona, patrulla: this.centinela.patrulla, reanuda: true }
+      : { tipo: 'oficio', oficio: this.oficio.oficio, zona: this.oficio.zona, reanuda: true }
+    this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : this.centinela ? 'modo centinela' : 'oficio ' + this.oficio.oficio, 'reanudar')
       .catch(e => this.ev('[centinela] no pude retomar: ' + e.message)).finally(() => { this.reanudando = false })
   }
 
@@ -1313,6 +1326,73 @@ class Personaje {
         } finally { bot.removeListener('entityHurt', alGolpe); this.escoltando = false }
         return { exito: true, texto: '', pasos: [] }
       }
+      case 'oficio_off': {
+        const antes = this.oficio
+        this.fijarOficio(null)
+        return { exito: true, texto: antes ? `Dejo el oficio (${antes.oficio}).` : 'No tenía oficio.', pasos: [] }
+      }
+      case 'oficio': {
+        // 2026-11-02: tarea repetitiva hasta «deja el oficio». Cosechar: va a la zona (HOGAR por defecto), cosecha y replanta lo maduro, lo guarda
+        // en el cofre del marco con comida y, sin nada maduro, espera ESPERA_COSECHA y vuelve a mirar. Sobrevive a órdenes, muertes y reinicios.
+        if (o.oficio !== 'cosechar' && o.oficio !== 'herrero') return { exito: false, texto: `No sé el oficio ${o.oficio}.`, pasos: [] }
+        const nombreZona = o.zona || baseZona()
+        if (!zonas.leer().zonas.some(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())) { if (o.reanuda) this.fijarOficio(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
+        this.fijarOficio({ oficio: o.oficio, zona: o.zona || '' })
+        if (o.oficio === 'herrero') {
+          // 2026-11-02: herrero. Cada 5 s mira (sin moverse) si a algún soporte le falta una pieza; cada REVISION_HERRERO revisa también las herramientas
+          // de los cofres de los soportes. Si faltan materiales, espera ESPERA_HERRERO antes de insistir (no recorre los cofres en balde).
+          const personajes = Number(process.env.IO_HERRERO_BOTS) || new Set([...PROPIOS, ...VIVOS.keys()]).size || 1
+          if (!o.reanuda) bot.chat(`Soy el herrero de ${nombreZona}: armadura en los soportes y espada, pico y hacha para ${personajes} personajes.`)
+          let ultimoTodo = 0, noAntesDe = 0, ultimoAviso = 0
+          while (!(tarea && tarea.cancelada)) {
+            try {
+              if (!bot.entity || !(bot.health > 0) || this.recuperando || Date.now() < noAntesDe) { await esperar(1000); continue }
+              const modo = Date.now() - ultimoTodo > REVISION_HERRERO ? 'todo' : 'armadura'
+              if (modo === 'armadura') { // lo barato: los soportes que se ven desde donde está (si está lejos del hogar, primero hasta allí)
+                const lejos = !zonas.hogarDe(Math.floor(bot.entity.position.x), Math.floor(bot.entity.position.y), Math.floor(bot.entity.position.z))
+                if (lejos) await require('./habilidades/hogar')(bot, tarea).catch(() => {})
+              } else await require('./habilidades/hogar')(bot, tarea).catch(() => {})
+              const [r] = await paso('herrero', [nombreZona, modo, String(personajes)])
+              if (modo === 'todo' && r.causa !== 'sin soportes' && r.causa !== 'sin cofres') ultimoTodo = Date.now()
+              if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${nombreZona}.`, pasos: [] }
+              const hecho = [...(r.puestas || []), ...Object.keys(r.guardadas || {})].length
+              if (r.exito || (r.faltan && r.faltan.length)) this.ev(`[herrero] ${r.causa}: puestas ${(r.puestas || []).join(',') || '-'}, fabricadas ${JSON.stringify(r.fabricadas)}, guardadas ${JSON.stringify(r.guardadas)}${r.faltan && r.faltan.length ? '; faltan: ' + r.faltan.join(' | ') : ''}`)
+              if (r.faltan && r.faltan.length) {
+                noAntesDe = Date.now() + ESPERA_HERRERO
+                if (Date.now() - ultimoAviso > ESPERA_HERRERO) { bot.chat(`Me falta material: ${[...new Set(r.faltan)].slice(0, 2).join('; ')}.`); ultimoAviso = Date.now() }
+              } else if (hecho) bot.chat(`Listo: ${[...(r.puestas || []).map(x => 'puse ' + x.replace(/_/g, ' ')), ...Object.entries(r.guardadas || {}).map(([k, n]) => `guardé ${n} ${k.replace(/_/g, ' ')}`)].join(', ')}.`)
+            } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
+            for (const t1 = Date.now(); Date.now() - t1 < 5000 && !(tarea && tarea.cancelada); ) await esperar(500)
+          }
+          return { exito: true, texto: 'Dejo el trabajo un momento.', pasos: [] }
+        }
+        if (!o.reanuda) bot.chat(`Cosecho y replanto en ${nombreZona}; lo guardo en el cofre con comida en el marco.`)
+        let ultimoAviso = 0
+        while (!(tarea && tarea.cancelada)) {
+          try {
+            if (!bot.entity || !(bot.health > 0) || this.recuperando) { await esperar(1000); continue }
+            await require('./habilidades/hogar')(bot, tarea).catch(() => {}) // el campo del hogar: si está lejos, hasta allí
+            const [r] = await paso('cosechar', [nombreZona])
+            if (r.exito) {
+              const n = Object.entries(r.guardado || {}).map(([k, v]) => `${v} ${k.replace(/_/g, ' ')}`).join(', ')
+              this.ev(`[oficio] cosechados ${r.cosechados}, replantados ${r.replantados}${r.reparados ? `, reparados ${r.reparados}` : ''}${r.sinSemilla ? `, sin semilla ${r.sinSemilla}` : ''}; guardado: ${n || 'nada'} (${r.causa})`)
+              if (Date.now() - ultimoAviso > 120000) { bot.chat(`Cosechados ${r.cosechados}${r.reparados ? `, reparo ${r.reparados} parcelas` : ''}${n ? `, guardo ${n}` : ''}${r.causa !== 'guardado' ? ` (${r.causa})` : ''}.`); ultimoAviso = Date.now() }
+              await esperar(5000)
+            } else {
+              if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${nombreZona}.`, pasos: [] }
+              // nada maduro: a que crezca, mirando el campo cada 3 s (polvo de hueso o lo que sea: se pone a cosechar al momento) y, cada ESPERA_COSECHA,
+              // repasando el campo por si hay parcelas que reparar; un fallo (amenaza, sin camino…): poco
+              const espera = /^sin cultivos maduros/.test(r.causa) ? ESPERA_COSECHA : 8000
+              const cosechar = require('./habilidades/cosechar')
+              for (const t1 = Date.now(); Date.now() - t1 < espera && !(tarea && tarea.cancelada); ) {
+                await esperar(3000)
+                if (bot.entity && cosechar.hayMaduros(bot, nombreZona)) break
+              }
+            }
+          } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
+        }
+        return { exito: true, texto: 'Dejo el trabajo un momento.', pasos: [] }
+      }
       case 'centinela_off': {
         const antes = this.centinela
         this.fijarCentinela(null)
@@ -1321,9 +1401,10 @@ class Personaje {
       case 'centinela': {
         // 2026-11-02: monta guardia en una zona (HOGAR): ataca (acorralado, a puñetazos si no lleva arma) a cualquier monstruo hostil o jugador
         // que no sea aliado (dueños de IO_AMOS y otros personajes) que entre, y a quien le pegue; vuelve a su puesto. Hasta otra orden.
-        const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(o.zona).toLowerCase())
-        if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${o.zona}: márcala con !zona.`, pasos: [] } }
-        this.fijarCentinela(zona.nombre) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
+        const nombreZona = o.zona || baseZona() // sin zona: el hogar del dueño
+        const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())
+        if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
+        this.fijarCentinela(zona.nombre, !!o.patrulla) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
         const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
@@ -1344,7 +1425,7 @@ class Personaje {
             if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           }
           puesto = bot.entity.position.clone()
-          if (!o.reanuda) bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
+          if (!o.reanuda) bot.chat(o.patrulla ? `Patrullo ${zona.nombre}: ataco a quien entre sin ser de los míos.` : `Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
           while (!(tarea && tarea.cancelada)) {
             try {
               // muerto, o yendo a por sus cosas: la guardia espera; luego vuelve a su puesto
@@ -1355,6 +1436,14 @@ class Personaje {
               if (!x) {
                 // una vez (urgencia sobre dormir): sin intrusos durante 3 s, vuelve a lo que estaba (la cama)
                 if (o.una) { libreDesde = libreDesde || Date.now(); if (Date.now() - libreDesde > 3000) break; await esperar(500); continue }
+                if (o.patrulla) { // patrulla: sin puesto fijo; un punto al azar de la zona, una pausa y otro (un intruso o un golpe corta el paseo)
+                  const x1 = Math.min(zona.x1, zona.x2) + 1, x2 = Math.max(zona.x1, zona.x2) - 1, z1 = Math.min(zona.z1, zona.z2) + 1, z2 = Math.max(zona.z1, zona.z2) - 1
+                  const px = x1 <= x2 ? x1 + Math.random() * (x2 - x1) : cx, pz = z1 <= z2 ? z1 + Math.random() * (z2 - z1) : cz
+                  await moverHasta(bot, new goals.GoalNearXZ(px, pz, 1), () => !!golpeador || !!intruso(), { ms: 20000, tarea, mov: mov() })
+                  puesto = bot.entity.position.clone() // la altura de la vigilancia sigue al paseo (escaleras, desniveles)
+                  await esperar(2000 + Math.random() * 4000)
+                  continue
+                }
                 if (bot.entity.position.distanceTo(puesto) > 6) { // desplazado (reaparecer, una pelea…): de vuelta al puesto
                   const r = await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => !!golpeador || !!intruso(), { ms: 60000, tarea, mov: mov() })
                   if (r !== 'listo') await esperar(1500)
@@ -1540,7 +1629,7 @@ class Personaje {
         const stock = { ...(r.items || {}) }
         for (const it of bot.inventory.items()) stock[it.name] = (stock[it.name] || 0) + it.count
         const falta = mat.faltan(plan, stock)
-        const donde = r.cofres ? `${r.cofres} cofre${r.cofres === 1 ? '' : 's'} de ${r.zona}${r.noAbiertos ? ` (${r.noAbiertos} sin abrir)` : ''} y mi inventario` : `mi inventario (${r.causa === 'sin cofres' ? `no hay cofres en ${r.zona}` : `no abrí ningún cofre de ${r.zona}`})`
+        const donde = r.cofres ? `${r.cofres} cofre${r.cofres === 1 ? '' : 's'} de ${r.zona}${r.noAbiertos ? ` (${r.noAbiertos} sin abrir)` : ''}${r.lejosEnY ? ` (dejo ${r.lejosEnY} a más de 10 bloques de altura)` : ''} y mi inventario` : `mi inventario (${r.causa === 'sin cofres' ? `no hay cofres en ${r.zona}` : `no abrí ningún cofre de ${r.zona}`})`
         if (!falta.length) return { exito: true, texto: `Con ${donde} tengo todo para ${plan.nombre}.`, pasos: [d] }
         bot.chat(`Para ${plan.nombre} me falta, mirando ${donde}:`)
         for (const f of mat.frases(falta)) bot.chat(f)
@@ -1685,7 +1774,7 @@ class Personaje {
       }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
-        const [rs, ds] = await paso('equipar_soportes', [BASE_ZONA])
+        const [rs, ds] = await paso('equipar_soportes', [baseZona()])
         if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
@@ -1833,12 +1922,12 @@ class Personaje {
       const relleno = Object.entries(inv).filter(([k]) => RELLENO_OBRA.test(k)).reduce((a, [, n]) => a + n, 0)
       if (plano.dim[1] > 4 && relleno < plano.dim[1]) falta.dirt = (falta.dirt || 0) + plano.dim[1] - relleno
       if (Object.keys(falta).length) {
-        const [rc, dc] = await paso('revisar_cofres', [BASE_ZONA]); pasos.push(dc)
+        const [rc, dc] = await paso('revisar_cofres', [baseZona()]); pasos.push(dc)
         await this.salirDeVedada(tarea)
         const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })
         const plan = abastecer.planAbasto(bot.registry, falta, inv, rc.items || {}, { hayHorno, evitar: sinHallar })
         pedir = plan.pedir
-        if (Object.keys(pedir).length) bot.chat(`Para ${plano.nombre} necesito que me traigas ${frase(pedir)} (déjalo en un cofre de ${BASE_ZONA}).`)
+        if (Object.keys(pedir).length) bot.chat(`Para ${plano.nombre} necesito que me traigas ${frase(pedir)} (déjalo en un cofre de ${baseZona()}).`)
         if (!plan.pasos.length) break // solo queda lo que hay que pedir
         bot.chat(`Tanda ${ronda} de ${plano.nombre} (${t.bloques} bloques): voy a por ${frase(falta)}.`)
         const noHallo = {}
@@ -1850,7 +1939,7 @@ class Personaje {
           if ((p.tipo === 'mina' || p.tipo === 'cazar') && ds.length && ds.every(d => !d.exito)) for (const k of p.para.split(', ')) noHallo[k] = sinHallar[k] = p.n
         }
         if (Object.keys(noHallo).length) {
-          bot.chat(`No encuentro cerca con qué hacer ${frase(noHallo)}: tráemelo (déjalo en un cofre de ${BASE_ZONA}).`)
+          bot.chat(`No encuentro cerca con qué hacer ${frase(noHallo)}: tráemelo (déjalo en un cofre de ${baseZona()}).`)
         }
       }
       if (tarea.cancelada) break
@@ -1877,7 +1966,7 @@ class Personaje {
   // Un paso del abasto con la orden de siempre (tala, mina, funde, cazar) o la habilidad (saca y fabrica, con su cantidad)
   async pasoAbasto(p, tarea, paso, origen) {
     if (p.tipo === 'saca') { // de los cofres que contó revisar_cofres; luego fuera de la zona (si es vedada, desde dentro no se fabrica ni se va a la obra)
-      const d = (await paso('sacar_del_cofre', [p.objeto, String(p.n), `zona=${BASE_ZONA}`]))[1]
+      const d = (await paso('sacar_del_cofre', [p.objeto, String(p.n), `zona=${baseZona()}`]))[1]
       await this.salirDeVedada(tarea)
       return [d]
     }
@@ -1948,7 +2037,7 @@ class Personaje {
   }
 
   // Zonas protegidas. Desde el chat del juego (!zona ...) o por el puerto de control (zona ...).
-  //   inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
+  //   inicio | fin NOMBRE [no_talar|trabajo|hogar] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
   //   rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo] | tronco NOMBRE x y z | lista | borrar NOMBRE   (puerto)
   //   trabajo: si hay alguna, solo talan, pican y ponen dentro de ellas (bot/zonas.js)
   ordenZona(usuario, texto) {
@@ -1958,8 +2047,8 @@ class Personaje {
       if (!e) throw new Error('no te veo; acércate al personaje')
       return e.position.floored()
     }
-    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : 'vedada')
-    const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro' }
+    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : /^hogar$/i.test(x || '') ? 'hogar' : 'vedada')
+    const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro', hogar: 'hogar: se usa y se pisa, no se rompe nada' }
     // 2026-11-02: en un mundo compartido va a mi jugadores/<yo>.json (plantel.js), que viaja por git: hasta «make share», solo la ven mis bots
     const comparte = zonas.compartido() ? ' · para que la vean los demás: make share' : ''
     switch (verbo) {
@@ -1980,11 +2069,15 @@ class Personaje {
         col.forEach((v, i) => zonas.arbolNuevo(p[0] + (col.length > 1 ? '#' + i : ''), v.x, v.y, v.z))
         return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)${comparte}`
       }
-      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
+      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo|hogar]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
+      case 'modo': {
+        const m = modo(p[1]); if (!p[0] || !/^(vedada|no_?talar|trabajo|hogar)$/i.test(p[1] || '')) return 'uso: zona modo NOMBRE vedada|no_talar|trabajo|hogar'
+        return zonas.cambiarModo(p[0], m) ? `zona ${p[0]} ahora es ${TIPO[m]}` : `no hay ninguna zona ${p[0]}`
+      }
       case 'tronco': { const [n, x, y, z] = p; zonas.arbolNuevo(n, +x, +y, +z); return 'tronco ' + n + ' protegido' }
       case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}${comparte}` : 'di cuál: !zona borrar NOMBRE'
       case 'lista': { const l = zonas.lista(); return l.length ? l.join('\n') : 'no hay zonas protegidas' }
-      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE'
+      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo|hogar] | modo NOMBRE vedada|no_talar|trabajo|hogar | arbol NOMBRE | lista | borrar NOMBRE'
     }
   }
 

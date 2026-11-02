@@ -84,7 +84,9 @@
   "rutina_madera",
   "rutina_noche",
   "equipar_soportes",
-  "revisar_cofres"
+  "revisar_cofres",
+  "cosechar",
+  "herrero"
  ],
  "etapas": {
   "madera": {

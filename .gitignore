@@ -66,3 +66,5 @@ local.env
 # plantilla y nadie lo vuelve a escribir: así un pull no trae los del compañero ni le borra los suyos
 *.local.json
 *.local.md
+# zonas por dueño en los mundos de un solo jugador (zonas.js: zonas_<dueño>.json): de cada persona, como los .local
+mundos/*/zonas_*.json

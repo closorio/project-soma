@@ -211,6 +211,7 @@ module.exports = async function refugiarse(bot, [modo], tarea) {
   const junto = hostilJunto(bot)
   if (junto) return fin(false, 'monstruos cerca', {}, { hostil: `${junto.name}@${dist(bot, junto).toFixed(1)}` })
   try { bot.pathfinder.setGoal(null) } catch (_) {}
+  if (M === 'auto') await require('./hogar')(bot, tarea, { max: 96 }) // mejor en el hogar (allí no se pica: se tapia), si está a ≤ 96 bloques y no hay peligro
   for (let w = 0; w < 20 && !bot.entity.onGround; w++) await esperar(50)
   const n = sv.cuantosColocables(bot)
 

@@ -87,7 +87,7 @@ async function ponerMesa(bot) {
   if (!mesa) return null
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
-    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !(sv.puedeTocar(v.x, v.y, v.z) || mesaEnCartel(v))) continue
+    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.solido(suelo) || !(sv.puedePoner(v.x, v.y, v.z) || mesaEnCartel(v))) continue
     try {
       await conLimite(bot.equip(mesa, 'hand'), 3000)
       await conLimite(bot.placeBlock(suelo, new Vec3(0, 1, 0)), 3000)
@@ -121,7 +121,7 @@ async function ponerMesa(bot) {
   if (!sv.solido(debajo)) return null
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const v = b.offset(dx, -1, dz), k = bot.blockAt(v)
-    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (!k || k.boundingBox !== 'empty' || sv.esLiquido(k) || !sv.puedePoner(v.x, v.y, v.z)) continue
     try {
       await conLimite(bot.equip(mesa, 'hand'), 3000)
       await conLimite(bot.placeBlock(debajo, new Vec3(dx, 0, dz)), 3000)
