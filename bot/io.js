@@ -28,6 +28,7 @@ const habilidades = require('./habilidades')
 const observacion = require('./observacion')
 const zonas = require('./zonas')
 const CHAT_ZONA = new Set() // órdenes de chat ya atendidas (varios personajes oyen lo mismo)
+const FOTO_RADIO = 16, FOTO_SEG = 8 // «foto»: a cuántos bloques posan y cuánto sostienen la mirada
 const ESQUINAS = new Map() // usuario -> primera esquina de la zona que está marcando
 // «continúa» (2026-11-01): las órdenes de trabajo que se retoman si otra las interrumpe, y con qué les faltaba. Moverse, pelear o
 // comer no se retoman: «continúa» es volver al trabajo
@@ -810,6 +811,12 @@ class Personaje {
       fin.catch(e => this.ev('[orden] fallo: ' + e.message))
       return `Sigo con «${p.texto}».`
     }
+    if (o.tipo === 'foto') { // 2026-11-02: no interrumpe nada; solo posa quien está cerca de quien lo pide (los lejanos callan)
+      const r = await this.posarFoto(quien)
+      if (r.exito && origen.via === 'chat') this.decir(r.texto)
+      this.anotarOrden({ texto, quien, modo: this.modo, exito: r.exito, resultado: r.texto, s: 0 })
+      return r.texto
+    }
     const inmediata = { estado: true, ayuda: true, modo: true, despues: true, perfil: true, campamento: true, decisor: true, rol: true }
     if (inmediata[o.tipo]) {
       const modoAntes = this.modo
@@ -825,6 +832,21 @@ class Personaje {
     if (esperarFin) return (await fin).texto
     fin.catch(e => this.ev('[orden] fallo: ' + e.message))
     return (AVISOS[o.tipo] ? AVISOS[o.tipo](o) : 'Voy.') + (varias ? ` Y luego: ${lista.slice(1).map(x => '«' + x.frase + '»').join(', ')}.` : '')
+  }
+
+  // 2026-11-02 («foto»): si quien lo pide está a menos de FOTO_RADIO bloques, se quita el casco y mira adonde mira él (su yaw y pitch),
+  // sosteniendo la mirada FOTO_SEG segundos por si otro comportamiento la mueve. Sin interrumpir la orden en curso.
+  async posarFoto(quien) {
+    const bot = this.bot, u = this.jugadorDe(quien)
+    const e = u ? bot.players[u]?.entity : jugadorCercano(bot, FOTO_RADIO)
+    if (!e || bot.entity.position.distanceTo(e.position) > FOTO_RADIO) return { exito: false, texto: 'Estoy lejos para la foto.' }
+    const yaw = e.yaw, pitch = e.pitch
+    let casco = false
+    if (bot.inventory.slots[bot.getEquipmentDestSlot('head')]) { try { await bot.unequip('head'); casco = true } catch (err) { this.ev('[foto] no pude quitarme el casco: ' + err.message) } }
+    const t0 = Date.now()
+    await bot.look(yaw, pitch, true).catch(() => {})
+    const mantener = setInterval(() => { if (Date.now() - t0 > FOTO_SEG * 1000) clearInterval(mantener); else bot.look(yaw, pitch, true).catch(() => {}) }, 300)
+    return { exito: true, texto: casco ? 'Sin casco y mirando contigo: foto.' : 'Mirando contigo: foto.' }
   }
 
   // F8.0a: cambia quién decide en libre (red, guion o capataz) y, si se da, la política; el tramo en curso sigue con el anterior.
