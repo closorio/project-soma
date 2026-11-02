@@ -60,7 +60,7 @@ publicar:
 .PHONY: version publicar help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order go move-log zone zones zone-delete test validate-profiles bench-smoke bench-k bench-prepare
+        order go move-log zone zones zone-delete import-structure structures test validate-profiles bench-smoke bench-k bench-prepare
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -97,6 +97,7 @@ help:
 	@echo "  order TEXT=\"…\"      \"tala 5 troncos\", \"ven\", \"caza 3 ovejas\", \"vuelve al campamento\"…"
 	@echo "  go POS=\"x y z\"      que vaya a esas coordenadas (las de F3): cuando está lejos y «ven» no te ve"
 	@echo "  zone NAME=… AREA=\"x1 z1 x2 z2\" [TYPE=trabajo|no_talar]   zona por coordenadas · zones (lista) · zone-delete NAME=…"
+	@echo "  import-structure FILE=… NAME=… [ALIAS=\"…\"] [FORCE=1]   importa un .litematic (catalogo/) a bot/estructuras/ · structures (lista)"
 	@echo "  move-log [WORLD=…]  ¿el server lo recoloca? ¿por qué rehace la ruta? (cuando no avanza)"
 	@echo "Pruebas y bancos:"
 	@echo "  test                todas las pruebas en seco (bot/probar_*_seco.js) · validate-profiles"
@@ -369,6 +370,14 @@ zone-delete:
 go:
 	@test -n "$(strip $(POS))" || { echo 'uso: make go POS="x y z" [PORT=3001]'; exit 1; }
 	@curl -s --max-time 600 "127.0.0.1:$(strip $(PORT))/?c=$$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1]))' "ir $(strip $(POS))")"; echo
+
+# catálogo de estructuras: .litematic → bot/estructuras/<id>.json y bot/materiales/<id>.json (offline, sin juego)
+import-structure:
+	@test -n "$(strip $(FILE))" -a -n "$(strip $(NAME))" || { echo 'uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FORCE=1]'; exit 1; }
+	@node herramientas/importar_estructura.js "$(strip $(FILE))" "$(strip $(NAME))" "$(ALIAS)" $(if $(strip $(FORCE)),--force)
+
+structures:
+	@node bot/estructuras.js
 
 # --- pruebas y bancos -----------------------------------------------------------------------------------------------------------
 # la parte A de probar_libre_seco pide entrenamiento/ejecuciones/ (datos sin versionar): su fallo no cuenta si es solo ese
