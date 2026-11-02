@@ -197,7 +197,9 @@ function interpretar(texto) {
   if ((m = t.match(/\bguardaespaldas\b(?: (?:de|a) (\w+))?/))) return { tipo: 'guardaespaldas', ...(m[1] ? { a: m[1] } : {}) }
   // 2026-11-02: oficio (tarea repetitiva). Por ahora cosechar: «oficio cosechar», «cosecha el hogar», «ponte a cosechar», «sé granjero»;
   // «deja el oficio» / «ya no coseches» lo quita. Antes de «caza» y de «recoge».
-  if (/\b(?:deja|dejar|quita|quitar|termina|terminar|cancela|cancelar|fin|sin|ya no)\b.*\b(?:oficio|cosech\w*|granj\w*)\b|\bya no (?:cosech\w*|seas granjero)\b/.test(t)) return { tipo: 'oficio_off' }
+  if (/\b(?:deja|dejar|quita|quitar|termina|terminar|cancela|cancelar|fin|sin|ya no)\b.*\b(?:oficio|cosech\w*|granj\w*|herrer\w*)\b|\bya no (?:seas |hagas de )?herrero\b|\bya no (?:cosech\w*|seas granjero)\b/.test(t)) return { tipo: 'oficio_off' }
+  if ((m = t.match(/\b(?:oficio(?: de)? herrer\w*|(?:se|ponte de|haz de|trabaja de|ponte a hacer de) herrero|herrero)\b(?: (?:en|de|del|por) (?:el |la )?(?:zona )?(\w+))?/)))
+    return { tipo: 'oficio', oficio: 'herrero', zona: (m[1] && !/^(?:hogar|campo|todo|aqui|ya|herrero)$/.test(m[1]) ? m[1] : '').toUpperCase() }
   if ((m = t.match(/\b(?:oficio(?: de)? cosech\w*|cosecha\w*|ponte a cosechar|se(?: un)? granjero|granjero)\b(?: (?:en|de|del|por) (?:el |la )?(?:zona )?(\w+))?/)))
     return { tipo: 'oficio', oficio: 'cosechar', zona: (m[1] && !/^(?:hogar|campo|cultivos|todo|aqui|ya)$/.test(m[1]) ? m[1] : '').toUpperCase() }
   // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela

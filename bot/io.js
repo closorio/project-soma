@@ -158,6 +158,7 @@ const SIGUEME_MAX = 600000 // «sígueme» dura como mucho 10 min (y «defiénde
 const HAMBRE_COMER = 14 // come siempre que la barra baje a esto (o menos) y lleve comida buena, haga lo que haga
 const GUARDIA_MOBS = 10, GUARDIA_JUGADORES = 5 // «modo guardaespaldas»: un hostil a ≤ 10 bloques de él, o un jugador no aliado a ≤ 5 (rango de golpe), pide pelea
 const RANGO_CAMA = { h: 8, v: 5 } // el mismo cuadro con el que el juego no deja dormir (monstruos a ≤ 8 en horizontal y ≤ 5 en vertical)
+const REVISION_HERRERO = 600000, ESPERA_HERRERO = 300000 // oficio herrero: cada cuánto revisa las herramientas de los cofres, y cuánto espera tras quedarse sin material
 const ESPERA_COSECHA = 90000 // oficio cosechar: sin nada maduro, espera esto antes de volver a mirar el campo
 const CENTINELA_DY = 8 // «modo centinela»: solo vigila ± 8 bloques de altura sobre su puesto (la cueva de debajo no cuenta), salvo que la zona tenga y1/y2
 const ESCOLTA_RADIO = 12 // «protégeme»: un hostil a ≤ 12 bloques de él o del bot pide pelea aunque aún no haya pegado
@@ -1325,10 +1326,38 @@ class Personaje {
       case 'oficio': {
         // 2026-11-02: tarea repetitiva hasta «deja el oficio». Cosechar: va a la zona (HOGAR por defecto), cosecha y replanta lo maduro, lo guarda
         // en el cofre del marco con comida y, sin nada maduro, espera ESPERA_COSECHA y vuelve a mirar. Sobrevive a órdenes, muertes y reinicios.
-        if (o.oficio !== 'cosechar') return { exito: false, texto: `No sé el oficio ${o.oficio}.`, pasos: [] }
+        if (o.oficio !== 'cosechar' && o.oficio !== 'herrero') return { exito: false, texto: `No sé el oficio ${o.oficio}.`, pasos: [] }
         const nombreZona = o.zona || baseZona()
         if (!zonas.leer().zonas.some(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())) { if (o.reanuda) this.fijarOficio(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
-        this.fijarOficio({ oficio: 'cosechar', zona: o.zona || '' })
+        this.fijarOficio({ oficio: o.oficio, zona: o.zona || '' })
+        if (o.oficio === 'herrero') {
+          // 2026-11-02: herrero. Cada 5 s mira (sin moverse) si a algún soporte le falta una pieza; cada REVISION_HERRERO revisa también las herramientas
+          // de los cofres de los soportes. Si faltan materiales, espera ESPERA_HERRERO antes de insistir (no recorre los cofres en balde).
+          const personajes = Number(process.env.IO_HERRERO_BOTS) || new Set([...PROPIOS, ...VIVOS.keys()]).size || 1
+          if (!o.reanuda) bot.chat(`Soy el herrero de ${nombreZona}: armadura en los soportes y espada, pico y hacha para ${personajes} personajes.`)
+          let ultimoTodo = 0, noAntesDe = 0, ultimoAviso = 0
+          while (!(tarea && tarea.cancelada)) {
+            try {
+              if (!bot.entity || !(bot.health > 0) || this.recuperando || Date.now() < noAntesDe) { await esperar(1000); continue }
+              const modo = Date.now() - ultimoTodo > REVISION_HERRERO ? 'todo' : 'armadura'
+              if (modo === 'armadura') { // lo barato: los soportes que se ven desde donde está (si está lejos del hogar, primero hasta allí)
+                const lejos = !zonas.hogarDe(Math.floor(bot.entity.position.x), Math.floor(bot.entity.position.y), Math.floor(bot.entity.position.z))
+                if (lejos) await require('./habilidades/hogar')(bot, tarea).catch(() => {})
+              } else await require('./habilidades/hogar')(bot, tarea).catch(() => {})
+              const [r] = await paso('herrero', [nombreZona, modo, String(personajes)])
+              if (modo === 'todo' && r.causa !== 'sin soportes' && r.causa !== 'sin cofres') ultimoTodo = Date.now()
+              if (r.causa === 'sin zona') return { exito: false, texto: `No hay ninguna zona ${nombreZona}.`, pasos: [] }
+              const hecho = [...(r.puestas || []), ...Object.keys(r.guardadas || {})].length
+              if (r.exito || (r.faltan && r.faltan.length)) this.ev(`[herrero] ${r.causa}: puestas ${(r.puestas || []).join(',') || '-'}, fabricadas ${JSON.stringify(r.fabricadas)}, guardadas ${JSON.stringify(r.guardadas)}${r.faltan && r.faltan.length ? '; faltan: ' + r.faltan.join(' | ') : ''}`)
+              if (r.faltan && r.faltan.length) {
+                noAntesDe = Date.now() + ESPERA_HERRERO
+                if (Date.now() - ultimoAviso > ESPERA_HERRERO) { bot.chat(`Me falta material: ${r.faltan[0]}.`); ultimoAviso = Date.now() }
+              } else if (hecho) bot.chat(`Listo: ${[...(r.puestas || []).map(x => 'puse ' + x.replace(/_/g, ' ')), ...Object.entries(r.guardadas || {}).map(([k, n]) => `guardé ${n} ${k.replace(/_/g, ' ')}`)].join(', ')}.`)
+            } catch (e) { this.ev('[oficio] error (sigo): ' + e.message); await esperar(2000) }
+            for (const t1 = Date.now(); Date.now() - t1 < 5000 && !(tarea && tarea.cancelada); ) await esperar(500)
+          }
+          return { exito: true, texto: 'Dejo el trabajo un momento.', pasos: [] }
+        }
         if (!o.reanuda) bot.chat(`Cosecho y replanto en ${nombreZona}; lo guardo en el cofre con comida en el marco.`)
         let ultimoAviso = 0
         while (!(tarea && tarea.cancelada)) {

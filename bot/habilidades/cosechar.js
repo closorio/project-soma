@@ -80,14 +80,14 @@ function itemDeMarco(bot, e) {
   return null
 }
 
-// Los cofres que tienen pegado un marco con comida (o con un cultivo). Se ven los marcos cargados (entidades) en el radio.
-// Devuelve [{ pos: Vec3 del cofre, objeto, marco }], de más cerca a más lejos de `desde`.
-function cofresMarcados(bot, desde, radio = 96) {
+// Los cofres que tienen pegado un marco con comida (o con un cultivo), o con lo que diga `vale(objeto)` (el herrero busca piezas y materiales).
+// Se ven los marcos cargados (entidades) en el radio. Devuelve [{ pos: Vec3 del cofre, objeto, marco }], de más cerca a más lejos de `desde`.
+function cofresMarcados(bot, desde, radio = 96, vale = (objeto) => !!(bot.registry.foodsByName[objeto] || COSECHA.has(objeto))) {
   const salida = [], vistos = new Set()
   for (const e of Object.values(bot.entities)) {
     if (!MARCOS.has(e.name) || e.isValid === false || e.position.distanceTo(desde) > radio) continue
     const objeto = itemDeMarco(bot, e)
-    if (!objeto || !(bot.registry.foodsByName[objeto] || COSECHA.has(objeto))) continue
+    if (!objeto || !vale(objeto)) continue
     const casilla = new Vec3(Math.floor(e.position.x), Math.floor(e.position.y), Math.floor(e.position.z))
     // el marco cuelga de su cofre: el vecino más pegado al punto de la entidad (que está a 0,03 de la pared)
     const vecino = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
