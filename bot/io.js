@@ -1791,7 +1791,7 @@ class Personaje {
   }
 
   // Zonas protegidas. Desde el chat del juego (!zona ...) o por el puerto de control (zona ...).
-  //   inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
+  //   inicio | fin NOMBRE [no_talar|trabajo|hogar] | arbol NOMBRE | lista | borrar NOMBRE      (chat: usa tu posición)
   //   rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo] | tronco NOMBRE x y z | lista | borrar NOMBRE   (puerto)
   //   trabajo: si hay alguna, solo talan, pican y ponen dentro de ellas (bot/zonas.js)
   ordenZona(usuario, texto) {
@@ -1801,8 +1801,8 @@ class Personaje {
       if (!e) throw new Error('no te veo; acércate al personaje')
       return e.position.floored()
     }
-    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : 'vedada')
-    const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro' }
+    const modo = (x) => (/no_?talar/i.test(x || '') ? 'no_talar' : /^trabajo$/i.test(x || '') ? 'trabajo' : /^hogar$/i.test(x || '') ? 'hogar' : 'vedada')
+    const TIPO = { vedada: 'vedada', no_talar: 'sin talar', trabajo: 'de trabajo: solo se trabaja dentro', hogar: 'hogar: se usa y se pisa, no se rompe nada' }
     switch (verbo) {
       case 'inicio': { const q = pos(); ESQUINAS.set(usuario, q); return `esquina A en ${q.x}, ${q.z}; ve a la opuesta y di: !zona fin NOMBRE` }
       case 'fin': {
@@ -1821,11 +1821,11 @@ class Personaje {
         col.forEach((v, i) => zonas.arbolNuevo(p[0] + (col.length > 1 ? '#' + i : ''), v.x, v.y, v.z))
         return `árbol ${p[0]} protegido en ${c.x}, ${c.z} (${col.length} troncos)`
       }
-      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
+      case 'rect': { const [n, a, b, c, d, m] = p; if ([a, b, c, d].some(v => v === undefined || isNaN(+v))) return 'uso: zona rect NOMBRE x1 z1 x2 z2 [no_talar|trabajo|hogar]'; zonas.zonaNueva(n, +a, +b, +c, +d, modo(m)); return `zona ${n} guardada (${TIPO[modo(m)]})` }
       case 'tronco': { const [n, x, y, z] = p; zonas.arbolNuevo(n, +x, +y, +z); return 'tronco ' + n + ' protegido' }
       case 'borrar': return p[0] ? `borrados: ${zonas.borrar(p[0])}` : 'di cuál: !zona borrar NOMBRE'
       case 'lista': { const l = zonas.lista(); return l.length ? l.join('\n') : 'no hay zonas protegidas' }
-      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo] | arbol NOMBRE | lista | borrar NOMBRE'
+      default: return 'zona: inicio | fin NOMBRE [no_talar|trabajo|hogar] | arbol NOMBRE | lista | borrar NOMBRE'
     }
   }
 

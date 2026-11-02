@@ -3,44 +3,62 @@
 // archivo cambia (sin reiniciar los bots).
 // Además, el navegador nunca rompe troncos (solo los pica quien decide picar: picar_tronco, la orden cerebro, talar) ni cofres
 // (los de cofres.json por su sitio, y cualquier cofre o barril por su tipo).
-//   zona:  { nombre, x1, z1, x2, z2, y1?, y2?, modo: 'vedada' | 'no_talar' | 'trabajo' }   (rectángulo en x/z; y opcional)
+//   zona:  { nombre, x1, z1, x2, z2, y1?, y2?, modo: 'vedada' | 'no_talar' | 'trabajo' | 'hogar' }   (rectángulo en x/z; y opcional)
 //   árbol: { nombre, x, y, z }  (un tronco concreto; no se tala)
 // Zonas de trabajo (pedido del usuario, 2026-10-31): lo contrario de las vedadas. Si hay alguna, talar, picar y poner solo se
 // hacen dentro de alguna de ellas (fuera, todo cuenta como protegido); andar sigue libre. Las vedadas y no_talar mandan también
 // dentro. Sin zonas de trabajo, todo como antes.
+// Zonas de hogar (pedido del usuario, 2026-11-02): la casa de los personajes. Se pisan y se usan (dormir, cofres, craftear, fundir,
+// cosechar, depositar), pero no se rompe nada dentro (como no_talar, también minar y picar); poner sí (cama, mesa, cofre, antorcha), también
+// con zonas de trabajo que la dejen fuera.
+// Alcance individual (2026-11-02): cada dueño (primero de IO_AMOS) tiene su propio zonas_<dueno>.json en la carpeta de datos del mundo; sin
+// archivo de dueño aún se lee el zonas.json de antes (una vez, hasta el primer cambio, que ya escribe el del dueño). Sin dueño, el de siempre.
 const fs = require('fs')
+const path = require('path')
 const cofres = require('./cofres')
 const mundo = require('./mundo')
-const RUTA = mundo.zonas
+const alcance = require('./alcance')
+const DUENO = alcance.duenoDe((process.env.IO_AMOS || '').split(',').map(s => s.trim()).filter(Boolean))
+const HEREDADA = mundo.zonas
+const RUTA = DUENO ? path.join(mundo.carpetaDatos, `zonas_${alcance.seguro(DUENO)}.json`) : HEREDADA
 const VACIO = () => ({ zonas: [], arboles: [] })
-let cache = { mtime: -1, datos: VACIO() }
+let cache = { marca: null, datos: VACIO() }
 
 function leer() {
   try {
-    const st = fs.statSync(RUTA)
-    if (st.mtimeMs !== cache.mtime) cache = { mtime: st.mtimeMs, datos: Object.assign(VACIO(), JSON.parse(fs.readFileSync(RUTA, 'utf8'))) }
-  } catch (_) { cache = { mtime: -1, datos: VACIO() } }
+    let ruta = RUTA, st
+    try { st = fs.statSync(ruta) } catch (_) { ruta = HEREDADA; st = fs.statSync(ruta) }
+    const marca = `${ruta}:${st.mtimeMs}`
+    if (marca !== cache.marca) cache = { marca, datos: Object.assign(VACIO(), JSON.parse(fs.readFileSync(ruta, 'utf8'))) }
+  } catch (_) { cache = { marca: null, datos: VACIO() } }
   return cache.datos
 }
-function guardar(d) { fs.writeFileSync(RUTA, JSON.stringify(d, null, 1) + '\n'); cache.mtime = -2 }
+function guardar(d) {
+  const tmp = `${RUTA}.${process.pid}.tmp`
+  fs.writeFileSync(tmp, JSON.stringify(d, null, 1) + '\n'); fs.renameSync(tmp, RUTA); cache.marca = null
+}
 
 const dentro = (zn, x, y, z) => x >= zn.x1 && x <= zn.x2 && z >= zn.z1 && z <= zn.z2 && (zn.y1 == null || (y >= zn.y1 && y <= zn.y2))
 const esTrabajo = (zn) => zn.modo === 'trabajo'
 const esVedada = (zn) => (zn.modo || 'vedada') === 'vedada'
+const esHogar = (zn) => zn.modo === 'hogar'
 const FUERA_DE_TRABAJO = 'fuera de la zona de trabajo'
 const trabajo = () => leer().zonas.filter(esTrabajo)
 // ¿Hay zonas de trabajo y (x, y, z) no cae en ninguna?
 function fueraDeTrabajo(x, y, z) { const t = trabajo(); return t.length > 0 && !t.some(zn => dentro(zn, x, y, z)) }
 // ¿Qué protege este bloque de la tala? El nombre de la zona (vedada o no_talar), del árbol marcado o FUERA_DE_TRABAJO; null si nada.
-function protegidoPor(x, y, z) {
+// poner: true = para colocar un bloque en una casilla vacía: el hogar no lo impide (ni la zona de trabajo, dentro de él).
+function protegidoPor(x, y, z, { poner = false } = {}) {
   const d = leer()
-  const zn = d.zonas.find(zn => !esTrabajo(zn) && dentro(zn, x, y, z))
+  const zn = d.zonas.find(zn => !esTrabajo(zn) && !(poner && esHogar(zn)) && dentro(zn, x, y, z))
   if (zn) return zn.nombre
   const a = d.arboles.find(a => a.x === x && a.y === y && a.z === z)
   if (a) return a.nombre
+  if (poner && d.zonas.some(zn => esHogar(zn) && dentro(zn, x, y, z))) return null
   return fueraDeTrabajo(x, y, z) ? FUERA_DE_TRABAJO : null
 }
 const talaProtegida = (x, y, z) => protegidoPor(x, y, z) !== null
+const ponerProtegido = (x, y, z) => protegidoPor(x, y, z, { poner: true }) !== null
 // ¿Se puede pisar esta casilla? Solo las zonas vedadas lo impiden.
 function pasoVedado(x, y, z) { return leer().zonas.some(zn => esVedada(zn) && dentro(zn, x, y, z)) }
 
@@ -92,9 +110,9 @@ function borrar(nombre) {
 }
 function lista() {
   const d = leer()
-  const tipo = (z) => (z.modo === 'no_talar' ? 'sin talar' : esTrabajo(z) ? 'de trabajo' : 'vedada')
+  const tipo = (z) => (z.modo === 'no_talar' ? 'sin talar' : esTrabajo(z) ? 'de trabajo' : esHogar(z) ? 'hogar' : 'vedada')
   return [...d.zonas.map(z => `${z.nombre}: zona ${tipo(z)} x ${z.x1}..${z.x2}, z ${z.z1}..${z.z2}`),
     ...d.arboles.map(a => `${a.nombre}: árbol en ${a.x},${a.y},${a.z}`)]
 }
-module.exports = { leer, talaProtegida, protegidoPor, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
+module.exports = { leer, talaProtegida, ponerProtegido, protegidoPor, esHogar, DUENO, pasoVedado, puntoFuera, aplicar, zonaNueva, arbolNuevo, borrar, lista, RUTA, NO_ROMPER,
   trabajo, fueraDeTrabajo, esTrabajo, FUERA_DE_TRABAJO }

@@ -51,7 +51,7 @@ module.exports = async function iluminar(bot, [radio0], tarea) {
     if (!cuantas(bot)) { causa = 'sin antorchas'; break }
     if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
     // la casilla más a oscuras que se pueda tocar
-    const meta = lista.find(x => x.d > ALCANCE_LUZ && sv.puedeTocar(x.v.x, x.v.y, x.v.z))
+    const meta = lista.find(x => x.d > ALCANCE_LUZ && sv.puedePoner(x.v.x, x.v.y, x.v.z))
     if (!meta) { causa = 'protegido'; break }
     const v = meta.v
     if (lejania(bot, v) > ALCANCE) {

@@ -49,7 +49,7 @@ async function verter(bot, [que = 'agua', ...resto], tarea) {
   if (!cubo) return { exito: false, causa: `sin cubo de ${que}` }
   let dest = resto.length >= 3 && resto.slice(0, 3).every(x => !isNaN(+x)) ? new Vec3(+resto[0], +resto[1], +resto[2]).floored() : sitioAlLado(bot)
   if (!dest) return { exito: false, causa: 'sin sitio' }
-  if (!sv.puedeTocar(dest.x, dest.y, dest.z)) return { exito: false, causa: 'casilla protegida' }
+  if (!sv.puedePoner(dest.x, dest.y, dest.z)) return { exito: false, causa: 'casilla protegida' }
   const k = bot.blockAt(dest)
   if (k && sv.solido(k)) return { exito: false, causa: `ocupada (${k.name})` }
   if (!sv.solido(bot.blockAt(dest.offset(0, -1, 0)))) return { exito: false, causa: 'sin apoyo' }

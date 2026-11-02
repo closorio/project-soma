@@ -102,6 +102,11 @@ function puedeTocar(x, y, z) {
   if (zonas.pasoVedado(x, y, z) || zonas.talaProtegida(x, y, z) || cofres.esCofre(x, y, z) || obras.esDeObra(x, y, z)) return false
   return mundo.reglasLibres || obras.enPermitido(x, z)
 }
+// Poner un bloque en una casilla vacía: como puedeTocar, pero el hogar (zonas.js) y, dentro de él, las zonas de trabajo no lo impiden.
+function puedePoner(x, y, z) {
+  if (zonas.pasoVedado(x, y, z) || zonas.ponerProtegido(x, y, z) || cofres.esCofre(x, y, z) || obras.esDeObra(x, y, z)) return false
+  return mundo.reglasLibres || obras.enPermitido(x, z)
+}
 const NO_PICAR = /^(bedrock|obsidian|crying_obsidian|reinforced_deepslate|end_portal_frame|barrier|spawner|chest|trapped_chest|barrel|.*shulker_box)$/
 const LIQUIDOS = /^(water|lava|bubble_column)$/
 const esLiquido = (k) => !!k && (LIQUIDOS.test(k.name) || /^(kelp|kelp_plant|seagrass|tall_seagrass)$/.test(k.name) ||
@@ -240,6 +245,6 @@ async function centrar(bot, ms = 1500) {
 }
 
 module.exports = { equiparPara, RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
-  puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar,
+  puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar, puedePoner,
   NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

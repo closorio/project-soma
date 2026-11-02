@@ -60,7 +60,7 @@ function sitioCama(bot, b = nodo(bot)) {
   const libre = (v) => { const k = bot.blockAt(v); return !!k && k.boundingBox === 'empty' && !sv.esLiquido(k) }
   for (const [dx, dz] of LADOS) {
     const pie = b.offset(dx, 0, dz), cab = b.offset(2 * dx, 0, 2 * dz)
-    if ([pie, cab].every(v => libre(v) && libre(v.offset(0, 1, 0)) && sv.solido(bot.blockAt(v.offset(0, -1, 0))) && sv.puedeTocar(v.x, v.y, v.z))) return { pie, cab }
+    if ([pie, cab].every(v => libre(v) && libre(v.offset(0, 1, 0)) && sv.solido(bot.blockAt(v.offset(0, -1, 0))) && sv.puedePoner(v.x, v.y, v.z))) return { pie, cab }
   }
   return null
 }
