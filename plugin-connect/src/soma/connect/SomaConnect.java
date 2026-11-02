@@ -21,8 +21,10 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scoreboard.Team;
 import org.bukkit.command.Command;
@@ -162,6 +164,19 @@ public final class SomaConnect extends JavaPlugin implements Listener {
     public void alSalir(PlayerQuitEvent ev) {
         permisos.remove(ev.getPlayer().getUniqueId());
         if (duenos.remove(ev.getPlayer().getName()) != null) difundirDuenos();
+    }
+
+    // Clic derecho sobre un bot propio (2026-11-02): abre su inventario. Solo el dueño, ni siquiera un op; el brand es el que fija el dueño.
+    @EventHandler
+    public void alClicarBot(PlayerInteractEntityEvent ev) {
+        if (ev.getHand() != EquipmentSlot.HAND || !(ev.getRightClicked() instanceof Player bot)) return;
+        String dueno = duenos.get(bot.getName());
+        if (dueno == null) return;
+        Player quien = ev.getPlayer();
+        if (!dueno.equalsIgnoreCase(quien.getName())) return;
+        ev.setCancelled(true);
+        var vista = quien.openInventory(bot.getInventory());
+        if (vista != null) vista.setTitle(bot.getName());
     }
 
     // El brand lo pone el cliente, así que no es de fiar: del dueño solo se admiten letras, cifras y «_» (hasta 16, como un nombre de
