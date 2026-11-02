@@ -292,3 +292,20 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 - 01:30:14 · Nico · modo órdenes · «Oqva no es aliado» (chat de __Count) → ✓ oqva ya no es aliado. (0.0 s) · al terminar: quieto
 - 01:30:15 · Lola · modo órdenes · «Oqva no es aliado» (chat de __Count) → ✓ oqva ya no es aliado. (0.0 s) · al terminar: quieto
 - 01:30:15 · Teo · modo órdenes · «Oqva no es aliado» (chat de __Count) → ✓ oqva ya no es aliado. (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:03 · Teo
+- 02:03:15 · Teo · modo órdenes · «duerman» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:03 · Nico
+- 02:03:15 · Nico · modo órdenes · «duerman» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:03 · Lola
+- 02:03:15 · Lola · modo órdenes · «duerman» (chat de __Count) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 02:03 · Trivino
+- 02:03:15 · Trivino · modo órdenes · «duerman» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:03:17 · Trivino · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (37.2 s) · al terminar: otra orden
+- 02:03:18 · Nico · modo órdenes · «duerme» (chat de __Count) → ✓ Spawn guardado en esta cama. (0.9 s; pasos: usar_cama✓) · al terminar: quieto
+- 02:04:19 · Trivino · modo órdenes · «duerme» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+- 02:04:20 · Teo · modo órdenes · «duerme» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+- 02:04:20 · Lola · modo órdenes · «duerme» (chat de __Count) → ✗ No pude usar la cama: no llego. (lo dejo tras 2 intentos) (30.0 s; pasos: usar_cama✗(no llego)) · al terminar: quieto
+- 02:16:25 · Nico · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:16:25 · Teo · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:16:25 · Lola · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
+- 02:16:25 · Trivino · modo órdenes · «foto» (chat de __Count) → ✗ no entendida (0.0 s)
