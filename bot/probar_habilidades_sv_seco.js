@@ -466,6 +466,12 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     }
     const o = require('./ordenes').interpretar('modo centinela')
     ok(o.tipo === 'centinela' && o.zona === '', `«modo centinela» → ${JSON.stringify(o)}`)
+    const I = require('./ordenes').interpretar
+    for (const [t, zona] of [['patrulla', ''], ['patruya', ''], ['patrullen', ''], ['patruyen el hogar', ''], ['patrulla en el hogar', ''], ['patrulla por la ZONA2', 'ZONA2']]) {
+      const q = I(t); ok(q.tipo === 'centinela' && q.patrulla === true && q.zona === zona, `«${t}» → ${JSON.stringify(q)}`)
+    }
+    ok(I('modo centinela').patrulla === undefined, '«modo centinela» no patrulla')
+    for (const t of ['deja de patrullar', 'desactiva centinela', 'ya no patrulles']) ok(I(t).tipo === 'centinela_off', `«${t}» → ${JSON.stringify(I(t))}`)
   }
 
   console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)

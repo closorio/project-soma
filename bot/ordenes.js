@@ -15,7 +15,7 @@ const BASE = (process.env.IO_BASE || 'HOGAR').toUpperCase()
 const MAX_TRONCOS = 64 // límite de seguridad de «tala N troncos»
 const AYUDA = 'Puedo: ven, sígueme, entra al portal, encadenar («tala 5 y luego guarda»), repetir («ataca sin parar», «3 veces», «hasta que muera»; «cola», «salta», «para todo»), quédate, tala N troncos, recoge, guarda en el cofre, huye, modo libre, modo órdenes, ' +
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
-  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela [en ZONA] (vigila tu base o esa zona y ataca a quien entre), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
+  'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela [en ZONA] (vigila tu base o esa zona y ataca a quien entre), patrulla [en ZONA] (igual, pero recorre el hogar o esa zona libremente; «deja de patrullar» la quita), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, ármate (espada, pico y hacha de piedra, con lo que haga falta), equípate, apártate, caza, foto (los que estén cerca se quitan el casco y miran adonde miras); y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
   'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
@@ -196,8 +196,11 @@ function interpretar(texto) {
   if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?guardaespaldas\b|\bya no (?:seas|hagas de) guardaespaldas\b/.test(t)) return { tipo: 'guardaespaldas_off' }
   if ((m = t.match(/\bguardaespaldas\b(?: (?:de|a) (\w+))?/))) return { tipo: 'guardaespaldas', ...(m[1] ? { a: m[1] } : {}) }
   // 2026-11-02: «desactiva centinela» es lo único que apaga el modo centinela
-  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?centinela\b|\bya no (?:seas|hagas de) centinela\b/.test(t)) return { tipo: 'centinela_off' }
+  if (/\b(?:desactiva|desactivar|desactivad|apaga|apagar|quita|quitar|termina|terminar|cancela|cancelar|deja|dejar de|fin)\w*(?: de| del| el)? (?:el )?(?:modo )?(?:centinela\b|patru\w+)|\bya no (?:seas|hagas de) centinela\b|\bya no patru\w+/.test(t)) return { tipo: 'centinela_off' }
   // 2026-11-02: «modo centinela» → vigila una zona (HOGAR por defecto) y ataca a quien entre sin ser aliado; antes que «ataca»/«ven»
+  // «patrulla» / «patruya» / «patrullen» / «patruyen»: como centinela, pero se mueve libre por la zona (el hogar por defecto)
+  if ((m = t.match(/\bpatru(?:ll|y)\w*(?: (?:en|por|el|la|de|del|zona)\b)*(?: (\w+))?/)) && !/\b(?:desactiva|apaga|quita|termina|cancela|deja|dejar|fin|ya no)\b/.test(t))
+    return { tipo: 'centinela', zona: (m[1] && !/^(?:por|el|la|ahora|aqui|ya|todos|favor|hogar)$/.test(m[1]) ? m[1] : '').toUpperCase(), patrulla: true }
   if ((m = t.match(/\b(?:modo )?centinela\b(?: (?:en|de|del) (?:la zona )?(\w+))?|\bvigila (?:el |la )?(?:zona )?(\w+)/)))
     return { tipo: 'centinela', zona: (m[1] || m[2] || '').toUpperCase() } // sin zona: el hogar del dueño (io.js), o la base
   // 2026-11-02: «haz una granja de piedra» → qué materiales faltan (inventario + cofres de HOGAR); por ahora no construye. Antes que «fabrica»
@@ -243,8 +246,8 @@ function interpretar(texto) {
   if (/\b(?:guarda|guardar|guardad|guardalo|deposita|depositar|vacia)\b|\bal cofre\b/.test(t)) return { tipo: 'guarda' }
   if ((m = t.match(/\b(?:huye|huir|huid|escapa|escapad|alejate|alejaos)\b(?: del? (?:el |la |los |las )?(\w+))?/)))
     return { tipo: 'huye', de: (m[1] && !/^(?:aqui|ahi|alli|aca|este|esta)$/.test(m[1]) && (MOBS[m[1]] || m[1])) || null }
-  if (/\b(?:sigueme|seguidme|sigue ?me|ven conmigo|acompaname)\b/.test(t)) return { tipo: 'sigueme', ...coords(texto) }
-  if (/^(?:ven|venid|vente|acercate|acercaos|aqui|ven aqui|ven aca)\b/.test(t)) return { tipo: 'ven', ...coords(texto) }
+  if (/\b(?:sigueme|seguidme|siganme|sigan ?me|sigannos|sigue ?me|ven conmigo|vengan conmigo|acompaname|acompanenme)\b/.test(t)) return { tipo: 'sigueme', ...coords(texto) }
+  if (/^(?:ven|venid|vengan|vengais|venga|vente|acercate|acercaos|acerquense|aqui|ven aqui|vengan aqui|ven aca|vengan aca)\b/.test(t)) return { tipo: 'ven', ...coords(texto) }
   return null
 }
 

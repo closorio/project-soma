@@ -123,8 +123,8 @@ const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.tri
 // El brand del cliente (lo que todo cliente le dice al server al conectar): «soma-bot;dueno=NOMBRE». ASCII, sin espacios.
 const marcaDeBot = () => `soma-bot;dueno=${require('./alcance').duenoDe(AMOS)}`
 const rutaCentinela = (n) => path.join(mundo.carpetaDatos, `centinela_${n}.json`)
-const leerCentinela = (n) => { try { const z = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')).zona; return z ? { zona: z } : null } catch (_) { return null } }
-const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
+const leerCentinela = (n) => { try { const j = JSON.parse(fs.readFileSync(rutaCentinela(n), 'utf8')); return j.zona ? { zona: j.zona, patrulla: !!j.patrulla } : null } catch (_) { return null } }
+const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela(n), JSON.stringify({ zona: c.zona, patrulla: !!c.patrulla }) + '\n'); else fs.rmSync(rutaCentinela(n), { force: true }) } catch (_) {} }
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
@@ -176,7 +176,7 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   aliado: () => 'Entendido.',
   centinela_off: () => 'Vale.', guardaespaldas_off: () => 'Vale.',
   guardaespaldas: (o) => `Modo guardaespaldas: no me separo de ${o.a || 'ti'}.`,
-  centinela: (o) => `Modo centinela: vigilo ${o.zona}.`,
+  centinela: (o) => (o.patrulla ? `Patrullo ${o.zona || 'el hogar'}.` : `Modo centinela: vigilo ${o.zona}.`),
   materiales: (o) => `Reviso los cofres de ${o.zona} para la granja de piedra.`,
   funde: (o) => `Voy a fundir ${o.n} de ${o.entrada}.`, ilumina: () => 'Pongo antorchas.', pon: (o) => `Pongo ${o.objeto}.`,
   saca: (o) => `Voy al cofre a por ${o.objeto || 'eso'}.`, desatascate: () => 'Busco por dónde salir.', sube: () => 'Subo a la superficie.',
@@ -1060,8 +1060,8 @@ class Personaje {
 
   // 2026-11-02: el modo centinela no se apaga solo: tras cualquier orden (cumplida o interrumpida), tras morir, reconectar o reiniciar, vuelve a
   // montar guardia. Solo «desactiva centinela» lo quita. Cada 3 s: si hay centinela y no hay orden ni habilidad en marcha, lo retoma.
-  fijarCentinela(zona) {
-    this.centinela = zona ? { zona } : null
+  fijarCentinela(zona, patrulla = false) { // patrulla (2026-11-02): centinela que se mueve libre por la zona en vez de quedarse en su puesto
+    this.centinela = zona ? { zona, patrulla } : null
     guardarCentinela(this.nombre, this.centinela)
     if (zona && this.guardaespaldas) this.fijarGuardaespaldas(null) // un modo u otro
   }
@@ -1087,7 +1087,7 @@ class Personaje {
       const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(this.centinela.zona).toLowerCase())
       const yo = bot.entity.position
       const x = zona && sv.intrusos(bot, zona, esAliado, new Map(), { y: yo.y, dy: RANGO_CAMA.v })[0]
-      if (x && Math.hypot(x.position.x - yo.x, x.position.z - yo.z) <= RANGO_CAMA.h) urgencia = { tipo: 'centinela', zona: zona.nombre, una: true, reanuda: true }
+      if (x && Math.hypot(x.position.x - yo.x, x.position.z - yo.z) <= RANGO_CAMA.h) urgencia = { tipo: 'centinela', zona: zona.nombre, patrulla: this.centinela.patrulla, una: true, reanuda: true }
     }
     if (!urgencia) return
     this.ultimaUrgenciaSueno = Date.now()
@@ -1103,7 +1103,7 @@ class Personaje {
     if (!(this.centinela || this.guardaespaldas) || this.reanudando || !this.agenda.vacia() || this.supervisando || this.enCurso || this.enHabilidad || this.enIr || this.modo === 'libre') return
     if (!bot || !bot.entity || !(bot.health > 0) || this.recuperando) return
     this.reanudando = true
-    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, reanuda: true }
+    const o = this.guardaespaldas ? { tipo: 'guardaespaldas', a: this.guardaespaldas.a, reanuda: true } : { tipo: 'centinela', zona: this.centinela.zona, patrulla: this.centinela.patrulla, reanuda: true }
     this.ordenAccion(o, this.guardaespaldas ? 'modo guardaespaldas' : 'modo centinela', 'reanudar')
       .catch(e => this.ev('[centinela] no pude retomar: ' + e.message)).finally(() => { this.reanudando = false })
   }
@@ -1317,7 +1317,7 @@ class Personaje {
         const nombreZona = o.zona || baseZona() // sin zona: el hogar del dueño
         const zona = zonas.leer().zonas.find(z => z.nombre.toLowerCase() === String(nombreZona).toLowerCase())
         if (!zona) { if (o.reanuda) this.fijarCentinela(null); return { exito: false, texto: `No hay ninguna zona ${nombreZona}: márcala con !zona.`, pasos: [] } }
-        this.fijarCentinela(zona.nombre) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
+        this.fijarCentinela(zona.nombre, !!o.patrulla) // desde ahora, hasta «desactiva centinela», vuelve a la guardia tras cada orden
         const aliado = esAliado // quién puede entrar sin ser echado; quien pega, aunque sea aliado, se defiende (esDueno)
         const ignorar = new Map(), avisados = new Set(), mov = () => prudentes(bot, { pisarVedadas: true })
         const cx = (zona.x1 + zona.x2) / 2, cz = (zona.z1 + zona.z2) / 2
@@ -1338,7 +1338,7 @@ class Personaje {
             if (r === 'cancelado') return { exito: false, texto: 'Dejo la guardia.', pasos: [] }
           }
           puesto = bot.entity.position.clone()
-          if (!o.reanuda) bot.chat(`Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
+          if (!o.reanuda) bot.chat(o.patrulla ? `Patrullo ${zona.nombre}: ataco a quien entre sin ser de los míos.` : `Centinela en ${zona.nombre}: ataco a quien entre sin ser de los míos.`)
           while (!(tarea && tarea.cancelada)) {
             try {
               // muerto, o yendo a por sus cosas: la guardia espera; luego vuelve a su puesto
@@ -1349,6 +1349,14 @@ class Personaje {
               if (!x) {
                 // una vez (urgencia sobre dormir): sin intrusos durante 3 s, vuelve a lo que estaba (la cama)
                 if (o.una) { libreDesde = libreDesde || Date.now(); if (Date.now() - libreDesde > 3000) break; await esperar(500); continue }
+                if (o.patrulla) { // patrulla: sin puesto fijo; un punto al azar de la zona, una pausa y otro (un intruso o un golpe corta el paseo)
+                  const x1 = Math.min(zona.x1, zona.x2) + 1, x2 = Math.max(zona.x1, zona.x2) - 1, z1 = Math.min(zona.z1, zona.z2) + 1, z2 = Math.max(zona.z1, zona.z2) - 1
+                  const px = x1 <= x2 ? x1 + Math.random() * (x2 - x1) : cx, pz = z1 <= z2 ? z1 + Math.random() * (z2 - z1) : cz
+                  await moverHasta(bot, new goals.GoalNearXZ(px, pz, 1), () => !!golpeador || !!intruso(), { ms: 20000, tarea, mov: mov() })
+                  puesto = bot.entity.position.clone() // la altura de la vigilancia sigue al paseo (escaleras, desniveles)
+                  await esperar(2000 + Math.random() * 4000)
+                  continue
+                }
                 if (bot.entity.position.distanceTo(puesto) > 6) { // desplazado (reaparecer, una pelea…): de vuelta al puesto
                   const r = await moverHasta(bot, new goals.GoalNear(puesto.x, puesto.y, puesto.z, 2), () => !!golpeador || !!intruso(), { ms: 60000, tarea, mov: mov() })
                   if (r !== 'listo') await esperar(1500)

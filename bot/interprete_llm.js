@@ -11,7 +11,7 @@ const CANONICAS = [
   'apártate', 'caza 3 ovejas', 'explora hacia el norte 30', 'mina 10 de carbón', 'construye una cabaña', 'deshaz la cabaña',
   'vuelve al campamento', 'campamento aquí', 'cocina la carne', 'funde 5 de hierro', 'pon el cofre', 'saca 10 troncos',
   'dame 10 troncos', 'dame todo', 'ilumina', 'baja 5', 'sube', 'desatáscate', 'recoge agua', 'vierte el agua', 'recupera tus cosas',
-  'entra al portal', 'modo centinela', 'desactiva centinela', 'ataca sin parar', 'tala 5 troncos 3 veces',
+  'entra al portal', 'modo centinela', 'patrulla', 'desactiva centinela', 'ataca sin parar', 'tala 5 troncos 3 veces',
 ]
 const SISTEMA =
   'Eres un traductor de órdenes de un bot de Minecraft. Recibes una frase en español (plurales, sinónimos, formas coloquiales) ' +
