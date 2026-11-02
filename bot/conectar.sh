@@ -26,6 +26,7 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 print("AMOS", ",".join(d.get("amos", [])))
 print("EXTERNOS", ",".join(d.get("externos", [])))
+print("BOTSDE", ";".join(j + "=" + ",".join(b) for j, b in d.get("bots_de", {}).items()))
 for p in d["personajes"]:
     print("P", p["nombre"], p["puerto"], p.get("estilo", "recolector"), p.get("modo", "ordenes"), p.get("decisor", "guion"), p.get("skin") or "-")
 PY
@@ -33,6 +34,7 @@ PY
 
 AMOS=$(sed -n 's/^AMOS //p' <<< "$datos")
 EXTERNOS=$(sed -n 's/^EXTERNOS //p' <<< "$datos")
+BOTSDE=$(sed -n 's/^BOTSDE //p' <<< "$datos")
 mapfile -t FILAS < <(sed -n 's/^P //p' <<< "$datos")
 NOMBRES=$(for f in "${FILAS[@]}"; do echo "${f%% *}"; done)
 
@@ -53,7 +55,7 @@ conectar() {
   # los demás de la lista son «propios»: ni los echa el centinela ni se defiende de ellos
   local propios; propios=$(echo "$NOMBRES" | grep -vx "$nombre" | paste -sd, -)
   rm -f "$pidf"
-  ( cd "$RAIZ/bot" && IO_SERVIDOR=$MUNDO IO_BOTS="$TODOS${EXTERNOS:+,$EXTERNOS}" IO_AMOS=$AMOS IO_PROPIOS=$propios IO_SKIN=$skin IO_RECONECTAR=0 \
+  ( cd "$RAIZ/bot" && IO_SERVIDOR=$MUNDO IO_BOTS="$TODOS${EXTERNOS:+,$EXTERNOS}" IO_AMOS=$AMOS IO_BOTS_DE=$BOTSDE IO_PROPIOS=$propios IO_SKIN=$skin IO_RECONECTAR=0 \
       setsid nohup bash -c 'echo $$ > "$0"; exec node io.js "$1"' "$pidf" "$nombre:$puerto:$estilo:$modo:$decisor" \
       > "$LOGS/bot-$nombre.log" 2>&1 < /dev/null & )
   for _ in 1 2 3 4 5 6 7 8 9 10; do [ -s "$pidf" ] && break; sleep 0.2; done
