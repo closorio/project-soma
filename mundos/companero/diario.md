@@ -465,3 +465,175 @@ Lo escriben los bots y las herramientas con IO_SERVIDOR=companero (bot/registro.
 ## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:53 · Teo
 - 03:53:39 · Teo · modo órdenes · «quienes son los bots de seppuq?» (chat de __Count) → ✗ no entendida (0.0 s)
 - 03:53:47 · Teo · modo órdenes · «cuales son los bots de seppuq?» (chat de __Count) → ✗ no entendida (0.0 s)
+- 03:27:42 · Oqva · modo órdenes · «armate» (chat de seppuq) → ✓ Armado: espada, pico y hacha de piedra. (121.0 s; pasos: fabricar✓ poner✓ fabricar✓ minar✗(nada que minar aquí) cavar_escalera✓ subir_a_superficie✓ fabricar✓ fabricar✗(no se pudo) árbol✗(pasos agotados) árbol✓×2 picar✓×2 fabricar✓ poner✓ fabricar✓ fabricar✗(no se pudo) recoger✗(no llegó) picar✓ recoger✗(no llegó) picar✓ recoger✓ picar✓ recoger✓ fabricar✓ poner✓ fabricar✓ equipar✓) · al terminar: quieto
+- 03:27:49 · Soma · modo órdenes · «recoge 2 troncos» (chat de seppuq) → ✗ No hay nada que recoger cerca. (0.0 s; pasos: recoger✗(nada que recoger)) · al terminar: quieto
+- 03:28:01 · Oqva · modo órdenes · «recoge 2 troncos» (chat de seppuq) → ✓ Recogí 5 troncos. (12.8 s; pasos: recoger✓) · al terminar: quieto
+- 03:28:01 · Iris · modo órdenes · «recoge 2 troncos» (chat de seppuq) → ✓ Recogí 4 troncos. (12.9 s; pasos: recoger✓) · al terminar: quieto
+- 03:28:38 · Soma · modo órdenes · «tala 2 troncos» (chat de seppuq) → ✓ Hecho: 3 troncos. (21.1 s; pasos: picar✓ recoger✗(no llegó) árbol✓ picar✓) · al terminar: quieto
+- 03:28:40 · Iris · modo órdenes · «tala 2 troncos» (chat de seppuq) → ✓ Hecho: 3 troncos. (22.7 s; pasos: picar✓ recoger✓ árbol✓ picar✓) · al terminar: quieto
+- 03:28:52 · Oqva · modo órdenes · «tala 2 troncos» (chat de seppuq) → ✗ Dejo «tala 2 troncos» por la orden nueva. Llevo 0 de 2 troncos. (1.2 s; pasos: árbol✗(cancelado)) · al terminar: otra orden
+- 03:29:17 · Iris · modo órdenes · «defiende agresivo a Oqva» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 03:29:28 · Iris · modo órdenes · «defiende a Oqva» (chat de seppuq) → ✗ No pude: vivo is not defined (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 03:30 · Oqva, Soma, Iris
+- 03:30:46 · Oqva · modo órdenes · «ven a campamento» (chat de seppuq) → ✓ Campamento en 607, 64, -797. (0.0 s)
+- 03:30:46 · Soma · modo órdenes · «ven a campamento» (chat de seppuq) → ✓ Campamento en 602, 63, -797. (0.0 s)
+- 03:30:46 · Iris · modo órdenes · «ven a campamento» (chat de seppuq) → ✓ Campamento en 605, 63, -802. (0.0 s)
+- 03:33:16 · Iris · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:33:16 · Soma · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: stone_sword. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:33:16 · Oqva · modo órdenes · «equipate» (chat de seppuq) → ✗ No tengo nada que equipar. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✗(nada que equipar)) · al terminar: quieto
+- 03:34:35 · Soma · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: stone_sword. (0.3 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:34:35 · Iris · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (0.4 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:34:35 · Oqva · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: lo que llevaba. (0.4 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:34:56 · Soma · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: stone_sword. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:34:56 · Oqva · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (0.4 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:34:59 · Iris · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (2.9 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:35:10 · Soma · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: stone_sword. (0.3 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:35:10 · Oqva · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 03:35:10 · Iris · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (0.2 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 04:12 · Oqva, Soma, Iris
+- 04:12:19 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 18/147. (3.2 s) · al terminar: quieto
+- 04:13:02 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 04:13:58 · Oqva · modo órdenes · «recoge tu loot» (chat de seppuq) → ✗ No he muerto desde que entré. (0.0 s) · al terminar: quieto
+- 04:14:18 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✗ No hay nada que recoger cerca. (0.0 s; pasos: recoger✗(nada que recoger)) · al terminar: quieto
+- 04:17:03 · Soma · modo órdenes · «sal» (chat de seppuq) → ✓ Fuera. (1.4 s; pasos: salir_del_refugio✓) · al terminar: quieto
+- 04:18:36 · Soma · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: stone_sword. (2.9 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 04:18:38 · Iris · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: iron_sword. (5.6 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 04:18:39 · Oqva · modo órdenes · «equipate» (chat de seppuq) → ✓ Equipado: lo que llevaba. (5.8 s; pasos: equipar_soportes✗(sin soportes ni cofres) equipar✓) · al terminar: quieto
+- 04:21:35 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 04:23:32 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✓ Recogí 11 cosas. (9.0 s; pasos: recoger✓) · al terminar: quieto
+- 04:24:33 · Oqva · modo órdenes · «__Count es aliado» (chat de seppuq) → ✓ __count es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 04:24:33 · Soma · modo órdenes · «__Count es aliado» (chat de seppuq) → ✓ __count es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 04:24:33 · Iris · modo órdenes · «__Count es aliado» (chat de seppuq) → ✓ __count es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 04:24:57 · Soma · modo órdenes · «los bots de __Count son aliados» (chat de seppuq) → ✗ No sé qué bots son de __count: faltan en bots_de de personajes.json. (0.0 s) · al terminar: quieto
+- 04:24:57 · Iris · modo órdenes · «los bots de __Count son aliados» (chat de seppuq) → ✗ No sé qué bots son de __count: faltan en bots_de de personajes.json. (0.0 s) · al terminar: quieto
+- 04:24:57 · Oqva · modo órdenes · «los bots de __Count son aliados» (chat de seppuq) → ✗ No sé qué bots son de __count: faltan en bots_de de personajes.json. (0.0 s) · al terminar: quieto
+- 04:27:02 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (22.4 s) · al terminar: otra orden
+- 04:30:14 · Oqva · modo órdenes · «listar aliados» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 04:30:14 · Soma · modo órdenes · «listar aliados» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 04:30:14 · Iris · modo órdenes · «listar aliados» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 04:31:07 · Soma · modo órdenes · «lista de aliados» (chat de seppuq) → ✓ Aliados, además de ti: __count. (0.0 s) · al terminar: quieto
+- 04:32:01 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No encontré mis cosas. (158.0 s) · al terminar: quieto
+- 04:32:45 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 2/27. (26.6 s) · al terminar: quieto
+- 04:33:21 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (58.2 s) · al terminar: otra orden
+- 04:33:23 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✗ No encontré mis cosas. (25.7 s) · al terminar: quieto
+- 04:33:26 · Soma · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 1/147. (no llego a 719 69 -906 (sin camino)) (27.9 s) · al terminar: quieto
+- 04:34:06 · Soma · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (10.7 s) · al terminar: otra orden
+- 04:34:17 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (11.8 s) · al terminar: otra orden
+- 04:35:23 · Soma · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (23.1 s) · al terminar: otra orden
+- 04:36:01 · Soma · modo órdenes · «sal» (chat de seppuq) → ✓ Ya estoy fuera. (0.0 s; pasos: salir_del_refugio✓) · al terminar: quieto
+- 04:36:05 · Oqva · modo órdenes · «sal» (chat de seppuq) → ✓ Fuera. (3.8 s; pasos: salir_del_refugio✓) · al terminar: quieto
+- 04:36:05 · Iris · modo órdenes · «sal» (chat de seppuq) → ✓ Fuera. (4.6 s; pasos: salir_del_refugio✓) · al terminar: quieto
+- 04:36:55 · Iris · modo órdenes · «recuperar mis cosas» (auto) → ✓ No llego a casa: me refugio aquí. (2.1 s) · al terminar: quieto
+- 04:37:39 · Oqva · modo órdenes · «duerme» (chat de seppuq) → ✗ Dejo «duerme» por la orden nueva. (22.0 s; pasos: usar_cama✗(no veo ninguna cama y no puedo hacer una (faltan materiales) dormir✗(cancelado)) · al terminar: otra orden
+- 04:37:45 · Iris · modo órdenes · «duerme» (chat de seppuq) → ✗ No pude usar la cama: amenaza. (27.6 s; pasos: usar_cama✗(amenaza)) · al terminar: quieto
+- 04:37:57 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (7.0 s) · al terminar: otra orden
+- 04:40:14 · Soma · modo órdenes · «duerme» (chat de seppuq) → ✗ No pude usar la cama: amenaza. (177.3 s; pasos: usar_cama✗(amenaza)) · al terminar: quieto
+- 04:40:15 · Oqva · modo órdenes · «duerme» (chat de seppuq) → ✗ No pude usar la cama: amenaza. (138.0 s; pasos: usar_cama✗(amenaza)) · al terminar: quieto
+- 04:44:48 · Oqva · modo órdenes · «armate» (chat de seppuq) → ✗ No pude hacerme un pico de madera: no se pudo. (69.8 s; pasos: árbol✓ picar✓ recoger✗(no llegó) picar✓ recoger✓ picar✓ recoger✓ picar✓×2 recoger✓ árbol✓×2 picar✓ fabricar✓ poner✓ fabricar✗(no se pudo)) · al terminar: quieto
+- 04:46:03 · Iris · modo órdenes · «armate» (chat de seppuq) → ✓ Armado: espada, pico y hacha de piedra. (141.0 s; pasos: árbol✓ recoger✗(no llegó) picar✓ recoger✗(no llegó) picar✓ recoger✗(no llegó) picar✓ recoger✗(no llegó) picar✓ recoger✓ picar✓ árbol✓ picar✓×2 fabricar✓ poner✓ fabricar✓ minar✗(nada que minar aquí) cavar_escalera✓ subir_a_superficie✓ fabricar✓×3 equipar✓) · al terminar: quieto
+- 04:48:33 · Soma · modo órdenes · «armate» (chat de seppuq) → ✓ Armado: espada, pico y hacha de piedra. (296.7 s; pasos: árbol✗(pasos agotados)×2 árbol✗(bloqueado) árbol✗(pasos agotados) árbol✗(bloqueado) árbol✗(pasos agotados) árbol✗(sin árbol) acercarse✗(tiempo agotado) árbol✓ picar✓ recoger✓ picar✓ recoger✓ árbol✗(pasos agotados)×2 árbol✓ picar✓×2 recoger✓ picar✓ fabricar✓ poner✓ fabricar✓ minar✗(nada que minar aquí) cavar_escalera✓ minar✓ subir_a_superficie✓ fabricar✓ poner✓ fabricar✓×3 equipar✓) · al terminar: quieto
+- 04:49:09 · Iris · modo órdenes · «toma del cofre hierro y fabrica armadura de hierro» (chat de seppuq) → ✗ No pude fabricar: faltan materiales: oak_log 1. (0.1 s; pasos: fabricar✗(faltan materiales)) · al terminar: quieto
+- 04:49:12 · Soma · modo órdenes · «toma del cofre hierro y fabrica armadura de hierro» (chat de seppuq) → ✓ Fabricado: 1 chest. (3.3 s; pasos: fabricar✓) · al terminar: quieto
+- 04:49:17 · Oqva · modo órdenes · «toma del cofre hierro y fabrica armadura de hierro» (chat de seppuq) → ✓ Fabricado: 1 chest, 1 crafting table. (7.6 s; pasos: fabricar✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 05:03 · Oqva
+- 05:03:14 · Oqva · modo órdenes · «ve con __Count» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 05:03:25 · Oqva · modo órdenes · «defiende a __Count» (chat de seppuq) → ✗ No pude: vivo is not defined (0.0 s) · al terminar: quieto
+- 05:05:09 · Oqva · modo órdenes · «defiende a __Count» (chat de seppuq) → ✗ No pude: vivo is not defined (0.0 s) · al terminar: quieto
+- 05:05:30 · Oqva · modo órdenes · «sigue a __Count» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 05:06:09 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 1/9. (7.6 s) · al terminar: quieto
+- 05:07:06 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 1/1. (4.5 s) · al terminar: quieto
+- 05:07:23 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 05:07:23 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 05:13 · Oqva
+- 05:13:21 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✓ Recuperé 1/1. (6.0 s) · al terminar: quieto
+- 05:13:28 · Oqva · modo órdenes · «Teo es aliado» (chat de seppuq) → ✓ teo es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 05:16:33 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 05:16:33 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 05:17:16 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✓ Recogí 9 cosas. (12.7 s; pasos: recoger✓) · al terminar: quieto
+- 05:20:20 · Oqva · modo órdenes · «Lola es aliado» (chat de seppuq) → ✓ lola es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 05:20:33 · Oqva · modo órdenes · «trivino es aliado» (chat de seppuq) → ✓ trivino es aliado: puede entrar a la zona. Si me pega, me defiendo. (0.0 s) · al terminar: quieto
+- 05:20:51 · Oqva · modo órdenes · «quienes son tus aliados?» (chat de seppuq) → ✓ Aliados, además de ti: __count, teo, lola, trivino. (0.0 s) · al terminar: quieto
+- 05:21:59 · Oqva · modo órdenes · «roba 3 diamantes» (chat de seppuq) → ✗ no entendida (0.0 s)
+- 05:29:53 · Oqva · modo órdenes · «mina 5 de carbon» (chat de seppuq) → ✓ Miné 5 de carbón. (11.9 s; pasos: minar✗(nada que minar aquí) ir_a_mena✓) · al terminar: quieto
+- 05:30:25 · Oqva · modo órdenes · «mina 2 de hierro» (chat de seppuq) → ✓ Miné 2 de hierro. (16.3 s; pasos: minar✗(nada que minar aquí) ir_a_mena✓) · al terminar: quieto
+- 05:31:15 · Oqva · modo órdenes · «mina 4 de cobre» (chat de seppuq) → ✓ Miné 4 de cobre. (31.0 s; pasos: minar✗(nada que minar aquí) ir_a_mena✓) · al terminar: quieto
+- 05:31:46 · Oqva · modo órdenes · «mina 4 de lapizlasuli» (chat de seppuq) → ✓ Miné 4 de piedra. (6.6 s; pasos: minar✓) · al terminar: quieto
+- 05:31:53 · Oqva · modo órdenes · «mina 4 de lapiz» (chat de seppuq) → ✓ Miné 4 de piedra. (5.6 s; pasos: minar✓) · al terminar: quieto
+- 05:32:06 · Oqva · modo órdenes · «mina 4 de diamante» (chat de seppuq) → ✓ Miné 4 de piedra. (5.0 s; pasos: minar✓) · al terminar: quieto
+- 05:32:19 · Oqva · modo órdenes · «mina 4 de redstone» (chat de seppuq) → ✓ Miné 4 de piedra. (4.8 s; pasos: minar✓) · al terminar: quieto
+- 05:33:12 · Oqva · modo órdenes · «mina 16 de carbon» (chat de seppuq) → ✓ Miné 16 de carbón. (30.7 s; pasos: minar✓) · al terminar: quieto
+- 05:33:20 · Oqva · modo órdenes · «sal» (chat de seppuq) → ✓ Ya estoy fuera. (0.0 s; pasos: salir_del_refugio✓) · al terminar: quieto
+- 05:33:43 · Oqva · modo órdenes · «sube» (chat de seppuq) → ✓ Fuera (y = 67). (15.0 s; pasos: subir_a_superficie✓) · al terminar: quieto
+- 05:34:09 · Oqva · modo órdenes · «mina 2 de netherita» (chat de seppuq) → ✗ No miné nada: nada que minar aquí. (0.1 s; pasos: minar✗(nada que minar aquí)) · al terminar: quieto
+- 05:37:48 · Oqva · modo órdenes · «mina 2 de hierro» (chat de seppuq) → ✓ Miné 2 de hierro. (28.2 s; pasos: minar✗(nada que minar aquí) ir_a_mena✓ minar✗(nada que minar aquí) ir_a_mena✓) · al terminar: quieto
+- 05:38:46 · Oqva · modo órdenes · «sube» (chat de seppuq) → ✓ Fuera (y = 68). (38.7 s; pasos: subir_a_superficie✓) · al terminar: quieto
+- 05:43:19 · Oqva · modo órdenes · «campamento» (chat de seppuq) → ✓ Campamento en 671, 64, -848. (0.0 s)
+- 05:46:28 · Oqva · modo órdenes · «centinela» (chat de seppuq) → ✗ No hay ninguna zona CASASOMA: márcala con !zona. (0.0 s) · al terminar: quieto
+- 06:00:44 · Oqva · modo órdenes · «duerme» (puerto (sueño)) → ✗ No pude usar la cama: no pude dormir: the bed is too far. (3.2 s; pasos: usar_cama✗(no pude dormir)) · al terminar: quieto
+- 06:00:52 · Oqva · modo órdenes · «duerme» (puerto (sueño)) → ✗ No hay cama (no veo ninguna cama y no puedo hacer una (faltan materiales: white_wool 3)) ni estoy refugiado: dime «refúgiate» o dame 3 de lana. (lo dejo tras 2 intentos) (0.2 s; pasos: usar_cama✗(no veo ninguna cama y no puedo hacer una (faltan materiales) dormir✗(sin cama y sin refugio)) · al terminar: quieto
+- 06:01:12 · Oqva · modo órdenes · «duerme» (puerto (sueño)) → ✗ No hay cama (no veo ninguna cama y no puedo hacer una (faltan materiales: white_wool 3)) ni estoy refugiado: dime «refúgiate» o dame 3 de lana. (lo dejo tras 2 intentos) (0.2 s; pasos: usar_cama✗(no veo ninguna cama y no puedo hacer una (faltan materiales) dormir✗(sin cama y sin refugio)) · al terminar: quieto
+- 06:01:42 · Oqva · modo órdenes · «duerme» (puerto (sueño)) → ✗ No hay cama (no veo ninguna cama y no puedo hacer una (faltan materiales: white_wool 3)) ni estoy refugiado: dime «refúgiate» o dame 3 de lana. (lo dejo tras 2 intentos) (0.1 s; pasos: usar_cama✗(no veo ninguna cama y no puedo hacer una (faltan materiales) dormir✗(sin cama y sin refugio)) · al terminar: quieto
+- 06:06:45 · Oqva · modo órdenes · «lee los carteles» (chat de seppuq) → ✗ no entendida (0.0 s)
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 06:07 · Oqva
+- 06:07:28 · Oqva · modo órdenes · «lee los carteles» (chat de seppuq) → ✓ No veo carteles de obras a 64 bloques (primera línea «[obras]», debajo el nombre, uno en cada esquina). (0.9 s) · al terminar: quieto
+- 06:07:56 · Oqva · modo órdenes · «lee los carteles» (chat de seppuq) → ✓ No veo carteles de obras a 64 bloques (primera línea «[obras]», debajo el nombre, uno en cada esquina). (0.8 s) · al terminar: quieto
+- 06:08:37 · Oqva · modo órdenes · «lee los carteles» (chat de seppuq) → ✓ Sin pareja: norte (1 cartel), obras (1 cartel). (0.7 s) · al terminar: quieto
+- 06:08:57 · Oqva · modo órdenes · «lee los carteles» (chat de seppuq) → ✓ Veo una zona de obras: norte (de 659 -834 a 679 -819). Di «acepta los carteles» para usarla. (0.7 s) · al terminar: quieto
+- 06:09:18 · Oqva · modo órdenes · «acepta los carteles» (chat de seppuq) → ✓ Construiré solo dentro de: norte (de 659 -834 a 679 -819) (mientras sigan sus carteles). (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 06:15 · Oqva
+- 06:15:45 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:15:45 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:20:15 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 65). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:20:15 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.0 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:20:37 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 65). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:20:37 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:21:01 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:21:01 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:21:46 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (28.1 s) · al terminar: otra orden
+- 06:21:47 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✗ No pude recoger: amenaza. (1.1 s; pasos: recoger✗(amenaza)) · al terminar: quieto
+- 06:22:23 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✗ Dejo «recoge» por la orden nueva. (21.3 s; pasos: recoger✗(cancelado)) · al terminar: otra orden
+- 06:22:41 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✗ Dejo «recoge» por la orden nueva. (17.5 s; pasos: recoger✗(cancelado)) · al terminar: otra orden
+- 06:22:46 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (4.9 s; pasos: jugador✓) · al terminar: quieto
+- 06:22:54 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✗ Dejo «recoge» por la orden nueva. (7.8 s; pasos: recoger✓) · al terminar: otra orden
+- 06:23:19 · Oqva · modo órdenes · «recoge» (chat de seppuq) → ✓ Recogí 105 cosas. Quedan 8 que no alcanzo. (24.4 s; pasos: recoger✓) · al terminar: quieto
+- 06:23:28 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (0.0 s; pasos: jugador✓) · al terminar: quieto
+- 06:23:35 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 67). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:23:35 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.0 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:27:49 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 63). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:27:49 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:35:12 · Oqva · modo órdenes · «armate» (chat de seppuq) → ✗ Me falta: espada, pico, hacha de piedra. (0.1 s; pasos: poner✗(sin sitio) fabricar✗(sin sitio para la mesa)×3 equipar✓) · al terminar: quieto
+- 06:36:17 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (38.6 s) · al terminar: otra orden
+- 06:36:17 · Oqva · modo órdenes · «armate» (chat de seppuq) → ✗ No pude hacerme un pico de madera: no se pudo. (0.4 s; pasos: fabricar✗(no se pudo)) · al terminar: quieto
+- 06:42:07 · Oqva · modo órdenes · «armate» (chat de seppuq) → ✗ Dejo «armate» por la orden nueva. (26.5 s; pasos: fabricar✓ fabricar✗(no se pudo) árbol✗(sin árbol) acercarse✗(cancelado) fabricar✗(cancelado) equipar✓) · al terminar: otra orden
+- 06:42:22 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (14.5 s; pasos: jugador✓) · al terminar: quieto
+- 06:43:16 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:43:16 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:44:10 · Oqva · modo órdenes · «desatascate» (agenda) → ✓ Fuera (y = 64). (0.0 s; pasos: desatascarse✓) · al terminar: quieto
+- 06:44:10 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No puedo construir casita prueba en 665 67 -830: parcela no válida: sin camino hasta la obra. (lo dejo tras 2 intentos) (0.2 s; pasos: construir✗(parcela no válida)) · al terminar: quieto
+- 06:44:21 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (4.2 s; pasos: jugador✓) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 06:45 · Oqva
+- 06:45:11 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (1.0 s; pasos: jugador✓) · al terminar: quieto
+- 06:52:55 · Oqva · modo órdenes · «continua» (chat de seppuq) → ✗ No tengo nada a medias. (0.0 s)
+- 06:53:14 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (128.8 s; pasos: revisar_cofres✗(no abrí ninguno)) · al terminar: otra orden
+- 06:54:20 · Oqva · modo órdenes · «sube» (chat de seppuq) → ✓ Fuera (y = 66). (65.8 s; pasos: subir_a_superficie✓) · al terminar: quieto
+- 06:54:44 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (20.5 s; pasos: revisar_cofres✓ acercarse✗(cancelado)) · al terminar: otra orden
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 06:57 · Oqva
+- 06:57:24 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (13.4 s; pasos: revisar_cofres✓ árbol✗(cancelado)) · al terminar: otra orden
+- 06:59:55 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (19.6 s; pasos: revisar_cofres✓ árbol✗(sin árbol) acercarse✗(cancelado)) · al terminar: otra orden
+- 07:01:30 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 07:02:33 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 07:12 · Oqva
+- 07:12:02 · Oqva · modo órdenes · «continua» (chat de seppuq) → ✗ No tengo nada a medias. (0.0 s)
+- 07:16:25 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (718.9 s; pasos: revisar_cofres✓ sacar_del_cofre✓ fabricar✗(faltan materiales) minar✗(nada que minar aquí) ir_a_mena✗(no veo coal_ore a ≤ 32) fabricar✗(faltan materiales)×5 construir✗(falta material) revisar_cofres✓ sacar_del_cofre✓×2 fabricar✗(faltan materiales) fabricar✗(sin sitio para la mesa)×2 fabricar✓ fabricar✗(sin sitio para la mesa) construir✗(no pude colocar en 665,67,-830)) · al terminar: otra orden
+- 07:19:21 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (21.3 s) · al terminar: otra orden
+- 07:20:11 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (0.2 s) · al terminar: otra orden
+- 07:20:33 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ Dejo «recuperar mis cosas» por la orden nueva. (1.4 s) · al terminar: otra orden
+- 07:22:04 · Oqva · modo órdenes · «recuperar mis cosas» (auto) → ✗ No he muerto desde que entré. (lo dejo tras 2 intentos) (0.0 s) · al terminar: quieto
+- 07:28:57 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (384.9 s; pasos: revisar_cofres✓ árbol✗(sin árbol) acercarse✓ picar✓ recoger✓ picar✓×2 recoger✓ picar✓×2 árbol✗(pasos agotados)×2 picar✓ recoger✓ picar✓×3 recoger✓ picar✓ recoger✗(no llegó) picar✓ recoger✓ picar✓×5 recoger✓ picar✓ recoger✓ picar✓ recoger✗(no llegó) picar✓ recoger✗(no llegó) árbol✓ picar✓ recoger✗(no llegó) picar✓ recoger✓ picar✓ recoger✓ picar✓×3 recoger✗(no llegó) picar✓ recoger✗(no llegó) picar✓×2 recoger✗(no llegó) fabricar✓ fabricar✗(sin sitio para la mesa) fabricar✗(cancelado)) · al terminar: otra orden
+- 07:33:51 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ Dejo «construye casita_prueba en 665 67 -830» por la orden nueva. (87.6 s; pasos: revisar_cofres✓ sacar_del_cofre✓×2 fabricar✗(sin sitio para la mesa) fabricar✗(cancelado)) · al terminar: otra orden
+## Modos libre y órdenes (F4) · sesión del bot 2026-11-02 07:35 · Oqva
+- 07:35:32 · Oqva · modo órdenes · «ven» (chat de seppuq) → ✓ Aquí estoy. (3.4 s; pasos: jugador✓) · al terminar: quieto
+- 07:35:49 · Oqva · modo órdenes · «come» (chat de seppuq) → ✓ Comido: 1 bocado (hambre 20 de 20). (1.8 s; pasos: comer✓) · al terminar: quieto
+- 07:36:59 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No terminé casita prueba: no pude colocar en 665,71,-830: andamio: falta material: tierra o adoquín para el andamio (74 de 99 bloques en su sitio; «continúa» la retoma). (61.1 s; pasos: construir✗(no pude colocar en 665,71,-830)) · al terminar: quieto
+- 07:37:19 · Oqva · modo órdenes · «construye casita_prueba en 665 67 -830» (chat de seppuq) → ✗ No terminé casita prueba: ocupado en 667,68,-826 (oak_door) (74 de 99 bloques en su sitio; «continúa» la retoma). (1.6 s; pasos: construir✗(ocupado en 667,68,-826 (oak_door))) · al terminar: quieto
+- 07:37:35 · Oqva · modo órdenes · «continua» (chat de seppuq) → ✗ No tengo nada a medias. (0.0 s)

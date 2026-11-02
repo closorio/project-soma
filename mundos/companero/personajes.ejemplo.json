@@ -1,0 +1,10 @@
+{
+ "nota": "Plantilla: cópiala a personajes.json (que no se versiona: es de cada persona) y pon tus datos. Los personajes que /connect puede lanzar en el server del compañero (bot/conectar.sh y plugin-connect/). Cada uno es un proceso node io.js con su puerto de control. «amos»: los jugadores a los que obedecen. «externos»: bots de otros procesos o del otro PC (no cuentan como humanos ni se les obedece). «bots_de»: de quién es cada bot ajeno.",
+ "mundo": "companero",
+ "amos": ["TU_JUGADOR"],
+ "externos": ["BOT_DEL_OTRO"],
+ "bots_de": {"JUGADOR_DEL_OTRO": ["BOT_DEL_OTRO"]},
+ "personajes": [
+  { "nombre": "MiBot", "puerto": 3011, "estilo": "recolector", "modo": "ordenes", "decisor": "guion", "skin": "" }
+ ]
+}

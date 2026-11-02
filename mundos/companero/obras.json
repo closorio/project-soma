@@ -1,6 +1,484 @@
 {
  "permitido": null,
- "obras": [],
+ "temporales": [
+  {
+   "nombre": "norte",
+   "x1": 659,
+   "z1": -834,
+   "x2": 679,
+   "z2": -819,
+   "carteles": [
+    [
+     679,
+     67,
+     -834
+    ],
+    [
+     659,
+     67,
+     -819
+    ]
+   ],
+   "desde": "2026-11-02 06:09:18"
+  }
+ ],
+ "obras": [
+  {
+   "id": "casita_prueba-mvz76lkf",
+   "nombre": "casita_prueba",
+   "plano": "casita_prueba",
+   "personaje": "Oqva",
+   "materia": null,
+   "origen": [
+    665,
+    67,
+    -830
+   ],
+   "inicio": "2026-11-02 06:50:43",
+   "fin": "2026-11-02 07:37:19",
+   "estado": "a medias",
+   "bloques": [
+    [
+     665,
+     67,
+     -830,
+     "oak_planks"
+    ],
+    [
+     666,
+     67,
+     -830,
+     "oak_planks"
+    ],
+    [
+     667,
+     67,
+     -830,
+     "oak_planks"
+    ],
+    [
+     668,
+     67,
+     -830,
+     "oak_planks"
+    ],
+    [
+     669,
+     67,
+     -830,
+     "oak_planks"
+    ],
+    [
+     665,
+     67,
+     -829,
+     "oak_planks"
+    ],
+    [
+     669,
+     67,
+     -829,
+     "oak_planks"
+    ],
+    [
+     665,
+     67,
+     -828,
+     "oak_planks"
+    ],
+    [
+     669,
+     67,
+     -828,
+     "oak_planks"
+    ],
+    [
+     665,
+     67,
+     -827,
+     "oak_planks"
+    ],
+    [
+     669,
+     67,
+     -827,
+     "oak_planks"
+    ],
+    [
+     665,
+     67,
+     -826,
+     "oak_planks"
+    ],
+    [
+     666,
+     67,
+     -826,
+     "oak_planks"
+    ],
+    [
+     667,
+     67,
+     -826,
+     "oak_planks"
+    ],
+    [
+     668,
+     67,
+     -826,
+     "oak_planks"
+    ],
+    [
+     669,
+     67,
+     -826,
+     "oak_planks"
+    ],
+    [
+     666,
+     67,
+     -829,
+     "oak_planks"
+    ],
+    [
+     667,
+     67,
+     -829,
+     "oak_planks"
+    ],
+    [
+     668,
+     67,
+     -829,
+     "oak_planks"
+    ],
+    [
+     666,
+     67,
+     -828,
+     "oak_planks"
+    ],
+    [
+     668,
+     67,
+     -828,
+     "oak_planks"
+    ],
+    [
+     666,
+     67,
+     -827,
+     "oak_planks"
+    ],
+    [
+     667,
+     67,
+     -827,
+     "oak_planks"
+    ],
+    [
+     668,
+     67,
+     -827,
+     "oak_planks"
+    ],
+    [
+     667,
+     67,
+     -828,
+     "oak_slab"
+    ],
+    [
+     665,
+     68,
+     -830,
+     "oak_planks"
+    ],
+    [
+     666,
+     68,
+     -830,
+     "oak_planks"
+    ],
+    [
+     667,
+     68,
+     -830,
+     "oak_planks"
+    ],
+    [
+     668,
+     68,
+     -830,
+     "oak_planks"
+    ],
+    [
+     669,
+     68,
+     -830,
+     "oak_planks"
+    ],
+    [
+     665,
+     68,
+     -829,
+     "oak_planks"
+    ],
+    [
+     669,
+     68,
+     -829,
+     "oak_planks"
+    ],
+    [
+     665,
+     68,
+     -828,
+     "oak_planks"
+    ],
+    [
+     669,
+     68,
+     -828,
+     "oak_planks"
+    ],
+    [
+     665,
+     68,
+     -827,
+     "oak_planks"
+    ],
+    [
+     669,
+     68,
+     -827,
+     "oak_planks"
+    ],
+    [
+     665,
+     68,
+     -826,
+     "oak_planks"
+    ],
+    [
+     666,
+     68,
+     -826,
+     "oak_planks"
+    ],
+    [
+     668,
+     68,
+     -826,
+     "oak_planks"
+    ],
+    [
+     669,
+     68,
+     -826,
+     "oak_planks"
+    ],
+    [
+     667,
+     68,
+     -826,
+     "oak_door"
+    ],
+    [
+     665,
+     69,
+     -830,
+     "oak_planks"
+    ],
+    [
+     666,
+     69,
+     -830,
+     "oak_planks"
+    ],
+    [
+     667,
+     69,
+     -830,
+     "oak_planks"
+    ],
+    [
+     668,
+     69,
+     -830,
+     "oak_planks"
+    ],
+    [
+     669,
+     69,
+     -830,
+     "oak_planks"
+    ],
+    [
+     665,
+     69,
+     -829,
+     "oak_planks"
+    ],
+    [
+     669,
+     69,
+     -829,
+     "oak_planks"
+    ],
+    [
+     665,
+     69,
+     -828,
+     "glass"
+    ],
+    [
+     669,
+     69,
+     -828,
+     "glass"
+    ],
+    [
+     665,
+     69,
+     -827,
+     "oak_planks"
+    ],
+    [
+     669,
+     69,
+     -827,
+     "oak_planks"
+    ],
+    [
+     665,
+     69,
+     -826,
+     "oak_planks"
+    ],
+    [
+     666,
+     69,
+     -826,
+     "oak_planks"
+    ],
+    [
+     668,
+     69,
+     -826,
+     "oak_planks"
+    ],
+    [
+     669,
+     69,
+     -826,
+     "oak_planks"
+    ],
+    [
+     667,
+     69,
+     -829,
+     "wall_torch"
+    ],
+    [
+     665,
+     70,
+     -830,
+     "oak_planks"
+    ],
+    [
+     666,
+     70,
+     -830,
+     "oak_planks"
+    ],
+    [
+     667,
+     70,
+     -830,
+     "oak_planks"
+    ],
+    [
+     668,
+     70,
+     -830,
+     "oak_planks"
+    ],
+    [
+     669,
+     70,
+     -830,
+     "oak_planks"
+    ],
+    [
+     665,
+     70,
+     -829,
+     "oak_planks"
+    ],
+    [
+     669,
+     70,
+     -829,
+     "oak_planks"
+    ],
+    [
+     665,
+     70,
+     -828,
+     "oak_planks"
+    ],
+    [
+     669,
+     70,
+     -828,
+     "oak_planks"
+    ],
+    [
+     665,
+     70,
+     -827,
+     "oak_planks"
+    ],
+    [
+     669,
+     70,
+     -827,
+     "oak_planks"
+    ],
+    [
+     665,
+     70,
+     -826,
+     "oak_planks"
+    ],
+    [
+     666,
+     70,
+     -826,
+     "oak_planks"
+    ],
+    [
+     667,
+     70,
+     -826,
+     "oak_planks"
+    ],
+    [
+     668,
+     70,
+     -826,
+     "oak_planks"
+    ],
+    [
+     669,
+     70,
+     -826,
+     "oak_planks"
+    ]
+   ]
+  }
+ ],
  "minados": [
   {
    "t": "2026-10-23 12:06:59",
@@ -2476,6 +2954,429 @@
    "z": 103,
    "tipo": "oak_leaves",
    "herramienta": null
+  },
+  {
+   "t": "2026-11-02 04:46:17",
+   "personaje": "Soma",
+   "x": 642,
+   "y": 68,
+   "z": -823,
+   "tipo": "oak_leaves",
+   "herramienta": "rotten_flesh"
+  },
+  {
+   "t": "2026-11-02 04:46:30",
+   "personaje": "Soma",
+   "x": 640,
+   "y": 67,
+   "z": -821,
+   "tipo": "oak_leaves",
+   "herramienta": "rotten_flesh"
+  },
+  {
+   "t": "2026-11-02 04:46:30",
+   "personaje": "Soma",
+   "x": 640,
+   "y": 68,
+   "z": -821,
+   "tipo": "oak_leaves",
+   "herramienta": "rotten_flesh"
+  },
+  {
+   "t": "2026-11-02 04:47:52",
+   "personaje": "Soma",
+   "x": 634,
+   "y": 58,
+   "z": -829,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe"
+  },
+  {
+   "t": "2026-11-02 04:47:54",
+   "personaje": "Soma",
+   "x": 633,
+   "y": 58,
+   "z": -828,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe"
+  },
+  {
+   "t": "2026-11-02 04:47:57",
+   "personaje": "Soma",
+   "x": 635,
+   "y": 58,
+   "z": -828,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe"
+  },
+  {
+   "t": "2026-11-02 04:48:00",
+   "personaje": "Soma",
+   "x": 635,
+   "y": 58,
+   "z": -829,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe"
+  },
+  {
+   "t": "2026-11-02 04:48:03",
+   "personaje": "Soma",
+   "x": 634,
+   "y": 57,
+   "z": -829,
+   "tipo": "stone",
+   "herramienta": "wooden_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:41",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 61,
+   "z": -859,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:43",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 61,
+   "z": -857,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:44",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 61,
+   "z": -859,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:46",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 61,
+   "z": -859,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:49",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 61,
+   "z": -857,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:51",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 60,
+   "z": -859,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:52",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 60,
+   "z": -859,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:31:53",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 61,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:02",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 61,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:03",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 60,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:04",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 60,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:06",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 61,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:15",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 60,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:16",
+   "personaje": "Oqva",
+   "x": 643,
+   "y": 61,
+   "z": -860,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:17",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 60,
+   "z": -861,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:18",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 60,
+   "z": -861,
+   "tipo": "stone",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:43",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 60,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:44",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 61,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:46",
+   "personaje": "Oqva",
+   "x": 638,
+   "y": 61,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:48",
+   "personaje": "Oqva",
+   "x": 638,
+   "y": 60,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:49",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 60,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:51",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 60,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:54",
+   "personaje": "Oqva",
+   "x": 638,
+   "y": 60,
+   "z": -855,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:57",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 59,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:32:58",
+   "personaje": "Oqva",
+   "x": 641,
+   "y": 59,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:00",
+   "personaje": "Oqva",
+   "x": 639,
+   "y": 59,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:02",
+   "personaje": "Oqva",
+   "x": 640,
+   "y": 59,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:03",
+   "personaje": "Oqva",
+   "x": 639,
+   "y": 59,
+   "z": -856,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:05",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 60,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:07",
+   "personaje": "Oqva",
+   "x": 642,
+   "y": 59,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:08",
+   "personaje": "Oqva",
+   "x": 643,
+   "y": 61,
+   "z": -857,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 05:33:10",
+   "personaje": "Oqva",
+   "x": 643,
+   "y": 61,
+   "z": -858,
+   "tipo": "coal_ore",
+   "herramienta": "iron_pickaxe"
+  },
+  {
+   "t": "2026-11-02 06:27:15",
+   "personaje": "Oqva",
+   "x": 724,
+   "y": 64,
+   "z": -791,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_hoe"
+  },
+  {
+   "t": "2026-11-02 06:27:15",
+   "personaje": "Oqva",
+   "x": 724,
+   "y": 64,
+   "z": -790,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_hoe"
+  },
+  {
+   "t": "2026-11-02 07:25:05",
+   "personaje": "Oqva",
+   "x": 716,
+   "y": 64,
+   "z": -802,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_axe"
+  },
+  {
+   "t": "2026-11-02 07:26:08",
+   "personaje": "Oqva",
+   "x": 721,
+   "y": 66,
+   "z": -794,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_axe"
+  },
+  {
+   "t": "2026-11-02 07:26:22",
+   "personaje": "Oqva",
+   "x": 720,
+   "y": 67,
+   "z": -795,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_axe"
+  },
+  {
+   "t": "2026-11-02 07:26:22",
+   "personaje": "Oqva",
+   "x": 721,
+   "y": 66,
+   "z": -795,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_axe"
+  },
+  {
+   "t": "2026-11-02 07:26:22",
+   "personaje": "Oqva",
+   "x": 721,
+   "y": 67,
+   "z": -795,
+   "tipo": "oak_leaves",
+   "herramienta": "iron_axe"
   }
  ],
  "nota": "Sin rectángulo de obras hasta acordarlo con el compañero: minar y construir se niegan. Las habilidades de supervivencia (refugiarse cava, salir_del_refugio pone bloques) no lo miran fuera del mundo del usuario."

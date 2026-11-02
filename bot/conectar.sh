@@ -14,6 +14,8 @@ set -u
 RAIZ=$(cd "$(dirname "$0")/.." && pwd)
 MUNDO=${IO_SERVIDOR:-companero}
 JSON=$RAIZ/mundos/$MUNDO/personajes.json
+# 2026-11-02: personajes.json es de cada persona (no se versiona); la plantilla, personajes.ejemplo.json
+[ -f "$JSON" ] || { echo "falta $JSON: copia mundos/companero/personajes.ejemplo.json a mundos/$MUNDO/personajes.json y pon tus amos y tus bots"; exit 1; }
 LOGS=$RAIZ/servidor-supervivencia/logs
 [ -f "$JSON" ] || { echo "falta $JSON"; exit 1; }
 
