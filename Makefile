@@ -15,6 +15,7 @@ WORLD   ?= local        # local (servidor-local/, 26.1.2) · companero (server 2
 ROLE    ?= casual       # rol v2 del capataz (perfiles/v2/): casual · speedrunner
 BOTS    ?= Oqva         # uno o varios nombres: "Oqva Eco Iris" (2026-11-01: Soma pasó a llamarse Oqva)
 OTHER_BOTS ?=           # bots de otros procesos o del otro PC ("Trivino", "Oqva"): no cuentan como humanos ni se les obedece
+PROPIOS ?=              # bots tuyos de otros procesos ("Trivino Nico"): como los dueños, ni los echa el centinela ni se defiende de ellos
 OWNERS  ?=              # jugadores a los que obedecen por el chat ("__Count"); vacío, a cualquier humano
 SKIN    ?=              # skin del server que se ponen al entrar (/skin set SKIN, SkinsRestorer): "trivino"
 PORT    ?= 3001         # puerto de control del primero; los demás, consecutivos (Oqva 3001, Eco 3002…)
@@ -248,7 +249,7 @@ bots:
 	@# el PID lo escribe el propio proceso antes de hacerse node (exec): con «… &» y $$! quedaba el de una subshell intermedia,
 	@# y bots-stop no paraba a nadie
 	@p=$(strip $(PORT)); args=""; for n in $(BOTS); do args="$$args $$n:$$p:$(strip $(STYLE)):$(strip $(MODE)):$(strip $(BOT_DECIDER))"; p=$$((p + 1)); done; \
-	  cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) IO_BOTS="$$(echo $(BOTS) $(OTHER_BOTS) | tr -s ' ' ,)" IO_AMOS="$$(echo $(OWNERS) | tr -s ' ' ,)" IO_SKIN="$(strip $(SKIN))" \
+	  cd $(RAIZ)/bot; IO_SERVIDOR=$(WORLD_) IO_BOTS="$$(echo $(BOTS) $(OTHER_BOTS) | tr -s ' ' ,)" IO_AMOS="$$(echo $(OWNERS) | tr -s ' ' ,)" IO_PROPIOS="$$(echo $(PROPIOS) | tr -s ' ' ,)" IO_SKIN="$(strip $(SKIN))" \
 	    setsid nohup bash -c 'echo $$$$ > "$$0"; exec node io.js "$$@"' $(PID) $$args > $(LOG) 2>&1 < /dev/null & \
 	  for i in 1 2 3 4 5 6 7 8 9 10; do [ -s $(PID) ] && break; sleep 0.2; done; \
 	  echo "bots de $(WORLD_) (PID $$(cat $(PID))):$$args"; echo "registro: $(LOG)"

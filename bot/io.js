@@ -79,7 +79,9 @@ const AMOS = new Set((process.env.IO_AMOS || '').split(',').map(s => s.trim()).f
 const RUTA_ALIADOS = path.join(mundo.carpetaDatos, 'aliados.json')
 const ALIADOS = new Set((() => { try { return JSON.parse(fs.readFileSync(RUTA_ALIADOS, 'utf8')).aliados || [] } catch (_) { return [] } })().map(x => String(x).toLowerCase()))
 const guardarAliados = () => { try { fs.writeFileSync(RUTA_ALIADOS, JSON.stringify({ aliados: [...ALIADOS] }, null, 1) + '\n') } catch (_) {} }
-const esDueno = (n) => AMOS.has(n) // el único que nunca se defiende de un golpe suyo
+// IO_PROPIOS=Nombre1,Nombre2: los bots del usuario (de otros procesos de esta misma máquina). Con los de este proceso (VIVOS), cuentan como dueños.
+const PROPIOS = new Set((process.env.IO_PROPIOS || '').split(',').map(x => x.trim()).filter(Boolean))
+const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
 const SKIN = (process.env.IO_SKIN || '').trim()
@@ -867,7 +869,7 @@ class Personaje {
         let puesto = null
         try {
           // antes de montar guardia se equipa, como con «equípate» (lo que falte de los armor stands; luego lo mejor que lleve). Idempotente.
-          const [rs] = await paso('equipar_soportes', ['24'])
+          const [rs] = await paso('equipar_soportes', ['HOGAR'])
           if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
           const [re] = await paso('equipar', ['todo'])
           if (re.exito && re.causa === 'equipado') bot.chat(`Me equipo: ${[re.arma, ...(re.armadura || [])].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
@@ -1086,7 +1088,7 @@ class Personaje {
       }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
-        const [rs, ds] = await paso('equipar_soportes', ['24'])
+        const [rs, ds] = await paso('equipar_soportes', ['HOGAR'])
         if (rs.exito && (rs.piezas.length || rs.arma)) bot.chat(`Tomo de los soportes: ${[...rs.piezas, rs.arma].filter(Boolean).join(', ').replace(/_/g, ' ')}.`)
         const [r, d] = await paso('equipar', ['todo'])
         const texto = r.exito ? `Equipado: ${[r.arma, ...(r.armadura || [])].filter(Boolean).join(', ') || 'lo que llevaba'}.` : 'No tengo nada que equipar.'
