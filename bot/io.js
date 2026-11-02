@@ -152,6 +152,7 @@ class Personaje {
     BOTS.set(this.nombre, bot) // los compañeros del proceso leen de aquí mi objetivo (fase C)
     bot.loadPlugin(pathfinder)
     require('./puertas').vigilar(bot) // 2026-11-01: abre la puerta que tiene delante y la cierra al dejarla atrás
+    require('./jugadores').vigilar(bot) // 2026-11-01: dónde vio a cada jugador (para «ataca a NOMBRE» fuera de la vista)
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
     sv.vigilarGolpes(bot, () => setImmediate(() => this.reposo())) // F7.2: los golpes de monstruos, para el reflejo de defensa
     // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
@@ -858,8 +859,17 @@ class Personaje {
         // 2026-11-01: «ataca a NOMBRE» con un jugador conectado (no él mismo) va a por ese jugador; si no es un jugador, como siempre
         const jugador = o.nombre && Object.keys(bot.players).find(n => n.toLowerCase() === o.nombre && n !== bot.username)
         if (jugador) {
+          // fuera de la vista (~48 bloques): a las coordenadas que le den («ataca a X en x y z») o a donde le vio por última vez, y en
+          // cuanto aparece, a por él
+          if (!bot.players[jugador].entity) {
+            const visto = require('./jugadores').ultimaVez(bot, jugador)
+            const meta = o.en ? new (require('vec3').Vec3)(...o.en) : visto && visto.pos
+            if (!meta) return { exito: false, texto: `No veo a ${jugador} y no sé dónde está: dime «ataca a ${jugador} en x y z» o llévame hacia él.` }
+            bot.chat(o.en ? `Voy a buscar a ${jugador} a ${o.en.join(' ')}.` : `Voy a buscar a ${jugador} donde le vi hace ${Math.round((Date.now() - visto.t) / 1000)} s.`)
+            const r = await moverHasta(bot, new goals.GoalNear(meta.x, meta.y, meta.z, 3), () => !!bot.players[jugador]?.entity, { ms: 180000, tarea, mov: prudentes(bot) })
+            if (r !== 'listo') return { exito: false, texto: r === 'cancelado' ? 'Dejo de buscarle.' : `No encuentro a ${jugador} (${r}).` }
+          }
           const e = bot.players[jugador].entity
-          if (!e) return { exito: false, texto: `No veo a ${jugador} cerca.` }
           const [r, d] = await paso('atacar', ['id:' + e.id, '30'])
           const textos = { muerto: `Derribé a ${jugador} (${r.golpes} golpes).`, 'huyó': `${jugador} se fue.`, 'sin hostil': `No veo a ${jugador} cerca.`,
             'salud baja': 'Estoy muy herido: no peleo.', demasiados: 'Hay demasiados monstruos: no peleo.', 'sin arma': 'No llevo arma: no peleo.' }

@@ -378,6 +378,10 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   }
   ok(ordenes.interpretar('defiéndete').tipo === 'ataca', '«defiéndete» sigue siendo atacar')
   { const o = ordenes.interpretar('ataca a __Count'); ok(o.tipo === 'ataca' && o.nombre === '__count' && !o.de, `«ataca a __Count» → ${JSON.stringify(o)}`) }
+  { const o = ordenes.interpretar('ataca a Trivino en 120 64 -300'); ok(o.nombre === 'trivino' && JSON.stringify(o.en) === '[120,64,-300]', `«ataca a Trivino en 120 64 -300» → ${JSON.stringify(o)}`) }
+  { const j = require('./jugadores'), b = new (require('events'))(), e = { type: 'player', username: 'Pepe', position: new Vec3(5, 64, -7) }
+    b.entity = { type: 'player' }; j.vigilar(b); b.emit('entityMoved', e); e.position = new Vec3(9, 64, 9)
+    const v = j.ultimaVez(b, 'Pepe'); ok(v && v.pos.x === 5 && v.pos.z === -7 && !j.ultimaVez(b, 'Ana'), `jugadores: recuerda dónde le vio (${JSON.stringify(v)})`) }
   { const o = ordenes.interpretar('ataca al zombi'); ok(o.de === 'zombie' && !o.nombre, `«ataca al zombi» no lleva nombre: ${JSON.stringify(o)}`) }
   {
     const yo = { id: 0, type: 'player' }, bx = { entity: yo }
