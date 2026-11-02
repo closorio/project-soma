@@ -99,6 +99,9 @@ const guardarCentinela = (n, c) => { try { if (c) fs.writeFileSync(rutaCentinela
 const rutaGuardaespaldas = (n) => path.join(mundo.carpetaDatos, `guardaespaldas_${n}.json`)
 const leerGuardaespaldas = (n) => { try { const a = JSON.parse(fs.readFileSync(rutaGuardaespaldas(n), 'utf8')).a; return a ? { a } : null } catch (_) { return null } }
 const guardarGuardaespaldas = (n, c) => { try { if (c) fs.writeFileSync(rutaGuardaespaldas(n), JSON.stringify({ a: c.a }) + '\n'); else fs.rmSync(rutaGuardaespaldas(n), { force: true }) } catch (_) {} }
+// IO_BOTS_DE=jugador=Bot1,Bot2;otro=Bot3 (de bots_de en personajes.json): los personajes de cada jugador; los de un dueño (IO_AMOS) son los propios
+const BOTS_DE = new Map((process.env.IO_BOTS_DE || '').split(';').filter(Boolean).map(x => { const [j, b = ''] = x.split('='); return [j.trim().toLowerCase(), b.split(',').map(y => y.trim()).filter(Boolean)] }))
+const botsDe = (j) => { const k = String(j).toLowerCase(); return [...new Set([...(BOTS_DE.get(k) || []), ...([...AMOS].some(a => a.toLowerCase() === k) ? [...VIVOS.keys(), ...PROPIOS] : [])])] }
 const esDueno = (n) => AMOS.has(n) || PROPIOS.has(n) || VIVOS.has(n) // los que nunca se defienden de un golpe suyo ni echa el centinela
 const esAliado = (n) => esDueno(n) || ALIADOS.has(String(n || '').toLowerCase()) // el que puede entrar en la zona del centinela
 const esDeclarado = (n) => ALIADOS.has(String(n || '').toLowerCase()) // aliado «por orden»: si pega, «modo diablo»
@@ -1160,6 +1163,13 @@ class Personaje {
         return { exito: r === 'tiempo agotado', texto: textos[r] || 'Dejo de seguirte.' }
       }
       case 'aliado': {
+        if (o.bots_de) { // los bots de un jugador, todos a la vez (o todos fuera)
+          const bs = botsDe(o.bots_de).filter(x => x !== this.nombre && !AMOS.has(x))
+          if (!bs.length) return { exito: false, texto: `No sé qué bots son de ${o.bots_de}: faltan en bots_de de personajes.json.`, pasos: [] }
+          for (const b of bs) { if (o.valor) ALIADOS.add(b.toLowerCase()); else ALIADOS.delete(b.toLowerCase()) }
+          guardarAliados()
+          return { exito: true, texto: o.valor ? `Los bots de ${o.bots_de} son aliados: ${bs.join(', ')}.` : `Los bots de ${o.bots_de} ya no son aliados: ${bs.join(', ')}.`, pasos: [] }
+        }
         if (o.lista) return { exito: true, texto: ALIADOS.size ? `Aliados, además de ti: ${[...ALIADOS].join(', ')}.` : 'No tengo más aliados que tú.', pasos: [] }
         const n = o.nombre.toLowerCase()
         if (AMOS.has(Object.keys(bot.players).find(x => x.toLowerCase() === n) || o.nombre)) return { exito: true, texto: `${o.nombre} ya es de los míos: es mi dueño.`, pasos: [] }
