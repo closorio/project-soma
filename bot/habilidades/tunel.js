@@ -4,15 +4,15 @@
 // que la toque, y solo para («lava delante») si no puede taparlo. Sin suelo delante, lo pone. Grava encima: la pica hasta que deje de
 // caer (escalera.abrir). Antorcha cada 8. Con `mena` (diamond_ore…; vale su deepslate_), para en cuanto ve una a ≤ 5 que se pueda
 // tocar (causa «veo mena»): la pica ir_a_mena, que sigue la veta.
-// Éxito: llegué al largo o veo la mena. Fallos: lava/agua delante (sin relleno) · protegido · sin herramienta · hueco · atasco · cancelado.
+// Éxito: llegué al largo o veo la mena. Fallos: lava/agua delante (sin relleno) · protegido · sin herramienta · hueco · atasco · pico gastado (le quedan < 12 usos) · cancelado.
 // Devuelve { exito, causa, largo, tapados, antorchas, peligros, rotos, puestos, s }.
 const { goals } = require('mineflayer-pathfinder')
-const { nodo, moverHasta, prudentes } = require('./comun')
+const { nodo, moverHasta, prudentes, usosPico } = require('./comun')
 const { colocar } = require('./colocar')
 const { abrir, liquidoJunto, dirDe } = require('./escalera')
 const sv = require('./sv')
 
-const MAX_LARGO = 64, MAX_MS = 300000, ANTORCHA_CADA = 8, VISTA = 5
+const MAX_LARGO = 64, MAX_MS = 300000, ANTORCHA_CADA = 8, VISTA = 5, USOS_PARAR = 12
 const LADOS6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
 
 // Tapa los líquidos que tocan la casilla v (y la propia v). Devuelve true o el líquido que no pudo tapar.
@@ -49,6 +49,8 @@ async function cavarTunel(bot, [rumbo, largo0, mena], tarea) {
     const m = veoMena(bot, mena)
     if (m && sv.puedeTocar(m.position.x, m.position.y, m.position.z)) { causa = 'veo mena'; break }
     if (ctx.pasos.length >= largo) { causa = 'llegué'; break }
+    // 2026-11-03, banco: el pico se rompía a mitad y, sin él, no hay sitio para la mesa ni se sube: parar antes (conseguir hace otro)
+    if (bot.inventory.items().some(i => /_pickaxe$/.test(i.name)) && usosPico(bot) < USOS_PARAR) { causa = 'pico gastado'; break }
     if (Date.now() - t0 > MAX_MS) { causa = 'tiempo agotado'; break }
     const b = nodo(bot), sig = b.offset(dx, 0, dz), cabeza = sig.offset(0, 1, 0), suelo = sig.offset(0, -1, 0)
     for (const v of [cabeza, sig, suelo]) {

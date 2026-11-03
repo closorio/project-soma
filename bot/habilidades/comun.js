@@ -156,5 +156,8 @@ async function viajeLargo(bot, destino, listo = () => false, { tarea, ms, mov, c
   }
 }
 
-module.exports = { esAmenaza, esperar, dist, conLimite, prudentes, prudentesSecos, conMovimientos, lejania, hayCamino, nodo, buscarEntidad, jugadorCercano,
+// Lo que le queda al mejor pico que lleva (0 sin pico). 2026-11-03: el de hierro se rompía dentro de una escalera larga
+const usosPico = (bot) => Math.max(0, ...bot.inventory.items().filter(i => /_pickaxe$/.test(i.name)).map(i => (i.maxDurability || 0) - (i.durabilityUsed || 0)))
+
+module.exports = { usosPico, esAmenaza, esperar, dist, conLimite, prudentes, prudentesSecos, conMovimientos, lejania, hayCamino, nodo, buscarEntidad, jugadorCercano,
   companeroCercano, moverHasta, viajeLargo, hostilCercano, hostiles, encerrado, pruebas, PERSONAJES, esBot, BOTS, companeros }

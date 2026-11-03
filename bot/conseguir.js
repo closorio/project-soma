@@ -11,7 +11,7 @@
 // La netherite no: hace falta el Nether (F8.7). siguiente() es puro (lo prueba probar_conseguir_seco.js); ejecutar() lo recorre
 // con el `paso` de io.js (las habilidades con su corte por amenaza) y las órdenes compuestas que le pase (armate).
 const progresion = require('./progresion')
-const { nodo } = require('./habilidades/comun')
+const { nodo, usosPico } = require('./habilidades/comun')
 
 // Cotas de 1.18+: donde más hay. pico: el nivel de progresion.NIVEL que pide la mena (madera 0,33 · piedra 0,66 · hierro 1).
 const MATERIALES = {
@@ -48,7 +48,7 @@ function estado(bot, yInicio) {
     antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y,
     // la madera en troncos (un tronco = 4 tablones = 8 palos) y lo que le queda al mejor pico
     madera: cuenta(['stick']) / 8 + items.filter(i => /_planks$/.test(i.name)).reduce((a, i) => a + i.count, 0) / 4 + items.filter(i => /_log$/.test(i.name)).reduce((a, i) => a + i.count, 0),
-    usosPico: Math.max(0, ...items.filter(i => /_pickaxe$/.test(i.name)).map(i => (i.maxDurability || 0) - (i.durabilityUsed || 0))),
+    usosPico: usosPico(bot), repuesto: items.filter(i => /_pickaxe$/.test(i.name)).length > 1,
     bajo: yInicio != null && nodo(bot).y < yInicio - 4, vida: bot.health, hambre: bot.food,
     huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
     enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
@@ -92,6 +92,9 @@ function siguiente(e, material, n, s) {
     if (e.carbon > 0) return { habilidad: 'fabricar', args: ['antorcha'], motivo: 'antorchas', marca: 'antorchasIntento' }
     if (material !== 'carbon') return { sub: { material: 'carbon', n: 2 }, motivo: 'carbón para antorchas' }
   }
+  // con madera, el de repuesto se hace abajo mientras el viejo aún pica (sin pico no hay hueco para la mesa: 2026-11-03)
+  if (e.bajo && e.usosPico < USOS_MIN && !e.repuesto && e.madera >= RESERVA - MADERA_PICO && !s.repuestoHecho)
+    return { orden: 'armate', motivo: 'pico de repuesto', marca: 'repuestoHecho' }
   if (e.bajo && e.usosPico < USOS_MIN && e.madera < RESERVA - MADERA_PICO && !s.subidoPico)
     return { habilidad: 'subir_a_superficie', args: [], motivo: 'el pico se va a romper', marca: 'subidoPico' }
   if (m.y !== null && e.y > m.y + 4 && !e.bajo && e.madera < RESERVA && !s.reservaNo)
@@ -113,17 +116,18 @@ function apuntar(s, p, r) {
   if (p.habilidad === 'ir_a_mena') s.noVeo = !r.exito || !(r.picadas > 0)
   if (p.habilidad === 'cavar_escalera') {
     s.bajadas = (s.bajadas || 0) + 1; s.noVeo = false // abajo hay otras menas a la vista
-    if (!r.exito) s.rumbo = (s.rumbo || 0) + 1 // lava, agua o algo protegido: otro rumbo
+    if (!r.exito && r.causa !== 'pico gastado') s.rumbo = (s.rumbo || 0) + 1 // lava, agua o algo protegido: otro rumbo
   }
   if (p.habilidad === 'cavar_tunel') {
     s.tuneles = (s.tuneles || 0) + 1; s.noVeo = false
-    if (r.causa !== 'veo mena') s.rumbo = (s.rumbo || 0) + 1 // el siguiente tramo gira: no repite la misma roca
+    if (r.causa !== 'veo mena' && r.causa !== 'pico gastado') s.rumbo = (s.rumbo || 0) + 1 // el siguiente tramo gira: no repite la misma roca
   }
   if (p.motivo === 'antorchas' && !r.exito) s.antorchasNo = true
-  if (p.orden === 'armate' && !r.exito) s.picoNo = 'de piedra'
+  if (p.orden === 'armate' && !r.exito && p.motivo !== 'pico de repuesto') s.picoNo = 'de piedra'
   if (p.motivo === 'madera de reserva antes de bajar') { s.reservas = (s.reservas || 0) + 1; if (!r.exito || s.reservas >= 2) s.reservaNo = true }
   else if (p.orden === 'tala' && !r.exito) s.maderaNo = true
   if (p.marca === 'piedraHorno') s.piedraHorno = true
+  if (p.marca === 'repuestoHecho') s.repuestoHecho = true
   if (p.habilidad === 'fundir' && !r.exito) { s.fundirNo = (s.fundirNo || 0) + 1; s.fundirCausa = r.causa }
   if (p.motivo === 'pico de hierro' && !r.exito) s.picoNo = 'de hierro: ' + r.causa
 }
@@ -166,7 +170,7 @@ async function ejecutar(bot, material, n0, ctx) {
     }
     if (p.tirar) { const k = await tirarBasura(bot); pasos.push({ habilidad: 'tirar', exito: k > 0, causa: `${k} de basura` }); if (!k) cima.s.noTirar = true; continue }
     if (p.orden) {
-      decir(p.orden === 'armate' ? 'Primero me hago un pico de piedra.' : `Primero, ${p.motivo}.`)
+      decir(p.motivo === 'pico de repuesto' ? 'Me hago un pico de repuesto antes de que se rompa este.' : p.orden === 'armate' ? 'Primero me hago un pico de piedra.' : `Primero, ${p.motivo}.`)
       const r = await ctx.orden(p.orden, p.n)
       pasos.push(...(r.pasos || []), { habilidad: 'orden ' + p.orden, exito: !!r.exito, causa: r.causa || '' }) // cuenta para MAX_PASOS
       if (!ctx.tarea.cancelada) apuntar(cima.s, p, r) // cortada por un golpe: no es un fallo, se repite al reanudar

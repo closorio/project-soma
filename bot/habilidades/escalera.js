@@ -12,13 +12,13 @@ const { Vec3 } = require('vec3')
 const { goals } = require('mineflayer-pathfinder')
 const memoria = require('../memoria')
 const persistente = require('../memoria_persistente')
-const { conLimite, esperar, nodo, moverHasta, prudentes } = require('./comun')
+const { conLimite, esperar, nodo, moverHasta, prudentes, usosPico } = require('./comun')
 const { picar } = require('./picar_tronco')
 const { colocar } = require('./colocar')
 const sv = require('./sv')
 
 const DIRS = { norte: [0, -1], n: [0, -1], sur: [0, 1], s: [0, 1], este: [1, 0], e: [1, 0], oeste: [-1, 0], o: [-1, 0] }
-const MAX_PASOS = 64, MAX_MS = 300000, ANTORCHA_CADA = 8, MAX_PICAR_MS = 8000, CIELO = 32
+const MAX_PASOS = 64, MAX_MS = 300000, ANTORCHA_CADA = 8, MAX_PICAR_MS = 8000, CIELO = 32, USOS_PARAR = 12
 const LADOS6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]
 const CAE = /^(sand|red_sand|gravel|suspicious_sand|suspicious_gravel)$/
 
@@ -119,6 +119,8 @@ async function escalera(bot, { yMeta, dir, hasta }, tarea) {
     if (!hasta && (sube ? y >= yMeta : y <= yMeta)) { causa = 'llegué'; break }
     if (tarea && tarea.cancelada) { causa = 'cancelado'; break }
     if (ctx.pasos.length >= MAX_PASOS) { causa = 'pasos agotados'; break }
+    // 2026-11-03, banco: el pico se rompía a mitad y, sin él, no hay sitio para la mesa ni se sube: parar antes (conseguir hace otro)
+    if (!sube && bot.inventory.items().some(i => /_pickaxe$/.test(i.name)) && usosPico(bot) < USOS_PARAR) { causa = 'pico gastado'; break } // subiendo, nunca: es la salida
     if (Date.now() - t0 > MAX_MS) { causa = 'tiempo agotado'; break }
     const r = await paso(bot, dir, sube, ctx, tarea)
     if (r !== true) causa = r

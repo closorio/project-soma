@@ -37,7 +37,9 @@ const casos = [
   ['sin madera antes de bajar: talar la reserva', E({ madera: 0 }), 'diamante', {}, /^orden:tala$/],
   ['la tala de reserva falló: baja igual', E({ madera: 0 }), 'diamante', { reservaNo: true }, /^ir_a_mena/],
   ['pico a punto de romperse abajo sin madera: arriba', E({ bajo: true, y: -57, usosPico: 10, madera: 0 }), 'diamante', {}, /^subir_a_superficie $/],
-  ['pico a punto de romperse con madera: sigue', E({ bajo: true, y: -57, usosPico: 10 }), 'diamante', {}, /^ir_a_mena/],
+  ['pico a punto de romperse con madera: uno de repuesto ahí', E({ bajo: true, y: -57, usosPico: 10 }), 'diamante', {}, /^orden:armate$/],
+  ['pico a punto de romperse, ya con repuesto: sigue', E({ bajo: true, y: -57, usosPico: 10, repuesto: true }), 'diamante', {}, /^ir_a_mena/],
+  ['el repuesto ya se intentó: sigue', E({ bajo: true, y: -57, usosPico: 10 }), 'diamante', { repuestoHecho: true }, /^ir_a_mena/],
   ['pico de piedra, sin hierro', E({ pico: 0.66 }), 'diamante', {}, /^sub:hierro:3$/],
   ['pico de piedra sin madera: talar', E({ pico: 0.66, madera: 0 }), 'diamante', {}, /^orden:tala$/],
   ['sin madera bajo tierra: arriba', E({ pico: 0.66, madera: 0, bajo: true, y: -20 }), 'diamante', {}, /^subir_a_superficie $/],
@@ -152,6 +154,28 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
     orden: async (tipo) => { v3.push('orden:' + tipo); if (tipo === 'tala' || bot.entity.position.y < 60) return { exito: false, pasos: [] }; poner('stone_pickaxe', 1); return { exito: true, pasos: [] } } })
   ok(r3.exito && r3.conseguidos >= 6, `pico gastado abajo: ${r3.causa} (${v3.join(' ')})`)
   ok(v3.indexOf('subir_a_superficie') >= 0 && v3.indexOf('subir_a_superficie') < v3.indexOf('orden:armate'), `sube antes de armarse: ${v3.join(' ')}`)
+
+  // 2026-11-03, banco: el pico de hierro se gastaba dentro de la escalera; ahora la escalera para («pico gastado») y conseguir se
+  // hace uno de repuesto abajo, con la madera de reserva, mientras el viejo aún pica; luego sigue bajando por el mismo rumbo
+  for (const x of slots) if (x) slots[x.slot] = null
+  bot.entity.position.y = 64; poner('iron_pickaxe', 1); poner('torch', 8); poner('bread', 4); poner('oak_log', 6)
+  slots.find(x => x && x.name === 'iron_pickaxe').maxDurability = 250
+  const v6 = []
+  const r6 = await ejecutar(bot, 'diamante', 2, { ...ctx, entregar: false,
+    paso: async (h, a) => {
+      v6.push(h + (a && a[1] ? ' ' + a[1] : ''))
+      const pico = slots.find(x => x && x.name === 'iron_pickaxe')
+      let r = { exito: false, causa: 'no veo' }
+      if (h === 'ir_a_mena') r = bot.entity.position.y <= -50 ? (poner('diamond', 2), { exito: true, picadas: 2 }) : r
+      if (h === 'cavar_escalera') {
+        if (pico.durabilityUsed === undefined) { pico.durabilityUsed = 245; bot.entity.position.y = 0; r = { exito: false, causa: 'pico gastado' } }
+        else { bot.entity.position.y = +a[0]; r = { exito: true, causa: 'llegué' } }
+      }
+      return [r, { habilidad: h, exito: !!r.exito, causa: r.causa || '' }]
+    },
+    orden: async (tipo) => { v6.push('orden:' + tipo); if (tipo === 'armate') { quitar('oak_log', 3); poner('stone_pickaxe', 1) } return { exito: true, pasos: [] } } })
+  ok(r6.exito && v6.includes('orden:armate'), `pico gastado en la escalera: repuesto y sigue (${r6.causa}: ${v6.join(' ')})`)
+  ok(v6.filter(h => h === 'cavar_escalera norte').length === 2, `el mismo rumbo tras «pico gastado»: ${v6.join(' ')}`)
 
   // 2026-11-03: un golpe corta el paso (io.js: tarea cancelada con motivo «interrupcion»); conseguir reanuda y termina
   for (const x of slots) if (x) slots[x.slot] = null
