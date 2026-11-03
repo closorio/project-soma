@@ -33,6 +33,9 @@ const ALIAS = { carbon: 'carbon', carbones: 'carbon', cobre: 'cobre', hierro: 'h
 const BASURA = /^(dirt|gravel|granite|diorite|andesite|tuff|calcite|cobbled_deepslate|flint|rotten_flesh|sand|coarse_dirt)$/
 const RELLENO = 16, ANTORCHAS = 4, COTA_OSCURA = 30, HAMBRE = 12, VIDA_SUBIR = 6, HUECOS = 3, MAX_N = 64
 const RUMBOS = ['norte', 'este', 'sur', 'oeste']
+// 2026-11-03, banco: sin madera abajo no se rehace el pico (ármate 3 troncos, el de hierro 1,5 con palos y mesa): antes de bajar, 5.
+// Y con el pico a punto de romperse y sin madera, arriba antes de que se rompa (sin pico no sube en pilar: «sin herramienta»)
+const RESERVA = 5, MADERA_PICO = 1.5, USOS_MIN = 24
 const MAX_REANUDAR = 8, MAX_BAJADAS = 4, MAX_TUNELES = 6, LARGO_TUNEL = 32, MAX_MS = 30 * 60 * 1000, MAX_PASOS = 120
 
 // Lo que mira siguiente(): un objeto plano, para que la prueba en seco no necesite un bot.
@@ -43,7 +46,9 @@ function estado(bot, yInicio) {
   for (const [k, m] of Object.entries(MATERIALES)) if (m.suelta) tiene[k] = cuenta(m.suelta)
   return { tiene, crudo_hierro: cuenta(['raw_iron']), lingotes_hierro: cuenta(['iron_ingot']), pico: e.inv.pico,
     antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y,
-    palos: cuenta(['stick']) + 2 * items.filter(i => /_planks$/.test(i.name)).reduce((a, i) => a + i.count, 0) + 8 * items.filter(i => /_log$/.test(i.name)).reduce((a, i) => a + i.count, 0),
+    // la madera en troncos (un tronco = 4 tablones = 8 palos) y lo que le queda al mejor pico
+    madera: cuenta(['stick']) / 8 + items.filter(i => /_planks$/.test(i.name)).reduce((a, i) => a + i.count, 0) / 4 + items.filter(i => /_log$/.test(i.name)).reduce((a, i) => a + i.count, 0),
+    usosPico: Math.max(0, ...items.filter(i => /_pickaxe$/.test(i.name)).map(i => (i.maxDurability || 0) - (i.durabilityUsed || 0))),
     bajo: yInicio != null && nodo(bot).y < yInicio - 4, vida: bot.health, hambre: bot.food,
     huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
     enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
@@ -67,15 +72,18 @@ function siguiente(e, material, n, s) {
   if (e.pico < m.pico) {
     if (s.picoNo) return { fin: true, exito: false, causa: `no tengo el pico que hace falta (${s.picoNo})` }
     // 2026-11-03, banco: el pico de piedra se gastó a y≈0 y ármate, que empieza talando, no encontró árboles: arriba, primero
-    if (e.pico < 0.66 && e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'reponer el pico', marca: 'subidoPico' }
+    if (e.pico < 0.66 && e.bajo && e.madera < RESERVA - MADERA_PICO && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'reponer el pico', marca: 'subidoPico' }
     if (e.pico < 0.66) return { orden: 'armate', motivo: 'pico de piedra' }
     // 2026-11-03, banco: ármate gasta la madera en las herramientas de piedra y el pico de hierro no tuvo palos (abajo no hay árboles)
-    if (e.palos < 2) {
+    if (e.madera < MADERA_PICO) {
       if (s.maderaNo) return { fin: true, exito: false, causa: 'no tengo madera para los palos del pico de hierro' }
       if (e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'madera para el pico', marca: 'subidoPico' }
       return { orden: 'tala', n: 2, motivo: 'madera para el pico' }
     }
     if (e.lingotes_hierro >= 3) return { habilidad: 'fabricar', args: ['pico_hierro'], motivo: 'pico de hierro' }
+    // 2026-11-03, banco: sin piedra para el horno, fundir fallaba al instante 100 veces seguidas (demasiados pasos): picar piedra, una vez
+    if (e.crudo_hierro + e.lingotes_hierro >= 3 && (s.fundirNo || 0) >= 2) return { fin: true, exito: false, causa: `no pude fundir el hierro del pico (${s.fundirCausa})` }
+    if (e.crudo_hierro + e.lingotes_hierro >= 3 && s.fundirNo && !s.piedraHorno) return { habilidad: 'minar', args: ['piedra', '8', '6', 'y=-64'], motivo: 'piedra para el horno', marca: 'piedraHorno' }
     if (e.crudo_hierro + e.lingotes_hierro >= 3) return { habilidad: 'fundir', args: ['hierro', String(3 - e.lingotes_hierro)], motivo: 'hierro para el pico' }
     return { sub: { material: 'hierro', n: 3 }, motivo: 'hierro para el pico' }
   }
@@ -84,6 +92,10 @@ function siguiente(e, material, n, s) {
     if (e.carbon > 0) return { habilidad: 'fabricar', args: ['antorcha'], motivo: 'antorchas', marca: 'antorchasIntento' }
     if (material !== 'carbon') return { sub: { material: 'carbon', n: 2 }, motivo: 'carbón para antorchas' }
   }
+  if (e.bajo && e.usosPico < USOS_MIN && e.madera < RESERVA - MADERA_PICO && !s.subidoPico)
+    return { habilidad: 'subir_a_superficie', args: [], motivo: 'el pico se va a romper', marca: 'subidoPico' }
+  if (m.y !== null && e.y > m.y + 4 && !e.bajo && e.madera < RESERVA && !s.reservaNo)
+    return { orden: 'tala', n: Math.ceil(RESERVA - e.madera), motivo: 'madera de reserva antes de bajar' }
   const falta = n - e.tiene[material]
   // buscar: primero la que se vea; luego bajar; luego túneles
   if (!s.noVeo) return { habilidad: 'ir_a_mena', args: [m.mena, '32', String(Math.min(16, falta))], motivo: 'a la mena', marca: 'buscando' }
@@ -109,7 +121,10 @@ function apuntar(s, p, r) {
   }
   if (p.motivo === 'antorchas' && !r.exito) s.antorchasNo = true
   if (p.orden === 'armate' && !r.exito) s.picoNo = 'de piedra'
-  if (p.orden === 'tala' && !r.exito) s.maderaNo = true
+  if (p.motivo === 'madera de reserva antes de bajar') { s.reservas = (s.reservas || 0) + 1; if (!r.exito || s.reservas >= 2) s.reservaNo = true }
+  else if (p.orden === 'tala' && !r.exito) s.maderaNo = true
+  if (p.marca === 'piedraHorno') s.piedraHorno = true
+  if (p.habilidad === 'fundir' && !r.exito) { s.fundirNo = (s.fundirNo || 0) + 1; s.fundirCausa = r.causa }
   if (p.motivo === 'pico de hierro' && !r.exito) s.picoNo = 'de hierro: ' + r.causa
 }
 
@@ -153,7 +168,7 @@ async function ejecutar(bot, material, n0, ctx) {
     if (p.orden) {
       decir(p.orden === 'armate' ? 'Primero me hago un pico de piedra.' : `Primero, ${p.motivo}.`)
       const r = await ctx.orden(p.orden, p.n)
-      pasos.push(...(r.pasos || []))
+      pasos.push(...(r.pasos || []), { habilidad: 'orden ' + p.orden, exito: !!r.exito, causa: r.causa || '' }) // cuenta para MAX_PASOS
       if (!ctx.tarea.cancelada) apuntar(cima.s, p, r) // cortada por un golpe: no es un fallo, se repite al reanudar
       continue
     }

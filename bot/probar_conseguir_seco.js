@@ -18,7 +18,7 @@ const ordenes = require('./ordenes')
 
 let pruebas = 0, fallos = 0
 const ok = (cond, que) => { pruebas++; if (!cond) { fallos++; console.log('  FALLO ' + que) } }
-const E = (o = {}) => ({ crudo_hierro: 0, lingotes_hierro: 0, pico: 1, antorchas: 8, carbon: 0, comida: 4, palos: 8, y: 64, vida: 20, hambre: 20,
+const E = (o = {}) => ({ crudo_hierro: 0, lingotes_hierro: 0, pico: 1, antorchas: 8, carbon: 0, comida: 4, madera: 8, usosPico: 200, y: 64, vida: 20, hambre: 20,
   huecos: 20, basura: false, ...o, tiene: { diamante: 0, hierro: 0, carbon: 0, esmeralda: 0, ...(o.tiene || {}) } })
 const desc = (p) => p.fin ? `fin:${p.exito}:${p.causa}` : p.sub ? `sub:${p.sub.material}:${p.sub.n}` : p.orden ? `orden:${p.orden}` : p.tirar ? 'tirar' : `${p.habilidad} ${p.args.join(' ')}`
 
@@ -27,13 +27,21 @@ const casos = [
   ['netherite', E(), 'netherite', {}, /^fin:false:.*Nether/],
   ['sin pico', E({ pico: 0 }), 'diamante', {}, /^orden:armate$/],
   ['pico de madera', E({ pico: 0.33 }), 'hierro', {}, /^orden:armate$/],
-  ['sin pico bajo tierra: arriba primero', E({ pico: 0, bajo: true, y: 0 }), 'lapis', {}, /^subir_a_superficie $/],
-  ['sin pico bajo tierra, ya subió', E({ pico: 0, bajo: true, y: 0 }), 'lapis', { subidoPico: true }, /^orden:armate$/],
-  ['pico de piedra gastado a por diamante: arriba', E({ pico: 0, bajo: true, y: -57 }), 'diamante', {}, /^subir_a_superficie $/],
+  ['sin pico bajo tierra: arriba primero', E({ pico: 0, bajo: true, y: 0, madera: 0 }), 'lapis', {}, /^subir_a_superficie $/],
+  ['sin pico bajo tierra, ya subió', E({ pico: 0, bajo: true, y: 0, madera: 0 }), 'lapis', { subidoPico: true }, /^orden:armate$/],
+  ['pico de piedra gastado a por diamante: arriba', E({ pico: 0, bajo: true, y: -57, madera: 0 }), 'diamante', {}, /^subir_a_superficie $/],
+  ['sin pico bajo tierra con madera de reserva: ármate ahí', E({ pico: 0, bajo: true, y: -57 }), 'diamante', {}, /^orden:armate$/],
+  ['fundir falló: piedra para el horno', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 1 }, /^minar piedra 8 6 y=-64$/],
+  ['ya picó piedra: fundir otra vez', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 1, piedraHorno: true }, /^fundir hierro 3$/],
+  ['fundir falló dos veces', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 2, fundirCausa: 'x' }, /^fin:false:no pude fundir/],
+  ['sin madera antes de bajar: talar la reserva', E({ madera: 0 }), 'diamante', {}, /^orden:tala$/],
+  ['la tala de reserva falló: baja igual', E({ madera: 0 }), 'diamante', { reservaNo: true }, /^ir_a_mena/],
+  ['pico a punto de romperse abajo sin madera: arriba', E({ bajo: true, y: -57, usosPico: 10, madera: 0 }), 'diamante', {}, /^subir_a_superficie $/],
+  ['pico a punto de romperse con madera: sigue', E({ bajo: true, y: -57, usosPico: 10 }), 'diamante', {}, /^ir_a_mena/],
   ['pico de piedra, sin hierro', E({ pico: 0.66 }), 'diamante', {}, /^sub:hierro:3$/],
-  ['pico de piedra sin palos: talar', E({ pico: 0.66, palos: 0 }), 'diamante', {}, /^orden:tala$/],
-  ['sin palos bajo tierra: arriba', E({ pico: 0.66, palos: 0, bajo: true, y: -20 }), 'diamante', {}, /^subir_a_superficie $/],
-  ['sin palos, la tala falló', E({ pico: 0.66, palos: 0 }), 'diamante', { maderaNo: true }, /^fin:false:.*madera/],
+  ['pico de piedra sin madera: talar', E({ pico: 0.66, madera: 0 }), 'diamante', {}, /^orden:tala$/],
+  ['sin madera bajo tierra: arriba', E({ pico: 0.66, madera: 0, bajo: true, y: -20 }), 'diamante', {}, /^subir_a_superficie $/],
+  ['sin madera, la tala falló', E({ pico: 0.66, madera: 0 }), 'diamante', { maderaNo: true }, /^fin:false:.*madera/],
   ['con 3 de hierro crudo', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', {}, /^fundir hierro 3$/],
   ['con 1 lingote y 2 crudos', E({ pico: 0.66, crudo_hierro: 2, lingotes_hierro: 1 }), 'diamante', {}, /^fundir hierro 2$/],
   ['con 3 lingotes', E({ pico: 0.66, lingotes_hierro: 3 }), 'diamante', {}, /^fabricar pico_hierro$/],
@@ -140,7 +148,8 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
       if (h === 'subir_a_superficie') { bot.entity.position.y = 64; r = { exito: true } }
       return [r, { habilidad: h, exito: !!r.exito, causa: r.causa || '' }]
     },
-    orden: async (tipo) => { v3.push('orden:' + tipo); if (bot.entity.position.y < 60) return { exito: false, pasos: [] }; poner('stone_pickaxe', 1); return { exito: true, pasos: [] } } })
+    // sin árboles cerca (la reserva de madera falla): el pico gastado abajo no se rehace ahí
+    orden: async (tipo) => { v3.push('orden:' + tipo); if (tipo === 'tala' || bot.entity.position.y < 60) return { exito: false, pasos: [] }; poner('stone_pickaxe', 1); return { exito: true, pasos: [] } } })
   ok(r3.exito && r3.conseguidos >= 6, `pico gastado abajo: ${r3.causa} (${v3.join(' ')})`)
   ok(v3.indexOf('subir_a_superficie') >= 0 && v3.indexOf('subir_a_superficie') < v3.indexOf('orden:armate'), `sube antes de armarse: ${v3.join(' ')}`)
 
