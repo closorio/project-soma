@@ -4,7 +4,7 @@
 const { conLimite, esperar } = require('./habilidades/comun')
 const sv = require('./habilidades/sv')
 
-const AGUA = /^(water|seagrass|tall_seagrass|kelp|kelp_plant|bubble_column)$/, VISTA = 4, PICAR_MS = 12000
+const AGUA = /^(water|seagrass|tall_seagrass|kelp|kelp_plant|bubble_column)$/, VISTA = 4, PICAR_MS = 12000, RECUPERAR_MS = 6000, AIRE_BIEN = 18
 const cabeza = (bot) => bot.blockAt(bot.entity.position.offset(0, 1.62, 0))
 const cabezaEnAgua = (bot) => { const b = bot.entity && cabeza(bot); return !!b && AGUA.test(b.name) }
 
@@ -39,6 +39,10 @@ async function respirar(bot, ms = 30000) {
       bot.setControlState('jump', true)
       await esperar(150)
     }
+    // 2026-11-03, banco: con 1 s fuera seguía con el aire a 9 y volvía a hundirse 8 veces: a flote hasta recuperarlo
+    const t1 = Date.now()
+    bot.setControlState('jump', true)
+    while (Date.now() - t1 < RECUPERAR_MS && bot.health > 0 && !cabezaEnAgua(bot) && bot.oxygenLevel < AIRE_BIEN) await esperar(150)
   } finally { bot.setControlState('jump', false) }
   return { fuera: !cabezaEnAgua(bot), picados, ms: Date.now() - t0 }
 }

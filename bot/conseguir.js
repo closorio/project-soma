@@ -49,7 +49,8 @@ function estado(bot, yInicio) {
     // la madera en troncos (un tronco = 4 tablones = 8 palos) y lo que le queda al mejor pico
     madera: cuenta(['stick']) / 8 + items.filter(i => /_planks$/.test(i.name)).reduce((a, i) => a + i.count, 0) / 4 + items.filter(i => /_log$/.test(i.name)).reduce((a, i) => a + i.count, 0),
     usosPico: usosPico(bot), repuesto: items.filter(i => /_pickaxe$/.test(i.name)).length > 1,
-    bajo: yInicio != null && nodo(bot).y < yInicio - 4, vida: bot.health, hambre: bot.food,
+    // bajar por una ladera no es estar bajo tierra (2026-11-03, banco: subió en pilar al aire libre y se quedó sin poder bajar a talar)
+    bajo: yInicio != null && nodo(bot).y < yInicio - 4 && !((bot.blockAt(bot.entity.position) || {}).skyLight >= 14), vida: bot.health, hambre: bot.food,
     huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
     enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
 }
@@ -76,7 +77,9 @@ function siguiente(e, material, n, s) {
     if (e.pico < 0.66) return { orden: 'armate', motivo: 'pico de piedra' }
     // 2026-11-03, banco: ármate gasta la madera en las herramientas de piedra y el pico de hierro no tuvo palos (abajo no hay árboles)
     if (e.madera < MADERA_PICO) {
-      if (s.maderaNo) return { fin: true, exito: false, causa: 'no tengo madera para los palos del pico de hierro' }
+      if (s.maderaNo && s.maderaBuscada) return { fin: true, exito: false, causa: 'no tengo madera para los palos del pico de hierro' }
+      // 2026-11-03, banco: «bloqueado» en 4 árboles seguidos desde un mal sitio y se rindió: de otro sitio, una vez más
+      if (s.maderaNo) return { habilidad: 'explorar', args: ['-', '24', '40'], motivo: 'buscar árboles', marca: 'maderaBuscada' }
       if (e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'madera para el pico', marca: 'subidoPico' }
       return { orden: 'tala', n: 2, motivo: 'madera para el pico' }
     }
@@ -126,6 +129,7 @@ function apuntar(s, p, r) {
   if (p.orden === 'armate' && !r.exito && p.motivo !== 'pico de repuesto') s.picoNo = 'de piedra'
   if (p.motivo === 'madera de reserva antes de bajar') { s.reservas = (s.reservas || 0) + 1; if (!r.exito || s.reservas >= 2) s.reservaNo = true }
   else if (p.orden === 'tala' && !r.exito) s.maderaNo = true
+  if (p.marca === 'maderaBuscada') { s.maderaBuscada = true; s.maderaNo = false }
   if (p.marca === 'piedraHorno') s.piedraHorno = true
   if (p.marca === 'repuestoHecho') s.repuestoHecho = true
   if (p.habilidad === 'fundir' && !r.exito) { s.fundirNo = (s.fundirNo || 0) + 1; s.fundirCausa = r.causa }
@@ -184,7 +188,11 @@ async function ejecutar(bot, material, n0, ctx) {
       const [, da] = await ctx.paso('atacar', []); pasos.push(da)
       continue // sin apuntar el fallo: el paso se repite
     }
-    if (ctx.tarea.cancelada) continue // ídem
+    if (ctx.tarea.cancelada) {
+      // ídem, pero salir del agua cortado por falta de aire es un intento: nadando sin salir, 8 cortes acabaron el encargo
+      if (p.marca === 'salirAgua') cima.s.salirAgua = (cima.s.salirAgua || 0) + 1
+      continue
+    }
     apuntar(cima.s, p, r)
     const tengo = estado(bot).tiene[material]
     if (tengo > 0 && pila.length === 1 && p.habilidad !== 'comer') decir(`Tengo ${tengo}/${n} de ${material}.`)

@@ -41,8 +41,11 @@ function combustible(bot, n, pedido, entrada) {
   const filtro = pedido && PEDIDO[pedido]
   for (const [patron, rinde] of COMBUSTIBLES) {
     const items = bot.inventory.items().filter(i => patron.test(i.name) && (!filtro || filtro.test(i.name)) && i.name !== entrada)
-    const hay = items.reduce((a, i) => a + i.count, 0), falta = Math.ceil(n / rinde)
-    if (hay >= falta) return [items[0].name, falta]
+    const falta = Math.ceil(n / rinde), hay = {}
+    // 2026-11-03, banco: se sumaban especies (1 de roble y 3 de abedul) y luego faltaba roble («Can't find oak_planks»): por nombre
+    for (const i of items) hay[i.name] = (hay[i.name] || 0) + i.count
+    const nombre = Object.keys(hay).find(k => hay[k] >= falta)
+    if (nombre) return [nombre, falta]
   }
   return null
 }
@@ -93,6 +96,10 @@ module.exports = async function fundir(bot, [pedido, cantidad, comb], tarea) {
   try { horno = await conLimite(bot.openFurnace(bot.blockAt(pos)), 8000) } catch (e) { return { exito: false, causa: 'no se abrió: ' + e.message, ...datos } }
   try {
     const id = (x) => bot.registry.itemsByName[x].id
+    // 2026-11-03, banco: lo que quedó de un intento anterior ocupa el horno («destination full»): sacarlo, si es otra cosa
+    if (horno.outputItem()) await conLimite(horno.takeOutput(), 3000)
+    if (horno.inputItem() && horno.inputItem().name !== entrada) await conLimite(horno.takeInput(), 3000)
+    if (horno.fuelItem() && horno.fuelItem().name !== c[0]) await conLimite(horno.takeFuel(), 3000)
     await conLimite(horno.putFuel(id(c[0]), null, c[1]), 5000)
     await conLimite(horno.putInput(id(entrada), null, n), 5000)
     while (cuenta(bot, salida) - antes < n && Date.now() - t0 < n * MS_OBJETO + 8000) {

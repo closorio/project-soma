@@ -43,7 +43,8 @@ const casos = [
   ['pico de piedra, sin hierro', E({ pico: 0.66 }), 'diamante', {}, /^sub:hierro:3$/],
   ['pico de piedra sin madera: talar', E({ pico: 0.66, madera: 0 }), 'diamante', {}, /^orden:tala$/],
   ['sin madera bajo tierra: arriba', E({ pico: 0.66, madera: 0, bajo: true, y: -20 }), 'diamante', {}, /^subir_a_superficie $/],
-  ['sin madera, la tala falló', E({ pico: 0.66, madera: 0 }), 'diamante', { maderaNo: true }, /^fin:false:.*madera/],
+  ['sin madera, la tala falló: de otro sitio', E({ pico: 0.66, madera: 0 }), 'diamante', { maderaNo: true }, /^explorar - 24 40$/],
+  ['sin madera, explorado y volvió a fallar', E({ pico: 0.66, madera: 0 }), 'diamante', { maderaNo: true, maderaBuscada: true }, /^fin:false:.*madera/],
   ['con 3 de hierro crudo', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', {}, /^fundir hierro 3$/],
   ['con 1 lingote y 2 crudos', E({ pico: 0.66, crudo_hierro: 2, lingotes_hierro: 1 }), 'diamante', {}, /^fundir hierro 2$/],
   ['con 3 lingotes', E({ pico: 0.66, lingotes_hierro: 3 }), 'diamante', {}, /^fabricar pico_hierro$/],
@@ -196,6 +197,24 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
     paso: async (h) => { t5.cancelada = true; t5.motivo = 'usuario'; return [{ exito: false, causa: 'cancelado' }, { habilidad: h, exito: false, causa: 'cancelado' }] } })
   ok(!r5.exito && r5.causa === 'cancelado', `«para» sí lo corta: ${r5.causa}`)
 
+  // salir del agua cortado por falta de aire cuenta como intento: no se repite hasta agotar las reanudaciones
+  for (const x of slots) if (x) slots[x.slot] = null
+  bot.entity.position.y = 64; poner('iron_pickaxe', 1); poner('torch', 8); poner('bread', 4); poner('oak_log', 6)
+  const t7 = { cancelada: false }, v7 = []
+  const azul = bot.blockAt, sinAgua = () => v7.length >= 2
+  bot.blockAt = (w) => (!sinAgua() && Math.abs(w.y - (bot.entity.position.y + 1.6)) < 0.01 ? { name: 'water', boundingBox: 'empty', position: w } : azul(w))
+  const r7 = await ejecutar(bot, 'diamante', 1, { ...ctx, tarea: t7, entregar: false,
+    reanudar: async () => { if (t7.motivo !== 'interrupcion') return false; t7.cancelada = false; t7.motivo = null; return true },
+    paso: async (h) => {
+      v7.push(h)
+      if (h === 'explorar') { t7.cancelada = true; t7.motivo = 'interrupcion'; return [{ exito: false, causa: 'cancelado' }, { habilidad: h, exito: false, causa: 'cancelado' }] }
+      if (h === 'ir_a_mena') poner('diamond', 1)
+      const r = { exito: h === 'ir_a_mena', picadas: 1 }
+      return [r, { habilidad: h, exito: r.exito, causa: '' }]
+    } })
+  bot.blockAt = azul
+  ok(r7.exito && v7.filter(h => h === 'explorar').length === 2, `salir del agua, dos veces como mucho: ${v7.join(' ')}`)
+
   // respirar: sube en línea recta (nunca con el navegador); si hay techo, lo pica sin saltar
   const { respirar } = require('./respirar')
   const agua = (roca) => {
@@ -221,6 +240,17 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
   const a2 = agua([63])
   const rb = await respirar(a2.b, 3000); a2.parar()
   ok(rb.fuera && rb.picados === 1, `con techo: lo pica y sale ${JSON.stringify(rb)}`)
+
+  const a3 = agua([]); a3.b.oxygenLevel = 5
+  setTimeout(() => { a3.b.oxygenLevel = 20 }, 400)
+  const rc = await respirar(a3.b, 3000); a3.parar()
+  ok(rc.fuera && rc.ms >= 400, `a flote hasta recuperar el aire: ${JSON.stringify(rc)}`)
+
+  // combustible: por especie (1 de roble y 3 de abedul: abedul; 1 y 1: no llega con ninguna)
+  const { combustible } = require('./habilidades/fundir')
+  const conInv = (...l) => ({ inventory: { items: () => l.map(([name, count]) => ({ name, count })) } })
+  ok(String(combustible(conInv(['oak_planks', 1], ['birch_planks', 3]), 3, null, 'raw_iron')) === 'birch_planks,2', 'combustible: la especie que llega')
+  ok(combustible(conInv(['oak_planks', 1], ['birch_planks', 1]), 3, null, 'raw_iron') === null, 'combustible: sumar especies no vale')
 
   // túnel: la lava junto a la casilla que va a abrir se tapa con piedra; sin relleno, para
   const { tapar } = require('./habilidades/tunel')
