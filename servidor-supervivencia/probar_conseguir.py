@@ -10,7 +10,7 @@ el resto con hierro), y «cero» = diamante 1 desde nada.
 Criterio fijado antes de medir: lo pedido en el inventario del bot (`conseguir` por el puerto se lo queda)
 en ≥ 4/5 de cada material, y 0 muertes en todo el banco. Se anota la causa, lo conseguido, los pasos y los segundos.
 Escribe logs/conseguir-AAAAMMDD-HHMM.json. Uso: probar_conseguir.py [--solo hierro,lapis,oro,redstone,diamante,cero] [--n 5]
-[--nombre Prueba1] [--puerto 3101] [--monstruos]"""
+[--nombre Prueba1] [--puerto 3101] [--monstruos] [--seguir logs/conseguir-….json] (lo reanuda)"""
 import argparse, json, os, re, signal, subprocess, sys, time
 from pathlib import Path
 
@@ -53,6 +53,7 @@ def main():
     ap.add_argument("--nombre", default="Prueba1")
     ap.add_argument("--puerto", type=int, default=3101)
     ap.add_argument("--monstruos", action="store_true")
+    ap.add_argument("--seguir", metavar="JSON", help="reanudar: salta los intentos ya hechos de ese JSON y sigue escribiéndolo")
     a = ap.parse_args()
     try:
         r("list")
@@ -66,6 +67,19 @@ def main():
     bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}"], cwd=AQUI.parent / "bot", stdout=log, stderr=subprocess.STDOUT,
                            env={**os.environ, "IO_SERVIDOR": MUNDO_SV}, start_new_session=True)
     res, n = {}, a.nombre
+    # 2026-11-02: el PC se reinició a mitad del banco y no quedó nada (el JSON se escribía al final): ahora, tras cada intento
+    salida = Path(a.seguir) if a.seguir else AQUI / "logs" / f"conseguir-{time.strftime('%Y%m%d-%H%M')}.json"
+    if a.seguir:
+        res = json.loads(salida.read_text()).get("pruebas", {})
+        print(f"== sigo {salida.name}: " + ", ".join(f"{c} {len(v)}" for c, v in res.items()), flush=True)
+
+    def guardar():
+        total = sum(x["murio"] for rs in res.values() for x in rs)
+        resumen = {c: {"bien": sum(x["ok"] for x in rs), "de": len(rs), "pasa": len(rs) > 0 and sum(x["ok"] for x in rs) >= 0.8 * len(rs)}
+                   for c, rs in res.items()}
+        salida.write_text(json.dumps({"fecha": time.strftime("%Y-%m-%d %H:%M"), "mundo": MUNDO_SV, "n": a.n, "resumen": resumen,
+                                      "muertes": total, "pruebas": res}, ensure_ascii=False, indent=1) + "\n")
+        return resumen, total
     try:
         for _ in range(60):
             if orden(a.puerto, "estado", 5).startswith("pos "):
@@ -78,12 +92,12 @@ def main():
             raise SystemExit("no encuentro un llano")
         print(f"== llano en {centro[1]}, {centro[2]} ({centro[3]} bloques)", flush=True)
         r(f"scoreboard players set {n} banco_muertes 0")
-        k = 0
+        k = sum(len(v) for v in res.values())  # al reanudar, otros puntos (no repite terreno)
         for caso in [c for c in a.solo.split(",") if c]:
             pide, kit, items = CASOS[caso]
             material = "diamante" if caso == "cero" else caso
-            res[caso] = []
-            for _ in range(a.n):
+            res.setdefault(caso, [])
+            for _ in range(a.n - len(res[caso])):
                 k += 1
                 r("time set 1000")
                 r("weather clear")
@@ -108,6 +122,7 @@ def main():
                 ok = tengo >= pide and not murio
                 fila = {"ok": ok, "pide": pide, "tengo": tengo, "murio": murio, "respuesta": txt[:200], "s": round(time.time() - t0, 1)}
                 res[caso].append(fila)
+                guardar()
                 print(f"  {caso:9} {'BIEN ' if ok else 'FALLO'} {tengo}/{pide}{' · MUERTO' if murio else ''} · {txt[:90]} ({fila['s']} s)",
                       flush=True)
                 if not ok and "sin respuesta" in txt:
@@ -125,15 +140,10 @@ def main():
         if monstruos:
             r(f"gamerule spawn_monsters {monstruos[1]}")
         r("save-all flush")
-        total_muertes = sum(x["murio"] for rs in res.values() for x in rs)
-        resumen = {c: {"bien": sum(x["ok"] for x in rs), "de": len(rs), "pasa": len(rs) > 0 and sum(x["ok"] for x in rs) >= 0.8 * len(rs)}
-                   for c, rs in res.items()}
+        resumen, total_muertes = guardar()
         for c, s in resumen.items():
             print(f"{c:10} {s['bien']}/{s['de']} (criterio ≥ 4/5: {'PASA' if s['pasa'] else 'NO PASA'})", flush=True)
         print(f"muertes: {total_muertes} (criterio 0: {'PASA' if total_muertes == 0 else 'NO PASA'})", flush=True)
-        (AQUI / "logs" / f"conseguir-{time.strftime('%Y%m%d-%H%M')}.json").write_text(json.dumps(
-            {"fecha": time.strftime("%Y-%m-%d %H:%M"), "mundo": MUNDO_SV, "n": a.n, "resumen": resumen, "muertes": total_muertes,
-             "pruebas": res}, ensure_ascii=False, indent=1) + "\n")
         print("FIN", flush=True)
 
 

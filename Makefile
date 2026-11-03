@@ -116,7 +116,7 @@ help:
 	@echo "  nightly [BENCHES=\"smoke-26-3 bench-k\"]   bancos en serie en segundo plano; luego make report"
 	@echo "  verify              todo lo que se comprueba sin servidor: pruebas en seco, perfiles, herramientas del vault, Python"
 	@echo "  bench-assistant PHASE=A2 [WORLD=local]   la puerta de una fase del asistente (entrenamiento/banco_asistente.py)"
-	@echo "  bench-gather [ONLY=hierro,diamante] [N=5]   «consigue N X» en el terreno local: lo pedido en ≥ 4/5 y 0 muertes"
+	@echo "  bench-gather [ONLY=…] [N=5] [SEGUIR=json]   «consigue N X» en el terreno local: lo pedido en ≥ 4/5 y 0 muertes"
 	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
@@ -273,7 +273,7 @@ bench-detour:
 	python entrenamiento/prueba_rodeo.py --mundo $(WORLD_) --puerto $(strip $(PORT))
 
 bench-gather:
-	IO_SERVIDOR=local python servidor-supervivencia/probar_conseguir.py $(if $(strip $(ONLY)),--solo $(strip $(ONLY))) $(if $(strip $(N)),--n $(strip $(N)))
+	IO_SERVIDOR=local python servidor-supervivencia/probar_conseguir.py $(if $(strip $(ONLY)),--solo $(strip $(ONLY))) $(if $(strip $(N)),--n $(strip $(N))) $(if $(strip $(SEGUIR)),--seguir $(strip $(SEGUIR)))
 
 bench-assistant:
 	python entrenamiento/banco_asistente.py --fase $(strip $(PHASE)) --mundo $(if $(filter usuario,$(WORLD_)),usuario,local)
