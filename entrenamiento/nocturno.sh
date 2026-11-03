@@ -18,9 +18,9 @@ libre() { awk '/^MemAvailable:/ {print int($2/1024)}' /proc/meminfo; }
         make --no-print-directory user-server-start proxy-start assistant
         make --no-print-directory smoke-26-3; r=$?
         make --no-print-directory bots-stop WORLD=usuario proxy-stop user-server-stop ;;
-      bench-k|bench-smoke)
+      bench-k|bench-smoke|bench-gather)
         make --no-print-directory "$b"; r=$? ;;
-      *) echo "== $b: desconocido (smoke-26-3, bench-k, bench-smoke)"; continue ;;
+      *) echo "== $b: desconocido (smoke-26-3, bench-k, bench-smoke, bench-gather)"; continue ;;
     esac
     [ "$r" = 0 ] && echo "== $b: bien" || echo "== $b: fallo (código $r)"
   done
