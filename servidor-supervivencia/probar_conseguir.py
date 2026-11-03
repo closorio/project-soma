@@ -16,7 +16,7 @@ from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
 sys.path.insert(0, str(AQUI))
-from probar_explorar import r, orden, localizar, poner_en, MUNDO_SV  # noqa: E402
+from probar_explorar import r as r_una, orden, localizar, poner_en, MUNDO_SV  # noqa: E402
 
 # material → (lo que se pide, kit, objetos que cuentan)
 CASOS = {
@@ -31,6 +31,17 @@ KITS = {"piedra": ["stone_pickaxe", "torch 8", "bread 8", "cobblestone 32"],
         "hierro": ["iron_pickaxe", "torch 8", "bread 8", "cobblestone 32"], "nada": []}
 PASO = 48
 SEG = 1900  # conseguir corta a los 30 min
+
+
+def r(cmd):
+    # 2026-11-03: el server cerró una conexión RCON y eso tumbó el banco con 5 intentos por hacer; una orden suelta se repite
+    for vez in range(3):
+        try:
+            return r_una(cmd)
+        except ConnectionError:
+            if vez == 2:
+                raise
+            time.sleep(2)
 
 
 def contar(nombre, items):

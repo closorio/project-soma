@@ -87,6 +87,7 @@ const agenda = require('./agenda') // 2026-11-01: cola de órdenes, bucles, rein
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
+const respirar = require('./respirar')
 const { conLimite, esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
@@ -154,7 +155,7 @@ const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 's
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
-const AIRE_MIN = 10, RESPIRAR_MS = 15000 // 2026-11-03: aire de 0 a 20 (15 s bajo el agua); con la mitad, a respirar
+const AIRE_MIN = 10, RESPIRAR_MS = 30000 // 2026-11-03: aire de 0 a 20 (15 s bajo el agua); con la mitad, a respirar
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
 // IO_DUENOS=seppuq[,otro] (2026-11-01): solo esos jugadores mandan por el chat (sin la variable, todos). El puerto local manda siempre.
@@ -263,11 +264,7 @@ class Personaje {
     informe.vigilar(bot) // F7.1: hambre, golpe, noche, día, refugiado, reaparecido (solo fuera del mundo del usuario)
     sv.vigilarGolpes(bot, (g) => { this.diablo(g); setImmediate(() => this.alGolpear(g)) }, esDueno) // F7.2: los golpes de monstruos, para el reflejo de defensa
     // 2026-11-03, banco: se ahogó dos veces cavando hacia una mena (el agua entra en el túnel; los reflejos solo se miran entre
-    // habilidades). La última casilla seca, y sin aire con la cabeza en el agua: cortar lo que haga y salir a respirar
-    bot.on('move', () => {
-      const p = bot.entity && bot.entity.position
-      if (p && bot.entity.onGround && !bot.entity.isInWater && !this.cabezaEnAgua()) this.seco = p.floored()
-    })
+    // habilidades). Sin aire con la cabeza en el agua: cortar lo que haga y salir a respirar
     // 2026-11-03, banco: murió «suffocated in a wall» bajando una escalera entre grava. Si pierde vida con arena o grava en la
     // cabeza, la pica (a mano también se rompe en ≈ 1 s), como mucho 8 veces seguidas
     bot.on('health', () => { if (bot.health > 0 && this.cabezaEnArena() && !this.desenterrando) this.desenterrar().catch(e => this.ev('[desenterrar] error: ' + e.message)) })
@@ -596,10 +593,7 @@ class Personaje {
     })().catch(e => this.ev('[defensa] error: ' + e.message)).finally(() => { this.defendiendo = null; if (this.tareaReflejo && !this.tareaReflejo.cancelada) this.tareaReflejo = null })
   }
 
-  cabezaEnAgua() {
-    const ojo = this.bot.entity && this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))
-    return !!ojo && ojo.name === 'water'
-  }
+  cabezaEnAgua() { return respirar.cabezaEnAgua(this.bot) }
 
   cabezaEnArena() {
     const ojo = this.bot.entity && this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))
@@ -619,34 +613,27 @@ class Personaje {
     } finally { this.desenterrando = false }
   }
 
-  // Sin aire: como un golpe (alGolpear), corta la tarea (un «consigue» sigue luego, reanudar) y sale a respirar: hacia la última
-  // casilla seca nadando hacia arriba, hasta sacar la cabeza (como mucho RESPIRAR_MS)
+  // Sin aire: como un golpe (alGolpear), corta la tarea (un «consigue» sigue luego, reanudar) y sale a respirar (respirar.js)
   alAhogarse() {
     const bot = this.bot
     if (!bot || !bot.entity || this.defendiendo || !(bot.health > 0)) return
+    this.respirando = true
     this.defendiendo = (async () => {
       if (this.enConseguir && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
       if (this.tareaReflejo) this.tareaReflejo.cancelada = true
       try { bot.pathfinder.setGoal(null); bot.stopDigging() } catch (_) {}
-      const t0 = Date.now(), seco = this.seco
-      try {
-        if (seco && bot.entity.position.distanceTo(seco) < 24) bot.pathfinder.setGoal(new goals.GoalNear(seco.x, seco.y, seco.z, 1))
-        bot.setControlState('jump', true)
-        while (Date.now() - t0 < RESPIRAR_MS && bot.health > 0 && this.cabezaEnAgua()) await esperar(200)
-      } finally {
-        bot.setControlState('jump', false)
-        try { bot.pathfinder.setGoal(null) } catch (_) {}
-      }
-      this.ev(`[respirar] sin aire (${bot.oxygenLevel}) → ${this.cabezaEnAgua() ? 'sigo en el agua' : 'fuera'} (${Date.now() - t0} ms)`)
-    })().catch(e => this.ev('[respirar] error: ' + e.message)).finally(() => { this.defendiendo = null })
+      await Promise.race([this.ocupado, esperar(800)]).catch(() => {}) // que lo cortado suelte el navegador
+      const r = await respirar.respirar(bot, RESPIRAR_MS)
+      this.ev(`[respirar] sin aire → ${r.fuera ? 'fuera' : 'sigo en el agua'} (aire ${bot.oxygenLevel}, ${r.picados} picados, ${r.ms} ms)`)
+    })().catch(e => this.ev('[respirar] error: ' + e.message)).finally(() => { this.defendiendo = null; this.respirando = false })
   }
 
   // En reposo (ninguna habilidad, orden ni reflejo en marcha; en modo libre, entre dos decisiones: el bucle espera a que acabe):
   // cada REPOSO_MS y en cuanto le golpea un monstruo.
   reposo() {
     const bot = this.bot
-    if (this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity) return
+    if (this.respirando || this.enHabilidad || this.reflejando || this.enCurso || this.enIr || !bot || !bot.entity) return
     if (sv.debeComerPorSalud(bot)) { // 2026-11-01: con poca vida, comer (si lleva), con o sin reflejos
       const tarea = this.tareaReflejo = { cancelada: false }
       this.ev(`[curarse] salud ${Math.round(bot.health)}, hambre ${bot.food}: como`)

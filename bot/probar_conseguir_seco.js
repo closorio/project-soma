@@ -196,6 +196,32 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
     paso: async (h) => { t5.cancelada = true; t5.motivo = 'usuario'; return [{ exito: false, causa: 'cancelado' }, { habilidad: h, exito: false, causa: 'cancelado' }] } })
   ok(!r5.exito && r5.causa === 'cancelado', `«para» sí lo corta: ${r5.causa}`)
 
+  // respirar: sube en línea recta (nunca con el navegador); si hay techo, lo pica sin saltar
+  const { respirar } = require('./respirar')
+  const agua = (roca) => {
+    const hielo = new Set(roca), metas = []
+    const b = mundoFalso({ pos: [0.5, 60, 0.5] })
+    let salto = false
+    b.pathfinder = { setGoal: (g) => metas.push(g) }
+    b.setControlState = (c, v) => { if (c === 'jump') salto = v }
+    b.dig = async (k) => { ok(!salto, 'pica sin saltar'); hielo.delete(k.position.y) }
+    b.equip = async () => {}
+    b.stopDigging = () => {}
+    b.blockAt = (v) => {
+      const y = Math.floor(v.y), bloque = (name, caja) => ({ name, boundingBox: caja, position: v.floored(), digTime: () => 500 })
+      return hielo.has(y) ? bloque('stone', 'block') : y < 66 ? bloque('water', 'empty') : bloque('air', 'empty')
+    }
+    const t = setInterval(() => { if (salto && !hielo.has(Math.floor(b.entity.position.y + 2.62))) b.entity.position.y += 1 }, 20)
+    return { b, metas, parar: () => clearInterval(t) }
+  }
+  const a1 = agua([])
+  const ra = await respirar(a1.b, 3000); a1.parar()
+  ok(ra.fuera && ra.picados === 0, `agua abierta: sube y sale ${JSON.stringify(ra)}`)
+  ok(a1.metas.every(g => g === null), 'sin objetivo en el navegador')
+  const a2 = agua([63])
+  const rb = await respirar(a2.b, 3000); a2.parar()
+  ok(rb.fuera && rb.picados === 1, `con techo: lo pica y sale ${JSON.stringify(rb)}`)
+
   // túnel: la lava junto a la casilla que va a abrir se tapa con piedra; sin relleno, para
   const { tapar } = require('./habilidades/tunel')
   const { Vec3 } = require('vec3')
