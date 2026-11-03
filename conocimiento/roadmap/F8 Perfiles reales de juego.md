@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F8
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-11-02
-siguiente: "F8.1 Casual, ronda corta: cazar sube a la superficie, árbol alcanzable, reflejo de ahogamiento y tejado de la cabaña; luego otra medida del banco K (medida 9: 3/8, criterio ≥ 6/8)"
+actualizado: 2026-11-03
+siguiente: "Recolector avanzado: repetir make bench-gather ONLY=diamante,cero con 6079626 (2.ª ronda 1/5 y 1/5, 2 ahogados); luego banco M del Minero y F8.1 Casual"
 ---
 # F8 Perfiles reales de juego
 
