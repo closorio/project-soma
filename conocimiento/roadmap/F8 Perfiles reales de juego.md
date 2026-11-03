@@ -18,7 +18,7 @@ Puerta G0, parte 1: `probar_supervivencia.py` en 26.1.2 pasa **todas** las secci
 
 **F8.1 parada sin pasar el banco K (2026-10-25).** El capataz del Casual recorre todas sus etapas, y el banco K elige puntos con ovejas y árboles, corta si caen los bots y da las causas de muerte. Medida 9: pico de hierro 7/8 (mediana del día 0,37), cama 3/8 (mediana 1,34) y 3/8 en el criterio, que pide ≥ 6/8. Lo que falta, según los registros, son cuatro habilidades concretas, no el diseño: cazar desde bajo tierra, árboles inalcanzables, ahogamiento y el tejado de `construir`. Ver [[2026-10-25-1401-banco-k-casual-medida-9]], [[Una presa que desaparece no está muerta]], [[Pedir ovejas elige llanos pelados]], [[El navegador pasa bloques sin posición a las exclusiones]] y [[El tejado de la cabaña no se alcanza desde fuera]].
 
-**F8.2 Minero, primer trozo (2026-11-02).** La orden «consigue N X» (`bot/conseguir.js`, `cavar_tunel`) resuelve pico, antorchas, bajada, túnel con la lava tapada y entrega; prueba en seco 42/42; banco `make bench-gather` sin medir. Ver [[2026-11-02-recolector-conseguir]].
+**F8.2 Minero, primer trozo (2026-11-02).** La orden «consigue N X» (`bot/conseguir.js`, `cavar_tunel`) resuelve pico, antorchas, bajada, túnel con la lava tapada y entrega; seco 44/44. Rol `minero` (M1-M6 sobre `conseguir`, 15 etapas, valida). Humo del banco: hierro 6/6 en 224 s, 0 muertes (el primero se ahogó en un lago: ahora sale del agua). Banco completo lanzado con `make nightly BENCHES=bench-gather`. Ver [[2026-11-02-recolector-conseguir]].
 
 ## Siguiente paso
 Ver campo «siguiente». Casual es el primer rol completo (F8.1) y su red llega en F8.G; Speedrunner va al final (F8.7-F8.8).
