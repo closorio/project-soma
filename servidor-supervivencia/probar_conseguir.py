@@ -93,7 +93,12 @@ def main():
                 for g in KITS[kit]:
                     r(f"give {n} minecraft:{g}")
                 orden(a.puerto, "para")
-                poner_en(n, centro[1] + PASO * (k % 7) - 3 * PASO, centro[2] + PASO * (k // 7))
+                # sin agua a los pies (el primer humo cayó en un lago y se ahogó): el siguiente punto, hasta 6
+                for _ in range(6):
+                    poner_en(n, centro[1] + PASO * (k % 7) - 3 * PASO, centro[2] + PASO * (k // 7))
+                    if "passed" not in r(f"execute at {n} if block ~ ~ ~ minecraft:water"):
+                        break
+                    k += 1
                 orden(a.puerto, "campamento -")
                 antes = muertes(n)
                 t0 = time.time()

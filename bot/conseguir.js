@@ -43,7 +43,8 @@ function estado(bot) {
   for (const [k, m] of Object.entries(MATERIALES)) if (m.suelta) tiene[k] = cuenta(m.suelta)
   return { tiene, crudo_hierro: cuenta(['raw_iron']), lingotes_hierro: cuenta(['iron_ingot']), pico: e.inv.pico,
     antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y, vida: bot.health, hambre: bot.food,
-    huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)) }
+    huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
+    enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
 }
 
 // El siguiente paso para tener n de `material`, o { fin, causa }. s: lo que el bucle lleva apuntado
@@ -55,6 +56,8 @@ function siguiente(e, material, n, s) {
   if (m.nether) return { fin: true, exito: false, causa: 'la netherite está en el Nether, y aún no sé ir' }
   if (e.tiene[material] >= n) return { fin: true, exito: true, causa: 'hecho' }
   if (e.vida < VIDA_SUBIR) return { fin: true, exito: false, causa: 'poca vida' }
+  // 2026-11-02, banco: empezó en agua honda y ir_a_mena se puso a cavar bajo el agua hasta ahogarse: primero, a tierra
+  if (e.enAgua && (s.salirAgua || 0) < 2) return { habilidad: 'explorar', args: ['-', '24', '40'], motivo: 'salir del agua', marca: 'salirAgua' }
   if (e.hambre < HAMBRE && e.comida > 0) return { habilidad: 'comer', args: [], motivo: 'hambre' }
   if (e.hambre < HAMBRE && !s.comidaBuscada) return { habilidad: 'recoger_comida', args: [], motivo: 'hambre sin comida', marca: 'comidaBuscada' }
   if (e.huecos < HUECOS && e.basura && !s.noTirar) return { tirar: true, motivo: 'inventario lleno' }
@@ -83,6 +86,7 @@ function siguiente(e, material, n, s) {
 // Apunta en s lo que ha pasado con el paso p (resultado r), para que siguiente() elija otro camino.
 function apuntar(s, p, r) {
   if (p.marca === 'comidaBuscada') s.comidaBuscada = true
+  if (p.marca === 'salirAgua') s.salirAgua = (s.salirAgua || 0) + 1
   if (p.habilidad === 'ir_a_mena') s.noVeo = !r.exito || !(r.picadas > 0)
   if (p.habilidad === 'cavar_escalera') {
     s.bajadas = (s.bajadas || 0) + 1; s.noVeo = false // abajo hay otras menas a la vista

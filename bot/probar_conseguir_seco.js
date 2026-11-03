@@ -42,6 +42,8 @@ const casos = [
   ['esmeralda sin verla', E(), 'esmeralda', { noVeo: true }, /^fin:false:.*montañas/],
   ['hecho', E({ tiene: { diamante: 3 } }), 'diamante', {}, /^fin:true:hecho$/],
   ['poca vida', E({ vida: 4 }), 'diamante', {}, /^fin:false:poca vida$/],
+  ['en agua honda', E({ enAgua: true }), 'diamante', {}, /^explorar - 24 40$/],
+  ['en agua, ya probó a salir dos veces', E({ enAgua: true }), 'diamante', { salirAgua: 2 }, /^ir_a_mena/],
   ['hambre con comida', E({ hambre: 8 }), 'diamante', {}, /^comer $/],
   ['hambre sin comida', E({ hambre: 8, comida: 0 }), 'diamante', {}, /^recoger_comida $/],
   ['hambre sin comida, ya buscada', E({ hambre: 8, comida: 0 }), 'diamante', { comidaBuscada: true }, /^ir_a_mena/],
