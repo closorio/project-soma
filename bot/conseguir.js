@@ -36,13 +36,14 @@ const RUMBOS = ['norte', 'este', 'sur', 'oeste']
 const MAX_BAJADAS = 4, MAX_TUNELES = 6, LARGO_TUNEL = 32, MAX_MS = 30 * 60 * 1000, MAX_PASOS = 120
 
 // Lo que mira siguiente(): un objeto plano, para que la prueba en seco no necesite un bot.
-function estado(bot) {
+function estado(bot, yInicio) {
   const items = bot.inventory.items(), e = progresion.estado(bot)
   const cuenta = (nombres) => items.filter(i => nombres.includes(i.name)).reduce((a, i) => a + i.count, 0)
   const tiene = {}
   for (const [k, m] of Object.entries(MATERIALES)) if (m.suelta) tiene[k] = cuenta(m.suelta)
   return { tiene, crudo_hierro: cuenta(['raw_iron']), lingotes_hierro: cuenta(['iron_ingot']), pico: e.inv.pico,
-    antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y, vida: bot.health, hambre: bot.food,
+    antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y,
+    bajo: yInicio != null && nodo(bot).y < yInicio - 4, vida: bot.health, hambre: bot.food,
     huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
     enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
 }
@@ -64,6 +65,8 @@ function siguiente(e, material, n, s) {
   // el pico
   if (e.pico < m.pico) {
     if (s.picoNo) return { fin: true, exito: false, causa: `no tengo el pico que hace falta (${s.picoNo})` }
+    // 2026-11-03, banco: el pico de piedra se gastó a y≈0 y ármate, que empieza talando, no encontró árboles: arriba, primero
+    if (e.pico < 0.66 && e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'reponer el pico', marca: 'subidoPico' }
     if (e.pico < 0.66) return { orden: 'armate', motivo: 'pico de piedra' }
     if (e.lingotes_hierro >= 3) return { habilidad: 'fabricar', args: ['pico_hierro'], motivo: 'pico de hierro' }
     if (e.crudo_hierro + e.lingotes_hierro >= 3) return { habilidad: 'fundir', args: ['hierro', String(3 - e.lingotes_hierro)], motivo: 'hierro para el pico' }
@@ -86,6 +89,7 @@ function siguiente(e, material, n, s) {
 // Apunta en s lo que ha pasado con el paso p (resultado r), para que siguiente() elija otro camino.
 function apuntar(s, p, r) {
   if (p.marca === 'comidaBuscada') s.comidaBuscada = true
+  if (p.marca === 'subidoPico') s.subidoPico = true
   if (p.marca === 'salirAgua') s.salirAgua = (s.salirAgua || 0) + 1
   if (p.habilidad === 'ir_a_mena') s.noVeo = !r.exito || !(r.picadas > 0)
   if (p.habilidad === 'cavar_escalera') {
@@ -121,7 +125,7 @@ async function ejecutar(bot, material, n0, ctx) {
     if (ctx.tarea.cancelada) { fin = { exito: false, causa: 'cancelado' }; break }
     if (Date.now() - t0 > MAX_MS) { fin = { exito: false, causa: 'se acabó el tiempo' }; break }
     if (pasos.length >= MAX_PASOS) { fin = { exito: false, causa: 'demasiados pasos' }; break }
-    const cima = pila[pila.length - 1], e = estado(bot)
+    const cima = pila[pila.length - 1], e = estado(bot, y0)
     const p = siguiente(e, cima.material, cima.n, cima.s)
     if (p.fin) {
       if (!p.exito && pila.length > 1) { fin = { ...p, causa: `antes necesitaba ${cima.material}: ${p.causa}` }; break }

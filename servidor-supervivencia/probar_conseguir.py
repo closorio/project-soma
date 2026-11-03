@@ -63,7 +63,10 @@ def main():
     if not a.monstruos:
         r("gamerule spawn_monsters false")
     r("scoreboard objectives add banco_muertes deathCount")
-    log = open(AQUI / "logs" / f"bot-{a.nombre}-conseguir.log", "w")
+    # "a": al reanudar con --seguir se conserva el registro de los intentos anteriores (2026-11-03 se perdió el del fallo de lapis)
+    log = open(AQUI / "logs" / f"bot-{a.nombre}-conseguir.log", "a")
+    log.write(f"\n===== {time.strftime('%Y-%m-%d %H:%M')} {'--seguir ' + a.seguir if a.seguir else 'banco nuevo'} =====\n")
+    log.flush()
     bot = subprocess.Popen(["node", "io.js", f"{a.nombre}:{a.puerto}"], cwd=AQUI.parent / "bot", stdout=log, stderr=subprocess.STDOUT,
                            env={**os.environ, "IO_SERVIDOR": MUNDO_SV}, start_new_session=True)
     res, n = {}, a.nombre

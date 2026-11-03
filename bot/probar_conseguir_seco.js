@@ -27,6 +27,9 @@ const casos = [
   ['netherite', E(), 'netherite', {}, /^fin:false:.*Nether/],
   ['sin pico', E({ pico: 0 }), 'diamante', {}, /^orden:armate$/],
   ['pico de madera', E({ pico: 0.33 }), 'hierro', {}, /^orden:armate$/],
+  ['sin pico bajo tierra: arriba primero', E({ pico: 0, bajo: true, y: 0 }), 'lapis', {}, /^subir_a_superficie $/],
+  ['sin pico bajo tierra, ya subió', E({ pico: 0, bajo: true, y: 0 }), 'lapis', { subidoPico: true }, /^orden:armate$/],
+  ['pico de piedra gastado a por diamante: arriba', E({ pico: 0, bajo: true, y: -57 }), 'diamante', {}, /^subir_a_superficie $/],
   ['pico de piedra, sin hierro', E({ pico: 0.66 }), 'diamante', {}, /^sub:hierro:3$/],
   ['con 3 de hierro crudo', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', {}, /^fundir hierro 3$/],
   ['con 1 lingote y 2 crudos', E({ pico: 0.66, crudo_hierro: 2, lingotes_hierro: 1 }), 'diamante', {}, /^fundir hierro 2$/],
@@ -115,6 +118,24 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
   const b2 = mundoFalso(); b2.inventory.emptySlotCount = () => 36
   const r2 = await ejecutar(b2, 'netherite', 1, { ...ctx, paso: async (h) => { throw new Error('no debía dar pasos: ' + h) } })
   ok(!r2.exito && /Nether/.test(r2.causa), `netherite: ${r2.causa}`)
+
+  // 2026-11-03, banco: el pico se gasta abajo → sube, se arma y vuelve a bajar
+  for (const x of slots) if (x) slots[x.slot] = null
+  bot.entity.position.y = 64; poner('stone_pickaxe', 1); poner('torch', 8); poner('bread', 4)
+  const v3 = []
+  let gastado = false
+  const r3 = await ejecutar(bot, 'lapis', 6, { ...ctx, entregar: false,
+    paso: async (h, a) => {
+      v3.push(h)
+      let r = { exito: false, causa: 'sin imitar' }
+      if (h === 'ir_a_mena') r = bot.entity.position.y <= 0 && gastado ? (poner('lapis_lazuli', 6), { exito: true, picadas: 2 }) : { exito: false, causa: 'no veo' }
+      if (h === 'cavar_escalera') { bot.entity.position.y = +a[0]; if (!gastado) { gastado = true; quitar('stone_pickaxe', 1) } r = { exito: true, causa: 'llegué' } }
+      if (h === 'subir_a_superficie') { bot.entity.position.y = 64; r = { exito: true } }
+      return [r, { habilidad: h, exito: !!r.exito, causa: r.causa || '' }]
+    },
+    orden: async (tipo) => { v3.push('orden:' + tipo); if (bot.entity.position.y < 60) return { exito: false, pasos: [] }; poner('stone_pickaxe', 1); return { exito: true, pasos: [] } } })
+  ok(r3.exito && r3.conseguidos >= 6, `pico gastado abajo: ${r3.causa} (${v3.join(' ')})`)
+  ok(v3.indexOf('subir_a_superficie') >= 0 && v3.indexOf('subir_a_superficie') < v3.indexOf('orden:armate'), `sube antes de armarse: ${v3.join(' ')}`)
 
   // túnel: la lava junto a la casilla que va a abrir se tapa con piedra; sin relleno, para
   const { tapar } = require('./habilidades/tunel')
