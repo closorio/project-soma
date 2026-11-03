@@ -1,5 +1,5 @@
 // Importa un .litematic (Litematica), un .nbt (bloque de estructura del juego) o un .schem (WorldEdit/Sponge v2-v3), NBT con gzip, al catálogo: bot/estructuras/<id>.json y bot/materiales/<id>.json.
-// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic|.nbt|.schem ID [ALIAS[,ALIAS…]] [--front=este]   (o make import-structure)
+// Sin juego ni red. Uso: node herramientas/importar_estructura.js ARCHIVO.litematic|.nbt|.schem ID [ALIAS[,ALIAS…]] [--front=este] [--crop=x0,y0,z0,x1,y1,z1]   (o make import-structure)
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
@@ -120,7 +120,7 @@ function deSchem(raiz) {
   return { dim: [W, H, L], paleta, puestos, nombres }
 }
 
-// buf: el archivo entero (.litematic, .nbt o .schem, con gzip). opts: { id, alias, fuente, frente, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
+// buf: el archivo entero (.litematic, .nbt o .schem, con gzip). opts: { id, alias, fuente, frente, recorte, registry } → { estructura, materiales }; error con la lista si hay bloques que no existen
 function importar(buf, opts) {
   const registry = opts.registry || require(path.join(BOT, 'node_modules', 'minecraft-data'))(VERSION)
   const raiz = nbt.simplify(nbt.parseUncompressed(zlib.gunzipSync(buf)))
@@ -128,7 +128,18 @@ function importar(buf, opts) {
   const esSchem = (raiz.Schematic && raiz.Schematic.Blocks) || (raiz.Palette && raiz.BlockData)
   const leido = raiz.Regions ? deLitematic(raiz) : (raiz.blocks && (raiz.palette || raiz.palettes)) ? deNbt(raiz) : esSchem ? deSchem(raiz) : null
   if (!leido) throw new Error('el archivo no es un .litematic (Regions), un .nbt de estructura (size, palette, blocks) ni un .schem (Palette, BlockData)')
-  const { dim, paleta, puestos, nombres } = leido
+  let { dim, paleta, puestos, nombres } = leido
+  // 2026-11-02: --crop=x0,y0,z0,x1,y1,z1 (CROP= en make): solo esa caja (en coordenadas de la plantilla, ambos extremos dentro),
+  // ajustada a lo que tiene bloques: un trozo de una obra enorme (una torre del castillo) para probarla antes que entera
+  if (opts.recorte) {
+    const [a, b] = [opts.recorte.slice(0, 3), opts.recorte.slice(3)]
+    const lo = a.map((v, k) => Math.min(v, b[k])), hi = a.map((v, k) => Math.max(v, b[k]))
+    const dentro = [...puestos].map(([k, i]) => [k.split(',').map(Number), i]).filter(([c]) => c.every((v, k) => v >= lo[k] && v <= hi[k]))
+    if (!dentro.length) throw new Error(`el recorte ${opts.recorte.join(',')} no tiene bloques (la plantilla es ${dim.join('×')})`)
+    const min = [0, 1, 2].map(k => Math.min(...dentro.map(([c]) => c[k]))), max = [0, 1, 2].map(k => Math.max(...dentro.map(([c]) => c[k])))
+    puestos = new Map(dentro.map(([c, i]) => [c.map((v, k) => v - min[k]).join(','), i]))
+    dim = max.map((v, k) => v - min[k] + 1)
+  }
   const desconocidos = new Set(), renombrados = new Set()
   for (const [viejo, nombre] of nombres) {
     if (!registry.blocksByName[nombre]) desconocidos.add(nombre)
@@ -193,14 +204,17 @@ if (require.main === module) {
   const DIR = { norte: 'north', sur: 'south', este: 'east', oeste: 'west', north: 'north', south: 'south', east: 'east', west: 'west' }
   const front = (args.find(a => a.startsWith('--front=')) || '').slice(8).toLowerCase()
   if (front && !DIR[front]) { console.error('FRONT: norte, sur, este u oeste'); process.exit(1) }
-  const [archivo, id, alias] = args.filter(a => a !== '--force' && !a.startsWith('--front='))
+  const crop = (args.find(a => a.startsWith('--crop=')) || '').slice(7)
+  const recorte = crop ? crop.split(/[\s,]+/).filter(Boolean).map(Number) : null
+  if (recorte && (recorte.length !== 6 || recorte.some(v => !Number.isInteger(v)))) { console.error('CROP: seis enteros, "x0 y0 z0 x1 y1 z1"'); process.exit(1) }
+  const [archivo, id, alias] = args.filter(a => a !== '--force' && !a.startsWith('--front=') && !a.startsWith('--crop='))
   if (!archivo || !id || !/^[a-z0-9_]+$/.test(id)) {
     console.error('uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FORCE=1]   (NAME: minúsculas, números y _)')
     process.exit(1)
   }
   try {
     const r = importar(fs.readFileSync(archivo), {
-      id, fuente: path.basename(archivo), alias: (alias || '').split(',').map(s => s.trim()).filter(Boolean), frente: DIR[front],
+      id, fuente: path.basename(archivo), alias: (alias || '').split(',').map(s => s.trim()).filter(Boolean), frente: DIR[front], recorte,
     })
     escribir(r, estructuras.DIR, path.join(BOT, 'materiales'), forzar)
     const e = r.estructura

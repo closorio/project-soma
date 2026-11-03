@@ -1,0 +1,12 @@
+{
+ "servidor": {
+  "host": "localhost",
+  "puerto": 25573,
+  "version": "26.1",
+  "nota": "Mundo creativo (servidor-creativo/, Minecraft 26.1.2, plano y pacífico) para probar en el juego las obras del catálogo."
+ },
+ "rcon": {
+  "puerto": 25583,
+  "nota": "La clave está en servidor-creativo/server.properties (permisos 600, fuera de git)."
+ }
+}

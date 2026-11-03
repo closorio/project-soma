@@ -43,6 +43,9 @@ make structures                       # la lista: id, tamaño, bloques, material
 - `FRONT` (opcional): hacia dónde da la **entrada** de la plantilla tal como está guardada (`norte`, `sur`, `este`, `oeste`). Si no
   lo pones, se deduce de la primera puerta; sin puerta, `sur`. El importador lo dice al terminar («entrada al oeste»): si no es
   así, repite con `FRONT=…`.
+- `CROP` (opcional): solo un trozo, `CROP="x0 y0 z0 x1 y1 z1"` en coordenadas de la plantilla (de 0 a su tamaño − 1); se ajusta a
+  lo que tenga bloques. Sirve para probar una parte de una obra enorme (`castillo_musgo_torre` es `CROP="21 11 25 35 83 39"`).
+  Para probarla en el juego sin conseguir materiales, el server creativo: `make creative-server-start` y `make bots WORLD=creativo`.
 - Si sale «bloques que no existen en 1.21.11: …», la plantilla es de otra versión con bloques que ya no están: cámbialos en el juego
   y vuelve a guardarla.
 

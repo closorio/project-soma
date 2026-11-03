@@ -45,6 +45,7 @@ PID := $(LOGS)/bots-$(WORLD_).pid
 LOG := $(LOGS)/bots-$(WORLD_).log
 RCON := python $(RAIZ)/servidor/rcon.py --servidor local
 RCON_USER := python $(RAIZ)/servidor/rcon.py --servidor usuario
+RCON_CREATIVE := python $(RAIZ)/servidor/rcon.py --servidor creativo
 # quién decide en libre al arrancar los bots (el asistente usa guion)
 BOT_DECIDER ?= capataz@$(ROLE_)
 # la orden al puerto de un bot, con el texto en la URL bien codificado
@@ -59,6 +60,7 @@ publicar:
 
 .PHONY: version publicar help install install-bot install-python server-download server-start server-stop server-save server-status \
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
+        creative-server-download creative-server-start creative-server-stop creative-server-save creative-rcon \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
         order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare
 
@@ -72,6 +74,9 @@ help:
 	@echo "  server-start        en segundo plano; se niega con menos de 3 GB libres"
 	@echo "  server-stop         guarda y cierra · server-save · server-status (jugadores y hora)"
 	@echo "  rcon CMD=\"time set day\"   cualquier orden de consola"
+	@echo "Server creativo (servidor-creativo/, 26.1.2, plano y pacífico, 127.0.0.1:25573, RCON 25583; bots con WORLD=creativo):"
+	@echo "  creative-server-download · creative-server-start · creative-server-stop · creative-server-save"
+	@echo "  creative-rcon CMD=\"gamemode creative Oqva\"   orden de consola en el server creativo"
 	@echo "Server del compañero (online-mode=false; su IP en mundos/companero/mundo.json: «destino» si es 26.3, «host» si es 26.1):"
 	@echo "  partner-ping        ¿responde? ¿qué versión? (26.3 = por el proxy · 26.1 = directo)"
 	@echo "  partner [BOTS=…]    en un paso: el proxy hacia el server 26.3 y los bots (Oqva) quietos en modo órdenes"
@@ -150,6 +155,22 @@ server-status:
 
 rcon:
 	@$(RCON) "$(strip $(CMD))"
+
+# --- server creativo propio (2026-11-02): obras del catálogo en el juego, con bloques del inventario creativo ---------------------
+creative-server-download:
+	servidor-creativo/descargar.sh
+
+creative-server-start:
+	servidor-creativo/arrancar.sh
+
+creative-server-stop:
+	servidor-creativo/parar.sh
+
+creative-server-save:
+	servidor-creativo/guardar.sh
+
+creative-rcon:
+	@$(RCON_CREATIVE) "$(strip $(CMD))"
 
 # --- server del compañero -------------------------------------------------------------------------------------------------------
 # el JS va en una variable de entorno: con «\» de make dentro de las comillas, node recibía la barra y no arrancaba
@@ -392,8 +413,8 @@ share:
 
 # catálogo de estructuras: .litematic → bot/estructuras/<id>.json y bot/materiales/<id>.json (offline, sin juego)
 import-structure:
-	@test -n "$(strip $(FILE))" -a -n "$(strip $(NAME))" || { echo 'uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FRONT=este] [FORCE=1]   (FILE: .litematic, .nbt o .schem)'; exit 1; }
-	@node herramientas/importar_estructura.js "$(strip $(FILE))" "$(strip $(NAME))" "$(ALIAS)" $(if $(strip $(FORCE)),--force) $(if $(strip $(FRONT)),--front=$(strip $(FRONT)))
+	@test -n "$(strip $(FILE))" -a -n "$(strip $(NAME))" || { echo 'uso: make import-structure FILE=catalogo/x.litematic NAME=casa_roble [ALIAS="casa de roble"] [FRONT=este] [CROP="x0 y0 z0 x1 y1 z1"] [FORCE=1]   (FILE: .litematic, .nbt o .schem)'; exit 1; }
+	@node herramientas/importar_estructura.js "$(strip $(FILE))" "$(strip $(NAME))" "$(ALIAS)" $(if $(strip $(FORCE)),--force) $(if $(strip $(FRONT)),--front=$(strip $(FRONT))) $(if $(strip $(CROP)),"--crop=$(strip $(CROP))")
 
 structures:
 	@node bot/estructuras.js

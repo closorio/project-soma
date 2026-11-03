@@ -228,5 +228,15 @@ ok(O.interpretar('solo de los cofres').modo === 'cofres' && O.interpretar('consi
 ok(O.interpretar('qué falta para casita_prueba').tipo === 'materiales' && O.interpretar('tala 5 troncos').tipo === 'tala', '«qué falta» y «tala» siguen igual')
 console.log('  girar: puerta, antorcha, troncos, vallas, carteles y raíles en las 4 direcciones; órdenes con dirección')
 
+// recorte (CROP=): solo la caja, ajustada a sus bloques; en la plantilla x 2..9 (en el mundo 12..19): 3 de ancho de A y los 3 de B
+const rec = imp.importar(litematic([A, B]), { id: 'trozo', registry, recorte: [2, 0, 0, 9, 99, 99] }).estructura
+const enCaja = [...esperado.keys()].filter(k => +k.split(',')[0] >= 12).length
+ok(rec.bloques.length === enCaja && rec.dim[0] === 8 && rec.bloques.every(([dx, dy, dz]) => dx >= 0 && dy >= 0 && dz >= 0 && dx < 8) && Math.min(...rec.bloques.map(b => b[1])) === 0,
+  `recorte: ${rec.bloques.length} bloques (esperados ${enCaja}), dim ${rec.dim}`)
+
+// creativo: la tanda en pilas del tamaño de cada objeto (64 la piedra, 16 los carteles)
+const pl = require('./abastecer').pilas(registry, { stone: 130, oak_sign: 20, azalea_leaves: 3 })
+ok(JSON.stringify(pl) === JSON.stringify([['stone', 64], ['stone', 64], ['stone', 2], ['oak_sign', 16], ['oak_sign', 4], ['azalea_leaves', 3]]), `creativo: pilas ${JSON.stringify(pl)}`)
+
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

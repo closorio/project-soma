@@ -172,6 +172,16 @@ function tanda(registry, plano, colocados, huecos) {
   return { bloques, objetos }
 }
 
+// En creativo (2026-11-02, server creativo): lo que falta de la tanda, en pilas para ponérselas del inventario creativo, [[objeto, n]]
+function pilas(registry, falta) {
+  const r = []
+  for (const [k, n] of Object.entries(falta)) {
+    const pila = (registry.itemsByName[k] || {}).stackSize || 64
+    for (let q = n; q > 0; q -= pila) r.push([k, Math.min(pila, q)])
+  }
+  return r
+}
+
 // Los recursos primarios de una lista de materiales (2026-11-02, «recursos de la 2»): lo que habría que talar, minar o cazar partiendo de
 // cero (troncos de cualquier madera, adoquín, arena, carbón…, con el combustible de lo que se funde) y lo que no se consigue
 function primarios(registry, materiales) {
@@ -185,4 +195,4 @@ function primarios(registry, materiales) {
   return { primarios: p, noSeConsigue: r.pedir }
 }
 
-module.exports = { planAbasto, tanda, hoja, maderaPreferida, primarios }
+module.exports = { planAbasto, tanda, hoja, maderaPreferida, primarios, pilas }

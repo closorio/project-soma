@@ -1928,7 +1928,8 @@ class Personaje {
     const total = estructuras.ordenar(plano).length
     let sinAvance = 0, antes = -1, r = null, mal = 0, pedir = {}, ronda = 0
     const sinHallar = {} // hojas que no encontró cerca: no se vuelven a buscar, se piden
-    while (++ronda <= 40 && !tarea.cancelada) {
+    const rondas = Math.max(40, Math.ceil(total / 300) + 10) // una obra grande (el castillo: 132 mil bloques) pide más de 40 tandas
+    while (++ronda <= rondas && !tarea.cancelada) {
       const hechos = puestosEnMundo()
       sinAvance = hechos.size === antes ? sinAvance + 1 : 0
       antes = hechos.size
@@ -1942,7 +1943,15 @@ class Personaje {
       // el andamio (más de 4 de alto): tierra o adoquín, una columna como mucho de la altura de la obra (Oqva dejó sin tejado la casita)
       const relleno = Object.entries(inv).filter(([k]) => RELLENO_OBRA.test(k)).reduce((a, [, n]) => a + n, 0)
       if (plano.dim[1] > 4 && relleno < plano.dim[1]) falta.dirt = (falta.dirt || 0) + plano.dim[1] - relleno
-      if (Object.keys(falta).length) {
+      if (Object.keys(falta).length && bot.game.gameMode === 'creative') { // server creativo: se los pone del inventario creativo
+        bot.chat(`Tanda ${ronda} de ${plano.nombre} (${t.bloques} bloques): me los pongo (creativo).`)
+        const Item = require('prismarine-item')(bot.registry)
+        for (const [k, n] of abastecer.pilas(bot.registry, falta)) {
+          const ranura = bot.inventory.firstEmptyInventorySlot()
+          if (ranura == null) break
+          await bot.creative.setInventorySlot(ranura, new Item(bot.registry.itemsByName[k].id, n))
+        }
+      } else if (Object.keys(falta).length) {
         const [rc, dc] = await paso('revisar_cofres', [baseZona()]); pasos.push(dc)
         await this.salirDeVedada(tarea)
         const hayHorno = !!bot.findBlock({ matching: b => b.name === 'furnace', maxDistance: 16 })

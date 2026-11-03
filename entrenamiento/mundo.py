@@ -16,6 +16,7 @@ RAIZ = Path(__file__).resolve().parent.parent
 MUNDOS = {"usuario": {"puerto_mc": 25565, "centro": (303, 32)}, "supervivencia": {"puerto_mc": 25566, "centro": None},
           "companero": {"puerto_mc": None, "centro": None},
           "local": {"puerto_mc": None, "centro": None},
+          "creativo": {"puerto_mc": None, "centro": None},
           "paper": {"puerto_mc": None, "centro": None}}  # F8: servidor-local/ (26.1.2)  # puerto_mc None: el de mundo.json: servidor.puerto
 HEREDADOS = {"zonas.json": RAIZ / "zonas.json", "cofres.json": RAIZ / "cofres.json", "obras.json": RAIZ / "obras.json",
              "diario.md": RAIZ / "mente" / "diario.md"}  # solo para el mundo del usuario

@@ -18,6 +18,9 @@ servidor-local/*
 !servidor-local/*.sh
 !servidor-local/*.py
 !servidor-local/eula.txt
+servidor-creativo/*
+!servidor-creativo/*.sh
+!servidor-creativo/*.py
 servidor-supervivencia/libraries/
 servidor-supervivencia/copias/
 servidor-supervivencia/logs/

@@ -200,7 +200,15 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
   // movimientos: prudentes y sin pisar la huella de la obra (no se encierra ni se sube a lo recién puesto)
   const mov = prudentesObra(bot, x0, z0)
   const enHuella = (x, z) => x >= x0 && x < x0 + plano.dim[0] && z >= z0 && z < z0 + plano.dim[2]
-  mov.exclusionAreasStep.push(b => (b && b.position && enHuella(b.position.x, b.position.z) ? 200 : 0))
+  // 2026-11-02 (torre del castillo, 15×15, server creativo): más de 100 es «prohibido» para el navegador, así que ya dentro de la huella
+  // no daba ni un paso (noPath) y se quedaba quieto junto al bloque; dentro, sin coste. Y en una obra más ancha que dos alcances el
+  // centro no se alcanza desde fuera: coste suave, que rodee por fuera pero pueda entrar
+  const grande = Math.min(plano.dim[0], plano.dim[2]) > 2 * ALCANCE - 1
+  mov.exclusionAreasStep.push(b => {
+    if (!b || !b.position || !enHuella(b.position.x, b.position.z)) return 0
+    const p = bot.entity.position
+    return enHuella(Math.floor(p.x), Math.floor(p.z)) ? 0 : grande ? 10 : 200
+  })
   // por capas y, en cada capa, del borde hacia dentro (2026-11-01: el techo empezaba por el centro, sin nada en que apoyarse); las del
   // catálogo con estructuras.ordenar, que además deja los dependientes (antorchas, puertas…) detrás de su soporte
   const orden = plano.viejo
@@ -210,7 +218,7 @@ async function levantar(bot, { id, plano, materia, x0, z0, y, relleno, fabricado
   const lista = [...relleno.map(([x, yy, z]) => ({ dest: new Vec3(x, yy, z), relleno: true })),
     ...orden.map(b => ({ dest: new Vec3(x0 + b[0], y + 1 + b[1], z0 + b[2]), estado: plano.viejo ? null : plano.paleta[b[3]] }))]
   // qué objeto lleva cada bloque y cuándo está bien puesto
-  const cx = { bot, materia, catalogo: !plano.viejo, id, mov, y, enHuella }
+  const cx = { bot, materia, catalogo: !plano.viejo, id, mov, y, enHuella, grande }
   const maxMs = plano.viejo ? MAX_MS : MAX_MS_CATALOGO
   const ms = Math.min(maxMs, (60 + 10 * lista.length) * 1000), t0 = Date.now()
   let puestos = 0, causa = null, ultimo = null, mal = 0
@@ -297,7 +305,8 @@ async function ponerUno(cx, ent, item, tarea) {
   const o = orientar(ent.estado || 'stone', [dest.x, dest.y, dest.z], solido)
   if (!o.apoyos.length) return { error: 'sin apoyo' }
   // muy alto (más de 3 por encima de los pies desde el suelo): andamio, solo en las del catálogo
-  if (cx.catalogo && dest.y > y + 4) return ponerDesdeAndamio(cx, ent, item, o, tarea)
+  // en una obra grande, ya la 4.ª capa (2026-11-02, torre del castillo: con muros de 2-3 de grueso no se alcanza desde el suelo)
+  if (cx.catalogo && dest.y > y + (cx.grande ? 3 : 4)) return ponerDesdeAndamio(cx, ent, item, o, tarea)
   let error = null
   // por encima de los ojos desde el suelo (3.ª capa, techo): saltando primero, sin buscar desde dónde verlo. En el catálogo no: el bot
   // puede estar dentro, sobre el suelo de la plantilla, con el bloque a la altura de los ojos (2026-11-02, casita_prueba); el salto, al final
@@ -437,9 +446,15 @@ function sitioColumna(cx, dest) {
   const cands = []
   for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
     const x = dest.x + dx, z = dest.z + dz
-    if (enHuella(x, z) || (zonas.pasoVedado(x, y + 1, z) && !obras.enTemporal(x, z)) || cofres.esCofre(x, y + 1, z)) continue
-    if (!parcela.solido(bot.blockAt(new Vec3(x, y, z))) || !parcela.libre(bot.blockAt(new Vec3(x, y + 1, z))) || !parcela.libre(bot.blockAt(new Vec3(x, y + 2, z)))) continue
-    cands.push([x, z, Math.hypot(dx, dz)])
+    // en una obra grande también dentro, en el suelo libre (la cara de dentro del muro de la torre queda a más de 3 de fuera); fuera, antes
+    const dentro = enHuella(x, z)
+    if ((dentro && !cx.grande) || (zonas.pasoVedado(x, y + 1, z) && !obras.enTemporal(x, z)) || cofres.esCofre(x, y + 1, z)) continue
+    if (!parcela.solido(bot.blockAt(new Vec3(x, y, z)))) continue
+    // libre toda la columna hasta la cabeza de arriba (dest.y - 1): dentro de la torre, un saliente de una capa ya puesta la cortaba
+    let libre = true
+    for (let yy = y + 1; yy <= Math.max(y + 2, dest.y - 1) && libre; yy++) libre = parcela.libre(bot.blockAt(new Vec3(x, yy, z)))
+    if (!libre) continue
+    cands.push([x, z, Math.hypot(dx, dz) + (dentro ? 3 : 0)])
   }
   cands.sort((p, q) => p[2] - q[2])
   return cands[0] || null
