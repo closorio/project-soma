@@ -117,6 +117,8 @@ def main():
                 antes = muertes(n)
                 t0 = time.time()
                 txt = orden(a.puerto, f"conseguir {material} {pide}", SEG + 60)  # por el puerto se lo queda (la orden de chat lo entregaría)
+                if '"cancelado"' in txt:  # lo cortó una pausa (Ctrl-C): no es un intento, --seguir lo repite
+                    raise SystemExit("intento cancelado: reanuda con --seguir")
                 tengo = contar(n, items)
                 murio = muertes(n) - antes
                 ok = tengo >= pide and not murio
