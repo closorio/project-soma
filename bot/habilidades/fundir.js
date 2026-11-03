@@ -47,9 +47,9 @@ function combustible(bot, n, pedido, entrada) {
   return null
 }
 
-async function hornoA(bot, tarea) {
+async function hornoA(bot, tarea, nuevo = false) {
   const id = bot.registry.blocksByName.furnace.id, lit = (bot.registry.blocksByName.lit_furnace || {}).id
-  let b = bot.findBlock({ matching: [id, lit].filter(x => x != null), maxDistance: RADIO_HORNO })
+  let b = !nuevo && bot.findBlock({ matching: [id, lit].filter(x => x != null), maxDistance: RADIO_HORNO })
   if (b) return { b, puesto: false }
   if (!cuenta(bot, 'furnace')) {
     const fabricar = require('./fabricar')
@@ -71,14 +71,23 @@ module.exports = async function fundir(bot, [pedido, cantidad, comb], tarea) {
   if (!n) return { exito: false, causa: 'no tengo ' + entrada, ...datos }
   const c = combustible(bot, n, comb, entrada)
   if (!c) return { exito: false, causa: 'sin combustible' + (comb ? ': ' + comb : ''), ...datos }
-  const h = await hornoA(bot, tarea)
+  let h = await hornoA(bot, tarea)
   if (!h.b) return { exito: false, causa: h.causa, ...datos }
-  const pos = h.b.position
-  Object.assign(datos, { horno: [pos.x, pos.y, pos.z], puesto: h.puesto })
+  let pos = h.b.position
   if (lejania(bot, pos) > 4.3) {
     const r = await moverHasta(bot, new goals.GoalNear(pos.x, pos.y, pos.z, 2), () => lejania(bot, pos) <= 4.3, { ms: 30000, tarea })
-    if (r !== 'listo') return { exito: false, causa: 'no llego al horno: ' + r, ...datos }
+    // 2026-11-03, banco: el horno de antes quedaba a la vista pero sin camino (tras la roca): otro al lado
+    if (r !== 'listo' && !(tarea && tarea.cancelada)) {
+      h = await hornoA(bot, tarea, true)
+      if (!h.b) return { exito: false, causa: `no llego al horno (${r}) y no pude poner otro: ${h.causa}`, ...datos }
+      pos = h.b.position
+    } else if (r !== 'listo') return { exito: false, causa: 'no llego al horno: ' + r, ...datos }
   }
+  Object.assign(datos, { horno: [pos.x, pos.y, pos.z], puesto: h.puesto })
+  // 2026-11-03, banco: el combustible (troncos) se elegía antes de hacer el horno, y la mesa para hacerlo se los comió
+  const c2 = combustible(bot, n, comb, entrada)
+  if (!c2) return { exito: false, causa: 'sin combustible' + (comb ? ': ' + comb : ''), ...datos }
+  c.splice(0, 2, ...c2)
   const antes = cuenta(bot, salida), t0 = Date.now()
   let horno
   try { horno = await conLimite(bot.openFurnace(bot.blockAt(pos)), 8000) } catch (e) { return { exito: false, causa: 'no se abrió: ' + e.message, ...datos } }

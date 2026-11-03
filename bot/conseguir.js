@@ -83,7 +83,7 @@ function siguiente(e, material, n, s) {
     if (e.lingotes_hierro >= 3) return { habilidad: 'fabricar', args: ['pico_hierro'], motivo: 'pico de hierro' }
     // 2026-11-03, banco: sin piedra para el horno, fundir fallaba al instante 100 veces seguidas (demasiados pasos): picar piedra, una vez
     if (e.crudo_hierro + e.lingotes_hierro >= 3 && (s.fundirNo || 0) >= 2) return { fin: true, exito: false, causa: `no pude fundir el hierro del pico (${s.fundirCausa})` }
-    if (e.crudo_hierro + e.lingotes_hierro >= 3 && s.fundirNo && !s.piedraHorno) return { habilidad: 'minar', args: ['piedra', '8', '6', 'y=-64'], motivo: 'piedra para el horno', marca: 'piedraHorno' }
+    if (e.crudo_hierro + e.lingotes_hierro >= 3 && s.fundirNo && !s.piedraHorno) return { habilidad: 'minar', args: ['stone', '8', '6', 'y=-64'], motivo: 'piedra para el horno', marca: 'piedraHorno' }
     if (e.crudo_hierro + e.lingotes_hierro >= 3) return { habilidad: 'fundir', args: ['hierro', String(3 - e.lingotes_hierro)], motivo: 'hierro para el pico' }
     return { sub: { material: 'hierro', n: 3 }, motivo: 'hierro para el pico' }
   }

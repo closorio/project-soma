@@ -31,7 +31,7 @@ const casos = [
   ['sin pico bajo tierra, ya subió', E({ pico: 0, bajo: true, y: 0, madera: 0 }), 'lapis', { subidoPico: true }, /^orden:armate$/],
   ['pico de piedra gastado a por diamante: arriba', E({ pico: 0, bajo: true, y: -57, madera: 0 }), 'diamante', {}, /^subir_a_superficie $/],
   ['sin pico bajo tierra con madera de reserva: ármate ahí', E({ pico: 0, bajo: true, y: -57 }), 'diamante', {}, /^orden:armate$/],
-  ['fundir falló: piedra para el horno', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 1 }, /^minar piedra 8 6 y=-64$/],
+  ['fundir falló: piedra para el horno', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 1 }, /^minar stone 8 6 y=-64$/],
   ['ya picó piedra: fundir otra vez', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 1, piedraHorno: true }, /^fundir hierro 3$/],
   ['fundir falló dos veces', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', { fundirNo: 2, fundirCausa: 'x' }, /^fin:false:no pude fundir/],
   ['sin madera antes de bajar: talar la reserva', E({ madera: 0 }), 'diamante', {}, /^orden:tala$/],

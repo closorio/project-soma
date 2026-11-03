@@ -87,7 +87,7 @@ const agenda = require('./agenda') // 2026-11-01: cola de órdenes, bucles, rein
 const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
-const { esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
+const { conLimite, esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
@@ -268,6 +268,9 @@ class Personaje {
       const p = bot.entity && bot.entity.position
       if (p && bot.entity.onGround && !bot.entity.isInWater && !this.cabezaEnAgua()) this.seco = p.floored()
     })
+    // 2026-11-03, banco: murió «suffocated in a wall» bajando una escalera entre grava. Si pierde vida con arena o grava en la
+    // cabeza, la pica (a mano también se rompe en ≈ 1 s), como mucho 8 veces seguidas
+    bot.on('health', () => { if (bot.health > 0 && this.cabezaEnArena() && !this.desenterrando) this.desenterrar().catch(e => this.ev('[desenterrar] error: ' + e.message)) })
     bot.on('breath', () => { if (bot.oxygenLevel !== undefined && bot.oxygenLevel <= AIRE_MIN && this.cabezaEnAgua()) setImmediate(() => this.alAhogarse()) })
     // 2026-10-31: en el server Paper 26.3 del compañero el bot planea bien pero no avanza. Si el server rechaza un movimiento lo
     // recoloca (forcedMove); eso y por qué el navegador rehace la ruta van al registro (make move-log), como mucho 1 línea / 2 s
@@ -596,6 +599,24 @@ class Personaje {
   cabezaEnAgua() {
     const ojo = this.bot.entity && this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))
     return !!ojo && ojo.name === 'water'
+  }
+
+  cabezaEnArena() {
+    const ojo = this.bot.entity && this.bot.blockAt(this.bot.entity.position.offset(0, 1.62, 0))
+    return !!ojo && /^(sand|red_sand|gravel|suspicious_sand|suspicious_gravel)$/.test(ojo.name)
+  }
+
+  async desenterrar() {
+    const bot = this.bot
+    this.desenterrando = true
+    try {
+      for (let k = 0; k < 8 && bot.health > 0 && this.cabezaEnArena(); k++) {
+        const ojo = bot.blockAt(bot.entity.position.offset(0, 1.62, 0))
+        try { bot.stopDigging(); await conLimite(bot.dig(ojo, true), 3000, () => bot.stopDigging()) } catch (_) {}
+        await esperar(300)
+      }
+      this.ev(`[desenterrar] grava en la cabeza → ${this.cabezaEnArena() ? 'sigue' : 'fuera'}`)
+    } finally { this.desenterrando = false }
   }
 
   // Sin aire: como un golpe (alGolpear), corta la tarea (un «consigue» sigue luego, reanudar) y sale a respirar: hacia la última

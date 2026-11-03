@@ -68,9 +68,33 @@ function sitiosAlLado(bot) {
 }
 const sitioAlLado = (bot) => sitiosAlLado(bot)[0] || null
 // Lo pone en la primera casilla de al lado donde entre (F8.0b: el banco vio fallar 1 de 10 hornos en la primera casilla, «sin apoyo»).
+// 2026-11-03, banco: en el túnel de una escalera todo es roca y el horno no tenía sitio («sin sitio»). Fuera del mundo del usuario,
+// picar una casilla de un lado (con suelo firme y sin líquidos alrededor), como ponerMesa de fabricar.js. Devuelve la casilla o null.
+async function abrirAlLado(bot) {
+  if (!require('../mundo').reglasLibres) return null
+  const b = nodo(bot)
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
+    if (!sv.solido(k) || sv.NO_PICAR.test(k.name) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (require('../parcela').vecinosLiquidos(bot, v).length) continue
+    const { item, ms } = sv.mejorHerramienta(bot, k)
+    if (ms > 6000) continue
+    try {
+      if (item) await conLimite(bot.equip(item, 'hand'), 3000)
+      await conLimite(bot.dig(k, true), ms + 3000, () => bot.stopDigging())
+    } catch (_) {}
+    await esperar(250)
+    const ahora = bot.blockAt(v)
+    if (ahora && ahora.boundingBox === 'empty') return v
+  }
+  return null
+}
+
 async function colocarAlLado(bot, item) {
   let ultimo = { exito: false, causa: 'sin sitio' }
-  for (const v of sitiosAlLado(bot).slice(0, 4)) {
+  let sitios = sitiosAlLado(bot)
+  if (!sitios.length) { const v = await abrirAlLado(bot); if (v) sitios = [v] }
+  for (const v of sitios.slice(0, 4)) {
     ultimo = await colocar(bot, v, item)
     if (ultimo.exito) return ultimo
     await esperar(250)
@@ -78,4 +102,4 @@ async function colocarAlLado(bot, item) {
   return ultimo
 }
 
-module.exports = { colocar, sitioAlLado, sitiosAlLado, colocarAlLado, esLoPuesto, APOYOS }
+module.exports = { colocar, sitioAlLado, sitiosAlLado, colocarAlLado, abrirAlLado, esLoPuesto, APOYOS }
