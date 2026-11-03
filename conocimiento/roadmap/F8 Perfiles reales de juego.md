@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-03
-siguiente: "Recolector avanzado: 4.ª ronda de make bench-gather ONLY=diamante,cero con f332ff1 (3.ª: 3/5 y 3/5, 1 asfixia); luego banco M del Minero y F8.1 Casual"
+siguiente: "Recolector avanzado: 5.ª ronda de make bench-gather ONLY=diamante,cero con e0afbc7 (4.ª: 4/5 y 2/5, 1 ahogado); luego banco M del Minero y F8.1 Casual"
 ---
 # F8 Perfiles reales de juego
 
