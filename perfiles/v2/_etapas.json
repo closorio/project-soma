@@ -26,7 +26,11 @@
    "mesa",
    "horno",
    "cama",
-   "cubo"
+   "cubo",
+   "cobre",
+   "oro",
+   "lapis",
+   "deepslate"
   ],
   "memoria": [
    "base",
@@ -37,7 +41,8 @@
    "huerto",
    "portal",
    "fortaleza",
-   "stronghold"
+   "stronghold",
+   "mina"
   ],
   "hitos": [
    "nether",
@@ -86,7 +91,9 @@
   "equipar_soportes",
   "revisar_cofres",
   "cosechar",
-  "herrero"
+  "herrero",
+  "conseguir",
+  "cavar_tunel"
  ],
  "etapas": {
   "madera": {
@@ -458,6 +465,130 @@
     "pendiente:subir_torre",
     "pendiente:romper_cristal",
     "pendiente:atacar_dragon"
+   ],
+   "max_s": 3600
+  },
+  "m_carbon": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.33
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "carbon": 32
+    }
+   },
+   "hacer": [
+    "conseguir carbon 32"
+   ],
+   "max_s": 1800
+  },
+  "m_pozo": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.66,
+     "antorchas": 8
+    }
+   },
+   "objetivo": {
+    "memoria": {
+     "mina": true
+    }
+   },
+   "hacer": [
+    "cavar_escalera 0 -",
+    "subir_a_superficie"
+   ],
+   "max_s": 1200
+  },
+  "m_hierro": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 0.66
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "hierro": 32,
+     "cobre": 16
+    }
+   },
+   "hacer": [
+    "conseguir hierro 32",
+    "conseguir cobre 16"
+   ],
+   "max_s": 3600
+  },
+  "m_deepslate": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "deepslate": 16
+    }
+   },
+   "hacer": [
+    "cavar_escalera -8 -",
+    "minar deepslate 16 8 y=-64",
+    "subir_a_superficie"
+   ],
+   "max_s": 1800
+  },
+  "m_diamante": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "diamante": 3
+    }
+   },
+   "hacer": [
+    "conseguir diamante 3"
+   ],
+   "max_s": 3600
+  },
+  "m_pico_diamante": {
+   "tipo": "fabricar",
+   "pre": {
+    "inv": {
+     "diamante": 3
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "hacer": [
+    "fabricar pico_diamante"
+   ]
+  },
+  "m_redstone": {
+   "tipo": "mineral",
+   "pre": {
+    "inv": {
+     "pico": 1
+    }
+   },
+   "objetivo": {
+    "inv": {
+     "redstone": 32
+    }
+   },
+   "hacer": [
+    "conseguir redstone 32"
    ],
    "max_s": 3600
   }

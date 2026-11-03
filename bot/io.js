@@ -469,6 +469,13 @@ class Personaje {
       this.ev(`[rutina] ${nombre} ${args.join(' ')} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms; ${(r.decisiones || []).join(' ')})`)
       return r
     }
+    if (nombre === 'conseguir') { // 2026-11-02: el recolector avanzado como paso del capataz (rol minero) o por el puerto; se lo queda
+      const paso = async (h, x) => { const r = await this.ejecutarHabilidad(h, x, tarea); return [r, { habilidad: h, exito: !!r.exito, causa: String(r.causa || '') }] }
+      const r = await conseguir.ejecutar(this.bot, args[0], parseInt(args[1]) || 1, { paso, tarea, quien: '', entregar: false, decir: (t) => this.ev('[conseguir] ' + t),
+        orden: (tipo) => this.hacer({ tipo }, tarea, '') })
+      this.ev(`[conseguir] ${args.join(' ')} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.conseguidos}/${r.pedidos}, ${r.s} s)`)
+      return { habilidad: 'conseguir', ...r, pasos: r.pasos.length }
+    }
     this.enHabilidad++
     try {
       const marcha = habilidades.ejecutar(this.bot, nombre, args, tarea)
@@ -2305,7 +2312,7 @@ class Personaje {
       personajes: async () => JSON.stringify({ yo: this.nombre, puerto: this.puerto, perfil: observacion.perfilDe(this.bot).nombre, decisor: this.decisor.nombre,
         personajes: [...PERSONAJES] }),
     }
-    for (const n of [...Object.keys(habilidades.HABILIDADES), ...Object.keys(rutinas.RUTINAS)]) O[n] = (a) => this.habilidad(n, a)
+    for (const n of [...Object.keys(habilidades.HABILIDADES), ...Object.keys(rutinas.RUTINAS), 'conseguir']) O[n] = (a) => this.habilidad(n, a)
     return O
   }
 }

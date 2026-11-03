@@ -7,7 +7,7 @@ Kits (lo que lleva un jugador que ya ha empezado): «piedra» = pico de piedra, 
 lo mismo con pico de hierro; «nada» = el inventario vacío (todo el camino: ármate, hierro, pico de hierro, carbón, bajar…).
 Materiales y lo que se pide: hierro 6, lapis 6, oro 4, redstone 8, diamante 2 (con el kit de cada uno: hierro y lapis con piedra,
 el resto con hierro), y «cero» = diamante 1 desde nada.
-Criterio fijado antes de medir: lo pedido en el inventario del bot (por el puerto no hay a quién dárselo; sin cofre se lo queda)
+Criterio fijado antes de medir: lo pedido en el inventario del bot (`conseguir` por el puerto se lo queda)
 en ≥ 4/5 de cada material, y 0 muertes en todo el banco. Se anota la causa, lo conseguido, los pasos y los segundos.
 Escribe logs/conseguir-AAAAMMDD-HHMM.json. Uso: probar_conseguir.py [--solo hierro,lapis,oro,redstone,diamante,cero] [--n 5]
 [--nombre Prueba1] [--puerto 3101] [--monstruos]"""
@@ -97,7 +97,7 @@ def main():
                 orden(a.puerto, "campamento -")
                 antes = muertes(n)
                 t0 = time.time()
-                txt = orden(a.puerto, f"orden_esperar consigue {pide} de {material}", SEG + 60)
+                txt = orden(a.puerto, f"conseguir {material} {pide}", SEG + 60)  # por el puerto se lo queda (la orden de chat lo entregaría)
                 tengo = contar(n, items)
                 murio = muertes(n) - antes
                 ok = tengo >= pide and not murio

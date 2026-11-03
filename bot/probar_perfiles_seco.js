@@ -32,7 +32,7 @@ process.env.IO_SERVIDOR = process.env.IO_SERVIDOR || 'supervivencia'
 const { HABILIDADES } = require('./habilidades')
 const cat = v2.catalogo()
 const { RUTINAS } = require('./rutinas')
-const sueltas = cat.acciones.filter(a => a.startsWith('rutina_') ? !RUTINAS[a] : !HABILIDADES[a])
+const sueltas = cat.acciones.filter(a => a.startsWith('rutina_') ? !RUTINAS[a] : a !== 'conseguir' && !HABILIDADES[a]) // conseguir: io.js (conseguir.js)
 ok(sueltas.length === 0, `acciones del catálogo que no son habilidades: ${sueltas.join(', ')}`)
 const nuevas = [...Object.keys(HABILIDADES), ...Object.keys(RUTINAS)].filter(h => !cat.acciones.includes(h))
 ok(nuevas.length === 0, `habilidades que faltan en el catálogo: ${nuevas.join(', ')}`)
@@ -46,7 +46,7 @@ const rotos = {
   'peso fuera de escala': { ...base, pesos: { ...base.pesos, riesgo: 7 } },
   'estilo que no existe': { ...base, estilos: { madera: 'leñador', noche: 'supervivencia' } },
   'etapa repetida': { ...base, etapas: [{ id: 'madera' }, { id: 'madera' }] },
-  'objetivo con clave rara': { ...base, etapas: [{ id: 'madera', objetivo: { inv: { oro: 3 } } }] },
+  'objetivo con clave rara': { ...base, etapas: [{ id: 'madera', objetivo: { inv: { oro_puro: 3 } } }] },
 }
 const pyRotos = py(`import json, perfiles_v2 as p
 rotos = json.loads(${JSON.stringify(JSON.stringify(rotos))})

@@ -107,7 +107,7 @@ async function tirarBasura(bot) {
   return n
 }
 
-// ctx: { paso(habilidad, args) → [r, d], orden(nombre) → r, decir(texto), quien, tarea }. Devuelve { exito, causa, conseguidos, pasos }.
+// ctx: { paso(habilidad, args) → [r, d], orden(nombre) → r, decir(texto), quien, tarea, entregar (false: se lo queda) }. Devuelve { exito, causa, conseguidos, pasos }.
 async function ejecutar(bot, material, n0, ctx) {
   const n = Math.min(MAX_N, Math.max(1, n0 || 1)), t0 = Date.now(), y0 = nodo(bot).y, pasos = []
   const pila = [{ material, n, s: {} }] // la petición y, encima, lo que haga falta antes (el hierro del pico, el carbón)
@@ -156,7 +156,7 @@ async function ejecutar(bot, material, n0, ctx) {
   }
   const conseguidos = m.suelta ? estado(bot).tiene[material] : 0
   let entrega = null
-  if (!ctx.tarea.cancelada && conseguidos > 0) {
+  if (!ctx.tarea.cancelada && conseguidos > 0 && ctx.entregar !== false) { // el capataz no entrega: sus etapas miran el inventario
     const objeto = m.suelta.find(nombre => bot.inventory.items().some(i => i.name === nombre && nombre !== m.suelta[0])) || m.suelta.find(nombre => bot.inventory.items().some(i => i.name === nombre))
     if (ctx.quien && bot.players[ctx.quien] && bot.players[ctx.quien].entity) {
       const [r, d] = await ctx.paso('dar', [ctx.quien, objeto]); pasos.push(d); entrega = r.exito ? 'dado' : null

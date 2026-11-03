@@ -22,6 +22,8 @@ function estado(bot) {
     troncos: c(/_log$/), tablones: c(/_planks$/), palos: c(/^stick$/), piedra: c(/^(cobblestone|cobbled_deepslate|blackstone)$/),
     carbon: c(/^(coal|charcoal)$/), hierro_mena: c(/^raw_iron$/), hierro: c(/^iron_ingot$/),
     comida: sv.comidas(bot).reduce((a, i) => a + i.count, 0), colocables: sv.cuantosColocables(bot), antorchas: c(/^torch$/),
+    // 2026-11-02: lo que mide el rol minero (conseguir.js)
+    cobre: c(/^(raw_copper|copper_ingot)$/), oro: c(/^(raw_gold|gold_ingot)$/), lapis: c(/^lapis_lazuli$/), deepslate: c(/^cobbled_deepslate$/),
     redstone: c(/^redstone$/), diamante: c(/^diamond$/), obsidiana: c(/^obsidian$/), varas_blaze: c(/^blaze_rod$/),
     perlas: c(/^ender_pearl$/), ojos: c(/^ender_eye$/),
     pico: nivel(items, '_pickaxe'), hacha: nivel(items, '_axe'), espada: nivel(items, '_sword'),
@@ -31,7 +33,7 @@ function estado(bot) {
   const m = {
     base: !!(d.base || yo.campamento), refugio: !!(d.refugio || yo.refugio), cofre: (d.cofres || []).length > 0,
     horno: (d.horno || []).length > 0, casa: !!d.casa, huerto: !!d.huerto, portal: !!d.portal, fortaleza: !!d.fortaleza,
-    stronghold: !!d.stronghold,
+    stronghold: !!d.stronghold, mina: (d.minas || []).some(m => m[3] <= 0), // 2026-11-02: el pozo del minero hasta y ≤ 0 (cavar_escalera lo anota: [x, y, z, y_fin])
   }
   if (m.horno) inv.horno = 1 // el horno puesto cuenta como tenerlo
   const hitos = { ...(d.hitos || {}) }

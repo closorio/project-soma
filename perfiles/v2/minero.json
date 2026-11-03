@@ -1,0 +1,73 @@
+{
+ "v": 2,
+ "nombre": "minero",
+ "identidad": "Apoyo bajo tierra: carbón, hierro, cobre, diamante y redstone para los demás; baja con antorchas y tapa la lava.",
+ "sirve_a": [
+  "casual",
+  "redstoner"
+ ],
+ "estilos": {
+  "madera": "recolector",
+  "noche": "supervivencia"
+ },
+ "pesos": {
+  "madera": 0.5,
+  "seguridad": 2.0,
+  "tiempo": 0.002,
+  "supervivencia": 2.0,
+  "progreso": 1.0,
+  "riesgo": 0.2
+ },
+ "reglas": {
+  "noche": "refugio",
+  "y_min": -64,
+  "cofre": "base"
+ },
+ "etapas": [
+  {
+   "id": "madera"
+  },
+  {
+   "id": "herr_madera"
+  },
+  {
+   "id": "piedra"
+  },
+  {
+   "id": "herr_piedra"
+  },
+  {
+   "id": "comida"
+  },
+  {
+   "id": "carbon"
+  },
+  {
+   "id": "m_carbon"
+  },
+  {
+   "id": "hierro"
+  },
+  {
+   "id": "pico_hierro"
+  },
+  {
+   "id": "m_pozo"
+  },
+  {
+   "id": "m_hierro"
+  },
+  {
+   "id": "m_deepslate"
+  },
+  {
+   "id": "m_diamante"
+  },
+  {
+   "id": "m_pico_diamante"
+  },
+  {
+   "id": "m_redstone"
+  }
+ ]
+}

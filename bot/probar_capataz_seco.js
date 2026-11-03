@@ -118,6 +118,15 @@ ok(capataz.decidir(mundoFalso({ salud: 5, entidades: [{ name: 'zombie', pos: [12
 ok(capataz.decidir(mundoFalso({ salud: 10, comida: 16, inventario: [['bread', 2]] }), 'casual').habilidad === 'comer', 'con 10 de vida y pan no come para regenerar')
 console.log(`  6 · casa sin tablones: construir → ${d6.habilidad} ${d6.args.join(' ')}`)
 
+// 8 · minero (2026-11-02): con pico de hierro, 32 de carbón y antorchas, y el pozo ya bajado, toca m_hierro y su paso es conseguir
+const bm = mundoFalso({ inventario: [['iron_pickaxe', 1], ['stone_sword', 1], ['coal', 32], ['torch', 8], ['bread', 16], ['oak_log', 6]] })
+persistente.de(bm).minas.push([0, 64, 0, -2])
+const hm = capataz.hechas(bm, 'minero')
+for (const id of ['madera', 'herr_madera', 'piedra', 'herr_piedra', 'comida', 'carbon', 'm_carbon', 'hierro', 'pico_hierro', 'm_pozo']) hm[id] = { dia: 0 }
+const dm = capataz.decidir(bm, 'minero')
+ok(dm.habilidad === 'conseguir' && dm.args.join(' ') === 'hierro 32', `minero: el paso de m_hierro es conseguir hierro 32 (${dm.habilidad} ${(dm.args || []).join(' ')})`)
+ok(progresion.estado(bm).memoria.mina === true, 'minero: el pozo hasta y ≤ 0 cuenta como mina')
+
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)
