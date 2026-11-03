@@ -49,6 +49,8 @@ const HABILIDADES = {
   herrero: require('./herrero'), // 2026-11-02: piezas de armadura en los soportes y herramientas de hierro en los cofres
   // F8.1: hasta una mena enterrada, cavando (la pide el capataz cuando minar no ve ninguna)
   ir_a_mena: require('./ir_a_mena'),
+  // 2026-11-02: el túnel del recolector avanzado (bot/conseguir.js), que tapa la lava en vez de pararse
+  cavar_tunel: require('./tunel').cavarTunel,
 }
 
 // Interrupción por amenaza (como los «modos» de Mindcraft y como el simulador): un hostil a ≤ 6 bloques corta

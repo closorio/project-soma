@@ -20,7 +20,7 @@ const AYUDA = 'Puedo: ven, sígueme, entra al portal, construir del catálogo (�
   'al terminar quieto o libre, perfil NOMBRE, decisor red|guion, estado, explora hacia el norte N [nadando], mina N de carbón (si no lo ve, lo busca), ' +
   'construye una cabaña, deshaz la cabaña, vuelve al campamento, campamento aquí; y para sobrevivir: come, ataca al zombi, defiéndeme [agresivo] (o defiende a X: solo a quien ataque; agresivo, a todo hostil cerca), modo centinela [en ZONA] (vigila tu base o esa zona y ataca a quien entre), patrulla [en ZONA] (igual, pero recorre el hogar o esa zona libremente; «deja de patrullar» la quita), modo guardaespaldas (te sigue y ataca a quien se te acerque), refúgiate, ' +
   'sal del refugio, duerme (o usa la cama / ven a la cama: la más cercana, o pone o fabrica una; de día guarda el spawn), fabrica una espada, ármate (espada, pico y hacha de piedra, con lo que haga falta), equípate, apártate, caza, foto (los que estén cerca se quitan el casco y miran adonde miras); y para progresar: fabrica una cama, un cubo, un cofre, un horno, ' +
-  'la armadura o un pico de hierro, funde N de hierro, cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
+  'la armadura o un pico de hierro, funde N de hierro, consigue N diamantes (o redstone, lapislázuli, oro, hierro, cobre, carbón, esmeralda: lo baja a buscar y te lo da), cocina la carne, pon el cofre, saca N troncos, dame N troncos (o dame todo), ilumina, baja N (una escalera), sube, ' +
   'desatáscate, caza N ovejas, recoge agua, vierte el agua; recupera tus cosas (tras morir; lo hace solo al reaparecer); y continúa (sigue con lo que dejaste a medias).'
 // F6: bloques que se pueden minar y planos que se pueden construir, por su nombre en español
 const BLOQUES = { piedra: 'stone', piedras: 'stone', roca: 'stone', tierra: 'dirt', arena: 'sand', grava: 'gravel', mineral: 'mineral', minerales: 'mineral',
@@ -48,6 +48,13 @@ const normalizar = (t) => String(t || '').toLowerCase().normalize('NFD').replace
   .replace(/[^a-z0-9ñ_ ]+/g, ' ').replace(/\s+/g, ' ').trim()
 const CORTESIA = /^(?:(?:por favor|porfa|oye|venga|eh|vale|ahora|puedes|podrias|quiero que|necesito que)\s+)+|\s+(?:por favor|porfa)$/g
 
+// 2026-11-02: el material de conseguir.js que nombra la frase («piedra roja» = redstone)
+const MATERIAL = require('./conseguir').ALIAS
+function materialDe(t) {
+  if (/\bpiedra roja\b/.test(t)) return 'redstone'
+  const w = t.split(/[^a-z]+/).find(w => MATERIAL[w])
+  return w ? MATERIAL[w] : null
+}
 function numero(t) {
   const d = t.match(/\b(\d{1,4})\b/)
   if (d) return parseInt(d[1])
@@ -143,6 +150,13 @@ function interpretar(texto) {
   if ((m = t.match(/^(?:rol|juega (?:como|de)|haz de) (\w+)$/))) return { tipo: 'rol', rol: m[1] } // F8.1: el rol v2 del capataz
   if (/\b(?:estado|informe)\b|^(?:como estas|que haces|donde estas|que tal)\b/.test(t)) return { tipo: 'estado' }
   if (/^(?:ayuda|que sabes hacer|ordenes)$/.test(t)) return { tipo: 'ayuda' }
+  // 2026-11-02: el recolector avanzado (conseguir.js): «consigue 5 diamantes», «tráeme redstone», «búscame 10 de oro»; y «mina N» de lo
+  // que minar no sabe (oro, lapislázuli, redstone, diamante, esmeralda, netherite). Antes que cazar: «consigue» también vale para animales
+  if ((m = t.match(/\b(?:consigue|conseguid|consigueme|trae|traeme|traed|busca|buscame|buscad|mina|minad|minar)\b/))) {
+    const mat = materialDe(t)
+    if (mat && (!/^(?:mina|minad|minar)$/.test(m[0]) || !['carbon', 'hierro', 'cobre'].includes(mat)))
+      return { tipo: 'consigue', material: mat, n: numero(t) || 1 }
+  }
   // F8.0b: la fundación de los perfiles v2 (antes que «mata», «vacía», «recoge», «mina» y «tala», que se las comerían)
   if ((m = t.match(/\b(?:caza|cazad|cazar|mata|matad|consigue|trae)\b/)) && palabra(t, ANIMALES))
     return { tipo: 'cazar', animal: palabra(t, ANIMALES), n: numero(t) || 1 }

@@ -157,4 +157,4 @@ async function subirASuperficie(bot, [rumbo], tarea) {
   return { ...r, exito: fuera(bot), causa: fuera(bot) ? 'fuera' : 'pilar: ' + r.causa, modo: 'pilar', y: nodo(bot).y }
 }
 
-module.exports = { cavarEscalera, subirASuperficie, alCielo, salidaLibre, fuera, dirDe, paso, escalera, DIRS }
+module.exports = { cavarEscalera, subirASuperficie, alCielo, salidaLibre, fuera, dirDe, paso, escalera, abrir, liquidoJunto, DIRS }

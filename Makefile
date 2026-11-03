@@ -62,7 +62,7 @@ publicar:
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         creative-server-download creative-server-start creative-server-stop creative-server-save creative-rcon \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare
+        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare bench-gather
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -116,6 +116,7 @@ help:
 	@echo "  nightly [BENCHES=\"smoke-26-3 bench-k\"]   bancos en serie en segundo plano; luego make report"
 	@echo "  verify              todo lo que se comprueba sin servidor: pruebas en seco, perfiles, herramientas del vault, Python"
 	@echo "  bench-assistant PHASE=A2 [WORLD=local]   la puerta de una fase del asistente (entrenamiento/banco_asistente.py)"
+	@echo "  bench-gather [ONLY=hierro,diamante]   «consigue N X» en el terreno local: lo pedido en ≥ 4/5 y 0 muertes"
 	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
@@ -270,6 +271,9 @@ verify: test validate-profiles
 # ¿anda por algo que no sea llano? llano, escalón y muro, con las recolocaciones del server (entrenamiento/prueba_rodeo.py)
 bench-detour:
 	python entrenamiento/prueba_rodeo.py --mundo $(WORLD_) --puerto $(strip $(PORT))
+
+bench-gather:
+	IO_SERVIDOR=local python servidor-supervivencia/probar_conseguir.py $(if $(strip $(ONLY)),--solo $(strip $(ONLY)))
 
 bench-assistant:
 	python entrenamiento/banco_asistente.py --fase $(strip $(PHASE)) --mundo $(if $(filter usuario,$(WORLD_)),usuario,local)

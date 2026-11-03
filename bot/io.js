@@ -33,11 +33,12 @@ const ESQUINAS = new Map() // usuario -> primera esquina de la zona que está ma
 // «continúa» (2026-11-01): las órdenes de trabajo que se retoman si otra las interrumpe, y con qué les faltaba. Moverse, pelear o
 // comer no se retoman: «continúa» es volver al trabajo
 const ORDENES_TRABAJO = new Set(['armate', 'tala', 'mina', 'construye', 'deshaz', 'cazar', 'caza', 'recoge', 'guarda', 'saca', 'dame', 'explora',
-  'fabrica', 'funde', 'pon', 'ilumina', 'baja', 'sube', 'agua', 'vierte', 'duerme'])
+  'fabrica', 'funde', 'pon', 'ilumina', 'baja', 'sube', 'agua', 'vierte', 'duerme', 'consigue'])
 function pendienteDe(o, r) {
   if (!ORDENES_TRABAJO.has(o.tipo)) return null
   if (o.tipo === 'tala' && r.troncos != null) return o.n - r.troncos > 0 ? { ...o, n: o.n - r.troncos } : null
   if (o.tipo === 'mina' && r.hechos != null) return o.n - r.hechos > 0 ? { ...o, n: o.n - r.hechos } : null
+  if (o.tipo === 'consigue' && r.conseguidos != null) return o.n - r.conseguidos > 0 ? { ...o, n: o.n - r.conseguidos } : null
   if (o.tipo === 'construye' && o.obra) return { ...o, retomar: o.obra }
   return { ...o }
 }
@@ -77,6 +78,7 @@ function noTalo(nombres) {
 }
 const { PERSONAJES, esBot, pruebas, BOTS } = require('./habilidades/comun')
 const depositar = require('./habilidades/depositar')
+const conseguir = require('./conseguir') // 2026-11-02: el recolector avanzado («consigue 5 diamantes»)
 const cofres = require('./cofres')
 const arbolado = require('./arbolado')
 const ordenes = require('./ordenes')
@@ -148,7 +150,7 @@ const libre = require('./libre')
 const persistente = require('./memoria_persistente') // F8.0a: lo que sobrevive a reiniciar (fuera del mundo del usuario)
 const rutinas = require('./rutinas')
 // Las habilidades que cambian el terreno: su línea [terreno] (rotos y puestos) deja al banco reponerlo (probar_noche.py).
-const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 'subir_a_superficie', 'desatascarse', 'explorar', 'verter', 'ir_a_mena']) // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
+const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 'subir_a_superficie', 'desatascarse', 'explorar', 'verter', 'ir_a_mena', 'cavar_tunel']) // F8.0a: los perfiles v1 como estilos de rutinas (rutina_madera, rutina_noche)
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
@@ -1619,6 +1621,16 @@ class Personaje {
         const ES = { coal: 'carbón', iron: 'hierro', copper: 'cobre', gold: 'oro', diamond: 'diamante', redstone: 'redstone', lapis: 'lapislázuli', emerald: 'esmeralda', stone: 'piedra', dirt: 'tierra', sand: 'arena', gravel: 'grava' }
         const nombre = ES[o.bloque.replace(/_ore$/, '')] || o.bloque.replace(/_ore$/, '').replace(/_/g, ' ')
         return { exito: total > 0, hechos: total, texto: total ? `Miné ${total} de ${nombre}${total < o.n ? ` (quería ${o.n}: ${causa})` : ''}.` : `No miné nada: ${causa}.`, pasos }
+      }
+      case 'consigue': { // 2026-11-02: el recolector avanzado (conseguir.js): pico, antorchas, bajar, túneles, volver y entregar
+        const quien2 = this.jugadorDe(quien)
+        const r = await conseguir.ejecutar(bot, o.material, o.n, { paso, tarea, quien: quien2, decir: (t) => this.decir(t),
+          orden: (tipo) => this.hacer({ tipo }, tarea, quien) })
+        const NOMBRE = { lapis: 'lapislázuli', carbon: 'carbón' }, nombre = NOMBRE[o.material] || o.material
+        const lugar = r.entrega === 'dado' ? ' Te lo he dado.' : r.entrega === 'cofre' ? ' Está en el cofre.' : r.conseguidos ? ' Lo llevo yo.' : ''
+        const texto = r.exito ? `Conseguido: ${r.conseguidos} de ${nombre}.${lugar}`
+          : r.conseguidos ? `Conseguí ${r.conseguidos}/${o.n} de ${nombre} (${r.causa}).${lugar}` : `No conseguí ${nombre}: ${r.causa}.`
+        return { exito: r.exito, conseguidos: r.conseguidos, texto, pasos: r.pasos }
       }
       case 'materiales': {
         // 2026-11-02: la lista de materiales de una construcción grande (bot/materiales/*.json) contra el inventario y los cofres de HOGAR
