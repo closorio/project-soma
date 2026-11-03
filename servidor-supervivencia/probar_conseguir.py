@@ -102,6 +102,14 @@ def main():
             res.setdefault(caso, [])
             for _ in range(a.n - len(res[caso])):
                 k += 1
+                # 2026-11-03: tras una muerte, el kit se daba al bot muerto y el siguiente intento empezaba sin pico: esperar a que
+                # reaparezca (la vida > 0) y parar «recuperar mis cosas»
+                for _ in range(30):
+                    vida = re.search(r"data: ([0-9.]+)f", r(f"data get entity {n} Health"))  # «… entity data: 20.0f»
+                    if vida and float(vida[1]) > 0:
+                        break
+                    time.sleep(1)
+                orden(a.puerto, "para")
                 r("time set 1000")
                 r("weather clear")
                 r(f"effect give {n} minecraft:instant_health 1 10 true")
@@ -109,6 +117,9 @@ def main():
                 r(f"clear {n}")
                 for g in KITS[kit]:
                     r(f"give {n} minecraft:{g}")
+                if KITS[kit] and contar(n, [KITS[kit][0]]) == 0:  # el pico del kit, comprobado
+                    time.sleep(3)
+                    r(f"give {n} minecraft:{KITS[kit][0]}")
                 orden(a.puerto, "para")
                 # sin agua a los pies (el primer humo cayó en un lago y se ahogó): el siguiente punto, hasta 6
                 for _ in range(6):
@@ -119,9 +130,11 @@ def main():
                 orden(a.puerto, "campamento -")
                 antes = muertes(n)
                 t0 = time.time()
-                txt = orden(a.puerto, f"conseguir {material} {pide}", SEG + 60)  # por el puerto se lo queda (la orden de chat lo entregaría)
-                if '"cancelado"' in txt:  # lo cortó una pausa (Ctrl-C): no es un intento, --seguir lo repite
-                    raise SystemExit("intento cancelado: reanuda con --seguir")
+                try:
+                    txt = orden(a.puerto, f"conseguir {material} {pide}", SEG + 60)  # por el puerto se lo queda (la orden de chat lo entregaría)
+                except KeyboardInterrupt:  # una pausa (Ctrl-C) no es un intento: no se guarda y --seguir lo repite
+                    orden(a.puerto, "para")
+                    raise SystemExit("pausado: reanuda con --seguir")
                 tengo = contar(n, items)
                 murio = muertes(n) - antes
                 ok = tengo >= pide and not murio

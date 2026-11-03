@@ -98,16 +98,22 @@ async function subirUno(bot) {
 
 // Del fondo del pozo a la boca (salida, encima): picar lo que haya sobre la cabeza y subir, hasta tener los pies a su altura.
 async function subirPozo(bot, salida, tarea) {
+  let caidas = 0
   for (let k = 0; k < 8 && nodo(bot).y < salida.y; k++) {
     if (tarea && tarea.cancelada) return false
-    const b = nodo(bot), encima = bot.blockAt(b.offset(0, 2, 0))
-    if (sv.solido(encima)) {
+    const b = nodo(bot)
+    // 2026-11-03, banco del recolector: subiendo en pilar bajo grava, la grava le cayó en la cabeza y murió asfixiado. Primero, la
+    // cabeza libre; y lo que cae de arriba se pica hasta que deja de caer, antes de saltar
+    for (const dy of [1, 2]) {
+      const encima = bot.blockAt(b.offset(0, dy, 0))
+      if (!sv.solido(encima)) continue
       if (!sv.puedeTocar(encima.position.x, encima.position.y, encima.position.z)) return false
       const { item } = sv.mejorHerramienta(bot, encima)
       try { if (item && (!bot.heldItem || bot.heldItem.name !== item.name)) await conLimite(bot.equip(item, 'hand'), 3000) } catch (_) {}
       const r = await picar(bot, encima, {}, tarea, 0)
       if (!r.exito) return false
     }
+    if (CAE.test((bot.blockAt(b.offset(0, 3, 0)) || {}).name || '') && caidas++ < 16) { await esperar(400); k--; continue }
     if (!(await subirUno(bot))) { if (!(await subirUno(bot))) return false } // un reintento: el salto a veces no llega
   }
   return nodo(bot).y >= salida.y

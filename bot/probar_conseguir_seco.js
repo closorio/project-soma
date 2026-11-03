@@ -18,7 +18,7 @@ const ordenes = require('./ordenes')
 
 let pruebas = 0, fallos = 0
 const ok = (cond, que) => { pruebas++; if (!cond) { fallos++; console.log('  FALLO ' + que) } }
-const E = (o = {}) => ({ crudo_hierro: 0, lingotes_hierro: 0, pico: 1, antorchas: 8, carbon: 0, comida: 4, y: 64, vida: 20, hambre: 20,
+const E = (o = {}) => ({ crudo_hierro: 0, lingotes_hierro: 0, pico: 1, antorchas: 8, carbon: 0, comida: 4, palos: 8, y: 64, vida: 20, hambre: 20,
   huecos: 20, basura: false, ...o, tiene: { diamante: 0, hierro: 0, carbon: 0, esmeralda: 0, ...(o.tiene || {}) } })
 const desc = (p) => p.fin ? `fin:${p.exito}:${p.causa}` : p.sub ? `sub:${p.sub.material}:${p.sub.n}` : p.orden ? `orden:${p.orden}` : p.tirar ? 'tirar' : `${p.habilidad} ${p.args.join(' ')}`
 
@@ -31,6 +31,9 @@ const casos = [
   ['sin pico bajo tierra, ya subió', E({ pico: 0, bajo: true, y: 0 }), 'lapis', { subidoPico: true }, /^orden:armate$/],
   ['pico de piedra gastado a por diamante: arriba', E({ pico: 0, bajo: true, y: -57 }), 'diamante', {}, /^subir_a_superficie $/],
   ['pico de piedra, sin hierro', E({ pico: 0.66 }), 'diamante', {}, /^sub:hierro:3$/],
+  ['pico de piedra sin palos: talar', E({ pico: 0.66, palos: 0 }), 'diamante', {}, /^orden:tala$/],
+  ['sin palos bajo tierra: arriba', E({ pico: 0.66, palos: 0, bajo: true, y: -20 }), 'diamante', {}, /^subir_a_superficie $/],
+  ['sin palos, la tala falló', E({ pico: 0.66, palos: 0 }), 'diamante', { maderaNo: true }, /^fin:false:.*madera/],
   ['con 3 de hierro crudo', E({ pico: 0.66, crudo_hierro: 3 }), 'diamante', {}, /^fundir hierro 3$/],
   ['con 1 lingote y 2 crudos', E({ pico: 0.66, crudo_hierro: 2, lingotes_hierro: 1 }), 'diamante', {}, /^fundir hierro 2$/],
   ['con 3 lingotes', E({ pico: 0.66, lingotes_hierro: 3 }), 'diamante', {}, /^fabricar pico_hierro$/],
@@ -102,7 +105,11 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
   const ctx = {
     tarea: { cancelada: false }, quien: 'Ana', decir: (t) => dichos.push(t),
     paso: async (h, a) => { vistos.push(h); const r = (imita[h] || (() => ({ exito: false, causa: 'sin imitar' })))(a); return [r, { habilidad: h, exito: !!r.exito, causa: r.causa || '' }] },
-    orden: async (tipo) => { vistos.push('orden:' + tipo); poner('stone_pickaxe', 1); poner('stone_sword', 1); return { exito: true, pasos: [] } },
+    orden: async (tipo) => {
+      vistos.push('orden:' + tipo)
+      if (tipo === 'tala') poner('oak_log', 2); else { poner('stone_pickaxe', 1); poner('stone_sword', 1) }
+      return { exito: true, pasos: [] }
+    },
   }
   const r = await ejecutar(bot, 'diamante', 3, ctx)
   const cadena = vistos.join(' ')
@@ -136,6 +143,25 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
     orden: async (tipo) => { v3.push('orden:' + tipo); if (bot.entity.position.y < 60) return { exito: false, pasos: [] }; poner('stone_pickaxe', 1); return { exito: true, pasos: [] } } })
   ok(r3.exito && r3.conseguidos >= 6, `pico gastado abajo: ${r3.causa} (${v3.join(' ')})`)
   ok(v3.indexOf('subir_a_superficie') >= 0 && v3.indexOf('subir_a_superficie') < v3.indexOf('orden:armate'), `sube antes de armarse: ${v3.join(' ')}`)
+
+  // 2026-11-03: un golpe corta el paso (io.js: tarea cancelada con motivo «interrupcion»); conseguir reanuda y termina
+  for (const x of slots) if (x) slots[x.slot] = null
+  bot.entity.position.y = 64; poner('stone_pickaxe', 1); poner('torch', 8); poner('bread', 4)
+  const t4 = { cancelada: false }
+  let golpe = false, reanudo = 0
+  const r4 = await ejecutar(bot, 'lapis', 6, { ...ctx, tarea: t4, entregar: false,
+    reanudar: async () => { reanudo++; if (t4.motivo !== 'interrupcion') return false; t4.cancelada = false; t4.motivo = null; return true },
+    paso: async (h, a) => {
+      if (h === 'cavar_escalera' && !golpe) { golpe = true; t4.cancelada = true; t4.motivo = 'interrupcion'; return [{ exito: false, causa: 'cancelado' }, { habilidad: h, exito: false, causa: 'cancelado' }] }
+      if (h === 'cavar_escalera') bot.entity.position.y = +a[0]
+      const r = h === 'ir_a_mena' && bot.entity.position.y <= 0 ? (poner('lapis_lazuli', 6), { exito: true, picadas: 6 }) : h === 'cavar_escalera' ? { exito: true } : h === 'subir_a_superficie' ? (bot.entity.position.y = 64, { exito: true }) : { exito: false, causa: 'no veo' }
+      return [r, { habilidad: h, exito: !!r.exito, causa: r.causa || '' }]
+    } })
+  ok(r4.exito && reanudo === 1, `golpe a mitad: reanuda y termina (${r4.causa}, reanudó ${reanudo})`)
+  const t5 = { cancelada: false }
+  const r5 = await ejecutar(bot, 'diamante', 9, { ...ctx, tarea: t5, entregar: false, reanudar: async () => false,
+    paso: async (h) => { t5.cancelada = true; t5.motivo = 'usuario'; return [{ exito: false, causa: 'cancelado' }, { habilidad: h, exito: false, causa: 'cancelado' }] } })
+  ok(!r5.exito && r5.causa === 'cancelado', `«para» sí lo corta: ${r5.causa}`)
 
   // túnel: la lava junto a la casilla que va a abrir se tapa con piedra; sin relleno, para
   const { tapar } = require('./habilidades/tunel')

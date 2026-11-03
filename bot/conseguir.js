@@ -33,7 +33,7 @@ const ALIAS = { carbon: 'carbon', carbones: 'carbon', cobre: 'cobre', hierro: 'h
 const BASURA = /^(dirt|gravel|granite|diorite|andesite|tuff|calcite|cobbled_deepslate|flint|rotten_flesh|sand|coarse_dirt)$/
 const RELLENO = 16, ANTORCHAS = 4, COTA_OSCURA = 30, HAMBRE = 12, VIDA_SUBIR = 6, HUECOS = 3, MAX_N = 64
 const RUMBOS = ['norte', 'este', 'sur', 'oeste']
-const MAX_BAJADAS = 4, MAX_TUNELES = 6, LARGO_TUNEL = 32, MAX_MS = 30 * 60 * 1000, MAX_PASOS = 120
+const MAX_REANUDAR = 8, MAX_BAJADAS = 4, MAX_TUNELES = 6, LARGO_TUNEL = 32, MAX_MS = 30 * 60 * 1000, MAX_PASOS = 120
 
 // Lo que mira siguiente(): un objeto plano, para que la prueba en seco no necesite un bot.
 function estado(bot, yInicio) {
@@ -43,6 +43,7 @@ function estado(bot, yInicio) {
   for (const [k, m] of Object.entries(MATERIALES)) if (m.suelta) tiene[k] = cuenta(m.suelta)
   return { tiene, crudo_hierro: cuenta(['raw_iron']), lingotes_hierro: cuenta(['iron_ingot']), pico: e.inv.pico,
     antorchas: e.inv.antorchas, carbon: e.inv.carbon, comida: e.inv.comida, y: nodo(bot).y,
+    palos: cuenta(['stick']) + 2 * items.filter(i => /_planks$/.test(i.name)).reduce((a, i) => a + i.count, 0) + 8 * items.filter(i => /_log$/.test(i.name)).reduce((a, i) => a + i.count, 0),
     bajo: yInicio != null && nodo(bot).y < yInicio - 4, vida: bot.health, hambre: bot.food,
     huecos: bot.inventory.emptySlotCount(), basura: items.some(i => BASURA.test(i.name)),
     enAgua: !!bot.entity.isInWater || /water/.test((bot.blockAt(bot.entity.position.offset(0, 1.6, 0)) || {}).name || '') }
@@ -68,6 +69,12 @@ function siguiente(e, material, n, s) {
     // 2026-11-03, banco: el pico de piedra se gastó a y≈0 y ármate, que empieza talando, no encontró árboles: arriba, primero
     if (e.pico < 0.66 && e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'reponer el pico', marca: 'subidoPico' }
     if (e.pico < 0.66) return { orden: 'armate', motivo: 'pico de piedra' }
+    // 2026-11-03, banco: ármate gasta la madera en las herramientas de piedra y el pico de hierro no tuvo palos (abajo no hay árboles)
+    if (e.palos < 2) {
+      if (s.maderaNo) return { fin: true, exito: false, causa: 'no tengo madera para los palos del pico de hierro' }
+      if (e.bajo && !s.subidoPico) return { habilidad: 'subir_a_superficie', args: [], motivo: 'madera para el pico', marca: 'subidoPico' }
+      return { orden: 'tala', n: 2, motivo: 'madera para el pico' }
+    }
     if (e.lingotes_hierro >= 3) return { habilidad: 'fabricar', args: ['pico_hierro'], motivo: 'pico de hierro' }
     if (e.crudo_hierro + e.lingotes_hierro >= 3) return { habilidad: 'fundir', args: ['hierro', String(3 - e.lingotes_hierro)], motivo: 'hierro para el pico' }
     return { sub: { material: 'hierro', n: 3 }, motivo: 'hierro para el pico' }
@@ -102,6 +109,7 @@ function apuntar(s, p, r) {
   }
   if (p.motivo === 'antorchas' && !r.exito) s.antorchasNo = true
   if (p.orden === 'armate' && !r.exito) s.picoNo = 'de piedra'
+  if (p.orden === 'tala' && !r.exito) s.maderaNo = true
   if (p.motivo === 'pico de hierro' && !r.exito) s.picoNo = 'de hierro: ' + r.causa
 }
 
@@ -115,14 +123,18 @@ async function tirarBasura(bot) {
   return n
 }
 
-// ctx: { paso(habilidad, args) → [r, d], orden(nombre) → r, decir(texto), quien, tarea, entregar (false: se lo queda) }. Devuelve { exito, causa, conseguidos, pasos }.
+// ctx: { paso(habilidad, args) → [r, d], orden(nombre, n) → r, reanudar() → bool (tras un golpe), decir(texto), quien, tarea, entregar (false: se lo queda) }. Devuelve { exito, causa, conseguidos, pasos }.
 async function ejecutar(bot, material, n0, ctx) {
   const n = Math.min(MAX_N, Math.max(1, n0 || 1)), t0 = Date.now(), y0 = nodo(bot).y, pasos = []
   const pila = [{ material, n, s: {} }] // la petición y, encima, lo que haga falta antes (el hierro del pico, el carbón)
-  let fin = null, avisado = ''
+  let fin = null, avisado = '', reanudadas = 0
   const decir = (t) => { if (t !== avisado) { avisado = t; ctx.decir(t) } }
   while (!fin) {
-    if (ctx.tarea.cancelada) { fin = { exito: false, causa: 'cancelado' }; break }
+    if (ctx.tarea.cancelada) {
+      // 2026-11-03: un golpe (io.js alGolpear) corta lo que esté haciendo para defenderse; después, sigue donde iba
+      if (ctx.reanudar && reanudadas < MAX_REANUDAR && (await ctx.reanudar())) { reanudadas++; continue }
+      fin = { exito: false, causa: 'cancelado' }; break
+    }
     if (Date.now() - t0 > MAX_MS) { fin = { exito: false, causa: 'se acabó el tiempo' }; break }
     if (pasos.length >= MAX_PASOS) { fin = { exito: false, causa: 'demasiados pasos' }; break }
     const cima = pila[pila.length - 1], e = estado(bot, y0)
@@ -139,9 +151,11 @@ async function ejecutar(bot, material, n0, ctx) {
     }
     if (p.tirar) { const k = await tirarBasura(bot); pasos.push({ habilidad: 'tirar', exito: k > 0, causa: `${k} de basura` }); if (!k) cima.s.noTirar = true; continue }
     if (p.orden) {
-      decir('Primero me hago un pico de piedra.')
-      const r = await ctx.orden(p.orden)
-      pasos.push(...(r.pasos || [])); apuntar(cima.s, p, r); continue
+      decir(p.orden === 'armate' ? 'Primero me hago un pico de piedra.' : `Primero, ${p.motivo}.`)
+      const r = await ctx.orden(p.orden, p.n)
+      pasos.push(...(r.pasos || []))
+      if (!ctx.tarea.cancelada) apuntar(cima.s, p, r) // cortada por un golpe: no es un fallo, se repite al reanudar
+      continue
     }
     if (/^(cavar_escalera|cavar_tunel)$/.test(p.habilidad)) decir(`Busco ${cima.material}: ${p.motivo}.`)
     let [r, d] = await ctx.paso(p.habilidad, p.args)
@@ -151,6 +165,7 @@ async function ejecutar(bot, material, n0, ctx) {
       const [, da] = await ctx.paso('atacar', []); pasos.push(da)
       continue // sin apuntar el fallo: el paso se repite
     }
+    if (ctx.tarea.cancelada) continue // ídem
     apuntar(cima.s, p, r)
     const tengo = estado(bot).tiene[material]
     if (tengo > 0 && pila.length === 1 && p.habilidad !== 'comer') decir(`Tengo ${tengo}/${n} de ${material}.`)

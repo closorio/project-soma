@@ -399,6 +399,20 @@ class Personaje {
     return (this.tarea = { cancelada: false, libre })
   }
 
+  // Tras una interrupción (un golpe: alGolpear se defiende), deja seguir a la tarea larga: espera a la defensa y la descancela.
+  // Devuelve false si la cortó otra cosa (para, una orden nueva).
+  async reanudar(tarea) {
+    await Promise.race([this.defendiendo, esperar(30000)]).catch(() => {})
+    if (!tarea.cancelada || tarea.motivo !== 'interrupcion' || tarea !== this.tarea) return false
+    tarea.cancelada = false; tarea.motivo = null
+    return true
+  }
+
+  async conseguirCon(material, n, ctx) {
+    this.enConseguir = (this.enConseguir || 0) + 1
+    try { return await conseguir.ejecutar(this.bot, material, n, { ...ctx, reanudar: () => this.reanudar(ctx.tarea) }) } finally { this.enConseguir-- }
+  }
+
   estado() {
     const bot = this.bot, p = bot.entity.position
     const otros = Object.values(bot.players).filter(x => x.entity && x.username !== bot.username)
@@ -471,8 +485,8 @@ class Personaje {
     }
     if (nombre === 'conseguir') { // 2026-11-02: el recolector avanzado como paso del capataz (rol minero) o por el puerto; se lo queda
       const paso = async (h, x) => { const r = await this.ejecutarHabilidad(h, x, tarea); return [r, { habilidad: h, exito: !!r.exito, causa: String(r.causa || '') }] }
-      const r = await conseguir.ejecutar(this.bot, args[0], parseInt(args[1]) || 1, { paso, tarea, quien: '', entregar: false, decir: (t) => this.ev('[conseguir] ' + t),
-        orden: (tipo) => this.hacer({ tipo }, tarea, '') })
+      const r = await this.conseguirCon(args[0], parseInt(args[1]) || 1, { paso, tarea, quien: '', entregar: false, decir: (t) => this.ev('[conseguir] ' + t),
+        orden: (tipo, n) => this.hacer({ tipo, ...(n ? { n } : {}) }, tarea, '') })
       this.ev(`[conseguir] ${args.join(' ')} → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.conseguidos}/${r.pedidos}, ${r.s} s)`)
       return { habilidad: 'conseguir', ...r, pasos: r.pasos.length }
     }
@@ -556,6 +570,8 @@ class Personaje {
       // 2026-11-02: una obra del catálogo no se pierde por una pelea: queda en pausa (agenda: interrumpida) y se retoma al acabar
       const ev = this.enVuelta
       if (ev && ev.o.tipo === 'construye' && ev.o.estructura) this.tarea.motivo = 'interrupcion'
+      // 2026-11-03: tampoco un «consigue» (banco: un golpe en «ármate» lo canceló entero): se defiende y conseguir sigue (reanudar)
+      if (this.enConseguir && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
       if (this.tareaReflejo) this.tareaReflejo.cancelada = true
       try { bot.pathfinder.setGoal(null); bot.stopDigging() } catch (_) {}
@@ -1631,8 +1647,8 @@ class Personaje {
       }
       case 'consigue': { // 2026-11-02: el recolector avanzado (conseguir.js): pico, antorchas, bajar, túneles, volver y entregar
         const quien2 = this.jugadorDe(quien)
-        const r = await conseguir.ejecutar(bot, o.material, o.n, { paso, tarea, quien: quien2, decir: (t) => this.decir(t),
-          orden: (tipo) => this.hacer({ tipo }, tarea, quien) })
+        const r = await this.conseguirCon(o.material, o.n, { paso, tarea, quien: quien2, decir: (t) => this.decir(t),
+          orden: (tipo, n) => this.hacer({ tipo, ...(n ? { n } : {}) }, tarea, quien) })
         const NOMBRE = { lapis: 'lapislázuli', carbon: 'carbón' }, nombre = NOMBRE[o.material] || o.material
         const lugar = r.entrega === 'dado' ? ' Te lo he dado.' : r.entrega === 'cofre' ? ' Está en el cofre.' : r.conseguidos ? ' Lo llevo yo.' : ''
         const texto = r.exito ? `Conseguido: ${r.conseguidos} de ${nombre}.${lugar}`
@@ -1763,8 +1779,10 @@ class Personaje {
           if (!r.exito) return { exito: false, texto: `No pude hacerme un pico de madera: ${r.causa}.`, pasos }
         }
         if (q() > 0 && !tarea.cancelada) { const [, d] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d) }
-        if (q() > 0 && !tarea.cancelada) { // sin piedra a la vista: una escalera de 8 hacia abajo (la que baje de las 4 direcciones;
-          // los escalones ya dan piedra), picar allí lo que falte y subir
+        // sin piedra a la vista: una escalera de 8 hacia abajo (la que baje de las 4 direcciones; los escalones ya dan piedra),
+        // picar allí lo que falte y subir. 2026-11-03, banco: junto a un lago las 4 dieron con agua: otra vez, 24-40 más allá
+        for (let vuelta = 0; vuelta < 2 && q() > 0 && !tarea.cancelada; vuelta++) {
+          if (vuelta) { const [, de] = await paso('explorar', ['-', '24', '40']); pasos.push(de) }
           const y0 = bot.entity.position.floored().y
           for (const rumbo of ['norte', 'este', 'sur', 'oeste']) {
             if (q() <= 0 || tarea.cancelada) break
