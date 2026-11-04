@@ -292,6 +292,8 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             r(f"effect give {n} minecraft:instant_health 1 10 true")
             r(f"effect give {n} minecraft:saturation 1 20 true")
             poner_en(n, px, pz)
+            # 2026-11-03: reaparecía en el spawn del mundo, a decenas de miles de bloques: sin vuelta a sus cosas (humo del banco M)
+            r(f"execute at {n} run spawnpoint {n} ~ ~ ~")
             orden(p, "campamento aqui")
             orden(p, "reflejos si")
             filas[n] = {"rotacion": k, "punto": [px, pz], "ovejas": nov, "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}

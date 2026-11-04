@@ -233,6 +233,25 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
     const t = setInterval(() => { if (salto && !hielo.has(Math.floor(b.entity.position.y + 2.62))) b.entity.position.y += 1 }, 20)
     return { b, metas, parar: () => clearInterval(t) }
   }
+  // aireCercano: el aire por el agua, sin atravesar roca y por donde cabe el cuerpo
+  const { aireCercano } = require('./respirar')
+  const { Vec3 } = require('vec3')
+  const recinto = (aguas, aires) => {
+    const k = (x, y, z) => `${x},${y},${z}`, ag = new Set(aguas.map(c => k(...c))), ai = new Set(aires.map(c => k(...c)))
+    const b = mundoFalso({ pos: [0.5, 60, 0.5] })
+    b.blockAt = (v) => { const p = v.floored(), n = ag.has(k(p.x, p.y, p.z)) ? 'water' : ai.has(k(p.x, p.y, p.z)) ? 'air' : 'stone'
+      return { name: n, boundingBox: n === 'stone' ? 'block' : 'empty', position: p } }
+    return b
+  }
+  const tubo = (x0, x1, z = 0) => { const c = []; for (let x = x0; x <= x1; x++) c.push([x, 60, z], [x, 61, z]); return c }
+  const codo = recinto([...tubo(0, 2), ...tubo(2, 2, 1), ...tubo(2, 2, 2)], [[2, 62, 2]])
+  const hc = aireCercano(codo)
+  ok(hc && hc.meta.equals(new Vec3(2, 62, 2)) && hc.paso.equals(new Vec3(1, 61, 0)), `aire tras un codo de agua: ${JSON.stringify(hc)}`)
+  ok(aireCercano(recinto(tubo(0, 2), [[5, 61, 0], [5, 60, 0]])) === null, 'no atraviesa la roca')
+  ok(aireCercano(recinto(tubo(0, 3), [])) === null, 'recinto sellado: null')
+  const bajo = recinto([[0, 60, 0], [0, 61, 0], [1, 61, 0], [2, 61, 0], [2, 60, 0]], [[2, 62, 0]])
+  ok(aireCercano(bajo) === null, 'por un hueco de 1 de alto no cabe el cuerpo')
+  ok(aireCercano(recinto(tubo(0, 20), [[20, 62, 0]])) === null, 'más lejos de 8 pasos: null')
   const a1 = agua([])
   const ra = await respirar(a1.b, 3000); a1.parar()
   ok(ra.fuera && ra.picados === 0, `agua abierta: sube y sale ${JSON.stringify(ra)}`)
@@ -254,7 +273,6 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
 
   // túnel: la lava junto a la casilla que va a abrir se tapa con piedra; sin relleno, para
   const { tapar } = require('./habilidades/tunel')
-  const { Vec3 } = require('vec3')
   const conLava = (inventario) => {
     const b = mundoFalso({ inventario, bloques: { '1,64,0': 'stone', '1,65,0': 'stone', '2,64,0': 'lava' } })
     const encima = new Map(), original = b.blockAt

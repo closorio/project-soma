@@ -302,6 +302,8 @@ class Personaje {
         if (this.ultimaMuerte && lleva >= this.ultimaMuerte.objetos) { this.ev(`[recupera] reaparezco con ${lleva} objetos: no hace falta`); this.agenda.pausada = false; return }
         this.ev('[recupera] reaparezco: voy a por mis cosas')
         // una urgencia de la agenda: va antes que lo que hacía y, al acabar, lo retoma («ataca a X sin parar» sigue tras recuperar)
+        // 2026-11-03, banco M: la agenda pasa a modo órdenes y el capataz no volvía a dar un paso: al acabar, otra vez a libre
+        if (this.modo === 'libre') this.libreTrasAgenda = true
         const e = this.agenda.entrada({ tipo: 'recupera' }, 'recuperar mis cosas', 'auto')
         e.fin = new Promise(res => { e.resolver = res })
         for (const x of this.agenda.pila.filter(x => x.o.tipo === 'recupera')) { this.agenda.quitar(x); this.soltar(x, { exito: false, texto: '' }) } // la nueva cubre los dos sitios
@@ -619,7 +621,8 @@ class Personaje {
     if (!bot || !bot.entity || this.defendiendo || !(bot.health > 0)) return
     this.respirando = true
     this.defendiendo = (async () => {
-      if (this.enConseguir && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
+      // 2026-11-03, banco M: sin motivo, la agenda lo tomaba por una orden nueva y dejaba «recuperar mis cosas»: se retoma al respirar
+      if ((this.enConseguir || this.enVuelta) && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
       if (this.tareaReflejo) this.tareaReflejo.cancelada = true
       try { bot.pathfinder.setGoal(null); bot.stopDigging() } catch (_) {}
@@ -746,6 +749,7 @@ class Personaje {
         const bot = this.bot
         if (!bot.entity || !bot.entity.position) { await esperar(2000); continue } // reconectando
         if (this.reflejando) { await this.reflejando; continue } // F7.2: un reflejo en reposo: decidir cuando acabe
+        if (this.respirando) { await Promise.resolve(this.defendiendo).catch(() => {}); continue } // con objetivo, el navegador pisa el salto
         if (!this.tramo || Date.now() - this.tramo.t0 >= this.tramo.T * 1000) { this.cerrarTramo('fin del tramo'); this.abrirTramo() }
         const t0 = Date.now()
         const { obs, datos, d, args, salir } = libre.decidir(bot, this.decisor)
@@ -1048,6 +1052,7 @@ class Personaje {
     const e = this.agenda.entrada(o, texto, quien)
     e.modoAntes = this.modo
     e.fin = new Promise(res => { e.resolver = res })
+    this.libreTrasAgenda = false // una orden real manda sobre la vuelta al modo libre tras recuperar
     if (this.modo === 'libre') this.ponerModo('ordenes', `orden «${texto}»`)
     if (encolar && !this.agenda.vacia()) { this.agenda.encolar(e); this.supervisar(); return e.fin }
     const vieja = this.agenda.reemplazar(e)
@@ -1077,6 +1082,10 @@ class Personaje {
         }
       } catch (err) { this.ev('[agenda] fallo: ' + err.message) } finally { this.supervisando = null }
       if (ultima && this.despues === 'libre' && this.agenda.vacia() && this.modo !== 'libre' && !this.centinela && !this.guardaespaldas && !this.oficio) this.ponerModo('libre', `al terminar «${ultima.texto}»`)
+      if (this.libreTrasAgenda && this.agenda.vacia()) { // aunque la recuperación fallara (ultima nula)
+        this.libreTrasAgenda = false
+        if (this.modo !== 'libre' && !this.centinela && !this.guardaespaldas && !this.oficio) this.ponerModo('libre', 'tras recuperar mis cosas')
+      }
     })()
     return this.supervisando
   }
@@ -2234,6 +2243,7 @@ class Personaje {
         const p = (a || '').split(/\s+/).filter(Boolean)
         if (p[0] === 'libre' || p[0] === 'ordenes') {
           if (p[0] === 'libre') this.decisor.preparar() // si la red no vale, falla aquí (y lo dice) en vez de quedarse en libre sin decidir
+          this.libreTrasAgenda = false
           this.ponerModo(p[0], 'orden directa del puerto: modo ' + p[0])
         }
         const i = p.indexOf('despues')
@@ -2265,7 +2275,7 @@ class Personaje {
         bot.pathfinder.setGoal(new goals.GoalFollow(j, 2), true)
         return 'siguiéndote'
       },
-      para: async () => { this.ponerModo('ordenes', 'orden directa del puerto: para'); this.tarea.cancelada = true; if (this.tareaReflejo) this.tareaReflejo.cancelada = true; this.bot.pathfinder.setGoal(null); return 'parado' },
+      para: async () => { this.libreTrasAgenda = false; this.ponerModo('ordenes', 'orden directa del puerto: para'); this.tarea.cancelada = true; if (this.tareaReflejo) this.tareaReflejo.cancelada = true; this.bot.pathfinder.setGoal(null); return 'parado' },
       // F7.2. reflejos [si|no]: los reflejos de supervivencia (reflejos.js; por defecto, sí fuera del mundo del usuario); sin nada, el
       // estado: activo, cuántos ha hecho de cada uno y el último golpe de un monstruo
       reflejos: async (a) => {

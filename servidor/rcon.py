@@ -27,6 +27,7 @@ import re
 import socket
 import struct
 import sys
+import time
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
@@ -108,7 +109,21 @@ def _leer_paquete(s):
 
 
 def rcon(cmd, servidor=None, host=None, puerto=None, clave_archivo=None):
-    """Manda una orden al RCON del mundo y devuelve la respuesta (texto entero, aunque llegue en varios paquetes)."""
+    """Manda una orden al RCON del mundo y devuelve la respuesta (texto entero, aunque llegue en varios paquetes).
+    2026-11-03: el server cierra alguna conexión suelta (sin causa conocida, y sigue en marcha) y eso tumbaba los bancos: se repite.
+    Con el server parado (conexión rechazada) falla a la primera."""
+    for vez in range(3):
+        try:
+            return _una_orden(cmd, servidor, host, puerto, clave_archivo)
+        except ConnectionRefusedError:
+            raise
+        except ConnectionError:
+            if vez == 2:
+                raise
+            time.sleep(2)
+
+
+def _una_orden(cmd, servidor, host, puerto, clave_archivo):
     nombre, h, p, clave = destino(servidor, host, puerto, clave_archivo)
     cerrojo = AQUI / f".lock-{nombre}"
     with open(cerrojo, "a") as fc:
