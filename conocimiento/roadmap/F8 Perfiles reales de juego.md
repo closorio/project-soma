@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-03
-siguiente: "Banco M: el capataz ya sigue tras morir, pero se atasca en la etapa comida y no recupera sus cosas si murió en la mina; decidir si se arregla antes de make bench-m; luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
+siguiente: "make bench-m (≈ 90 min) si el usuario lo pide: el humo con muerte forzada ya sigue trabajando tras morir; luego F8.1 Casual. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
