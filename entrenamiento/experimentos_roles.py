@@ -35,6 +35,7 @@ HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv:
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
 HITOS_MEMORIA = ("casa",)  # los de progresion.estado().memoria (la casa construida queda en la memoria persistente)
 # el kit y la hora de salida de cada rol (por defecto, sin nada y `time set 0`); kit del minero: las etapas previas a m_carbon ya cumplidas
+AL_LADO = [(24, 0), (0, 24), (-24, 0), (0, -24), (48, 0), (0, 48)]  # si el punto de salida cae en agua
 PREPARACION = {"minero": {"kit": ["stone_pickaxe", "stone_sword", "oak_log 6", "cobblestone 8", "bread 16", "coal 8", "torch 8"], "hora": 1000}}
 HIERRO_M = 24  # banco M: hierro al acabar para contar como bien
 MIN_MB = 800
@@ -292,6 +293,14 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             r(f"effect give {n} minecraft:instant_health 1 10 true")
             r(f"effect give {n} minecraft:saturation 1 20 true")
             poner_en(n, px, pz)
+            # 2026-11-04, banco M: poner_en cae sobre el agua (motion_blocking la incluye): M3 y M4 salieron en un lago y, con el spawnpoint
+            # ahí, M4 reapareció en el spawn del mundo. Otro punto en tierra, antes del spawnpoint
+            for dx, dz in AL_LADO:
+                if "passed" not in r(f"execute at {n} if block ~ ~ ~ minecraft:water") + r(f"execute at {n} if block ~ ~-1 ~ minecraft:water"):
+                    break
+                print(f"   {n}: agua en ({px}, {pz}), pruebo a {puntos[i][0] + dx}, {puntos[i][1] + dz}", flush=True)
+                px, pz = puntos[i][0] + dx, puntos[i][1] + dz
+                poner_en(n, px, pz)
             # 2026-11-03: reaparecía en el spawn del mundo, a decenas de miles de bloques: sin vuelta a sus cosas (humo del banco M)
             r(f"execute at {n} run spawnpoint {n} ~ ~ ~")
             orden(p, "campamento aqui")

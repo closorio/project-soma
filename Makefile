@@ -31,7 +31,7 @@ POS     ?=              # go: coordenadas "x y z" (F3 en el juego)
 TEXT    ?= estado       # una orden en lenguaje sencillo: "tala 5 troncos", "ven", "caza 3 ovejas"
 CMD     ?= list         # una orden de RCON para el server local
 BASE    ?=              # banco K: JSON de una medida anterior para comparar punto a punto
-ZONE    ?=              # banco K: zona sin usar para preparar los puntos fijos
+ZONE    ?=              # banco K: zona sin usar para preparar los puntos fijos; banco M: terreno de la medida
 DAYS    ?= 2            # banco K: días de juego
 BENCHES ?= smoke-26-3 bench-k  # nightly: bancos en serie, sin Claude
 HOURS   ?= 24           # report: horas hacia atrás
@@ -449,10 +449,10 @@ bench-k:
 	  $(if $(strip $(BASE)),--comparar $(strip $(BASE)))
 
 bench-m:
-	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --dias $(strip $(DAYS)) --prefijo M
+	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --dias $(strip $(DAYS)) --prefijo M $(if $(strip $(ZONE)),--zona $(strip $(ZONE)))
 
 bench-m-smoke:
-	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --n 1 --rotaciones 1 --dias 0.5 --prefijo M
+	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --n 1 --rotaciones 1 --dias 0.5 --prefijo M $(if $(strip $(ZONE)),--zona $(strip $(ZONE)))
 
 bench-breath:
 	IO_SERVIDOR=local python servidor-supervivencia/probar_respirar.py
