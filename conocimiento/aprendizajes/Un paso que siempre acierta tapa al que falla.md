@@ -2,7 +2,7 @@
 tipo: aprendizaje
 fecha: 2026-11-04
 autor: seppuq
-titulo: Un paso que siempre acierta tapa al que falla
+fuente: "bot/capataz.js, servidor-supervivencia/logs/bots-rol-minero-{0,1}.log"
 ---
 # Un paso que siempre acierta tapa al que falla
 
