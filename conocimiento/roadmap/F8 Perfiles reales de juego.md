@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-04
-siguiente: "Banco M no pasa con otras zonas (3/8, 6 muertes; antes 6/8): no comparable. Lo que más pesa: tras morir se abandona «recuperar mis cosas». El usuario decide si se arregla y se mide con las mismas zonas. Pendiente: reaparecer en el spawn del mundo pese a spawnpoint; m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
+siguiente: "Recuperar tras un golpe arreglado (0/3 → 6/6). El usuario decide si repite el banco M en las mismas zonas (≈ 80 min) para comparar con el 3/8. Pendiente: reaparecer en el spawn del mundo pese a spawnpoint; m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
