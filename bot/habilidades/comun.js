@@ -120,6 +120,8 @@ async function moverHasta(bot, meta, listo, { ms, tarea, entidad, mov }) {
         if (entidad && !bot.entities[entidad.id]) return 'perdido'
         if (Date.now() - t0 > ms) return 'tiempo agotado'
         if (sinCamino >= 3 && !bot.pathfinder.isMoving()) return 'sin camino'
+        // 2026-11-04, banco de recuperar: un reflejo que acababa después le quitaba el destino y se quedaba quieto hasta agotar el tiempo
+        if (bot.pathfinder.goal === null) bot.pathfinder.setGoal(meta, true)
         await esperar(200)
       }
     }, mov)
@@ -144,13 +146,17 @@ async function viajeLargo(bot, destino, listo = () => false, { tarea, ms, mov, c
     const queda = limite - (Date.now() - t0)
     if (queda <= 0) return 'tiempo agotado'
     let meta
-    if (d <= TRAMO && !atascos) meta = new goals.GoalNear(destino.x, destino.y, destino.z, cerca)
+    const ultimo = d <= TRAMO && !atascos
+    if (ultimo) meta = new goals.GoalNear(destino.x, destino.y, destino.z, cerca)
     else {
       const a = Math.atan2(destino.z - aqui().z, destino.x - aqui().x) + GIROS[atascos % GIROS.length] * Math.PI / 180, l = Math.min(TRAMO, d)
       meta = new goals.GoalNearXZ(Math.round(aqui().x + Math.cos(a) * l), Math.round(aqui().z + Math.sin(a) * l), 4)
     }
     const r = await mover(bot, meta, () => listo() || meta.isEnd(aqui().floored()), { ms: Math.min(queda, 120000), tarea, mov })
     if (r === 'cancelado' || (r === 'tiempo agotado' && Date.now() - t0 >= limite)) return r
+    // 2026-11-04, banco de recuperar: GoalNear cuenta bloques enteros y `lejos` la distancia exacta: parado a 2,1 de un destino con
+    // cerca = 2, la meta ya estaba cumplida, no se movía más y acababa en «sin camino» a dos pasos de sus cosas
+    if (ultimo && !listo() && meta.isEnd(aqui().floored())) return 'llegué'
     atascos = lejos() < d - 4 ? 0 : atascos + 1
     if (atascos >= 4) return 'sin camino'
   }

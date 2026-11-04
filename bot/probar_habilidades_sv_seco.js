@@ -402,6 +402,9 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
     b.entity.position = new Vec3(0, 64, 0)
     const r3 = await viajeLargo(b, new Vec3(300, 64, 0), () => false, { mover: async () => 'sin camino' })
     ok(r3 === 'sin camino', `viajeLargo: sin avanzar → ${r3}`)
+    b.entity.position = new Vec3(298.4, 64, 0.5) // 2026-11-04: a 2,1 con cerca = 2: GoalNear (bloques enteros) ya está cumplida y no se mueve más
+    const r4 = await viajeLargo(b, new Vec3(300.5, 64, 0.5), () => false, { cerca: 2, mover: async () => 'listo' })
+    ok(r4 === 'llegué', `viajeLargo: meta cumplida a 2,1 de un destino con cerca 2 → ${r4}`)
   }
   { // 2026-11-01: siempre lo mejor puesto (equipar.pendiente)
     const { pendiente } = require('./habilidades/equipar'), it = (name) => ({ name, count: 1 })

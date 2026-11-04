@@ -62,7 +62,7 @@ publicar:
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         creative-server-download creative-server-start creative-server-stop creative-server-save creative-rcon \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare bench-gather bench-m bench-m-smoke bench-breath bench-climb-furnace
+        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare bench-gather bench-m bench-m-smoke bench-breath bench-climb-furnace bench-recover
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -121,6 +121,7 @@ help:
 	@echo "  bench-m-smoke       humo del banco M: 1 bot, medio día (≈ 10 min)"
 	@echo "  bench-breath        respirar bajo el agua en dos recintos: aire a 6 bloques y techo de 1 (≈ 3 min)"
 	@echo "  bench-climb-furnace subir sobre un estanque y dos bots con un solo horno (≈ 5 min)"
+	@echo "  bench-recover       recuperar lo suyo tras morir, con un golpe por el camino (≈ 2 min)"
 	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
@@ -458,6 +459,9 @@ bench-breath:
 
 bench-climb-furnace:
 	IO_SERVIDOR=local python servidor-supervivencia/probar_subir_y_horno.py
+
+bench-recover:
+	IO_SERVIDOR=local python servidor-supervivencia/probar_recuperar.py
 
 bench-prepare:
 	@test -n "$(strip $(ZONE))" || { echo "falta ZONE=… (una sin usar; las medidas hasta ahora llegan a la 77)"; exit 1; }

@@ -580,6 +580,8 @@ class Personaje {
       // 2026-11-02: una obra del catálogo no se pierde por una pelea: queda en pausa (agenda: interrumpida) y se retoma al acabar
       const ev = this.enVuelta
       if (ev && ev.o.tipo === 'construye' && ev.o.estructura) this.tarea.motivo = 'interrupcion'
+      // 2026-11-04, banco M: ni «recuperar mis cosas»: sin motivo, la agenda lo tomaba por una orden nueva y M4 perdió 477 objetos
+      if (ev && ev.o.tipo === 'recupera' && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       // 2026-11-03: tampoco un «consigue» (banco: un golpe en «ármate» lo canceló entero): se defiende y conseguir sigue (reanudar)
       if (this.enConseguir && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
@@ -1610,7 +1612,7 @@ class Personaje {
         if (sitios[0].segunda) return { exito: false, texto: `He muerto 3 veces seguidas recuperando mis cosas: lo dejo.` }
         const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
         const contar = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
-        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = [], sinLlegar = []
+        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = [], sinLlegar = [], recogidos = []
         this.recuperando = true
         try {
           for (const m of sitios) {
@@ -1632,10 +1634,12 @@ class Personaje {
               const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
               if (!q.exito || !q.quedan) break
             }
+            if (!tarea.cancelada) recogidos.push(m)
           }
         } finally { this.recuperando = false }
         // los de una muerte nueva, para la próxima vuelta; 2026-11-03, banco M: y aquellos a los que no llegó (el reintento decía «No he muerto»)
-        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x) || sinLlegar.includes(x))
+        // 2026-11-04: y si un golpe lo cortó, los que no terminó, para cuando se retome
+        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x) || sinLlegar.includes(x) || (tarea.cancelada && !recogidos.includes(x)))
         const n = contar() - antes
         const texto = (n > 0 ? `Recuperé ${Math.min(n, total)}/${total}.` : 'No encontré mis cosas.') + (fallos.length ? ` (${fallos.join('; ')})` : '')
         if (!tarea.cancelada && peligro()) {
