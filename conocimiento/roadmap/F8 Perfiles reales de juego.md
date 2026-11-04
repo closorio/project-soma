@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-03
-siguiente: "Recolector avanzado: 5.ª ronda de make bench-gather ONLY=diamante,cero con e0afbc7 (4.ª: 4/5 y 2/5, 1 ahogado); luego banco M del Minero y F8.1 Casual"
+siguiente: "Humo del banco M (make bench-m-smoke) y, si el usuario lo pide, banco M completo (make bench-m); luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
@@ -19,6 +19,7 @@ Puerta G0, parte 1: `probar_supervivencia.py` en 26.1.2 pasa **todas** las secci
 **F8.1 parada sin pasar el banco K (2026-10-25).** El capataz del Casual recorre todas sus etapas, y el banco K elige puntos con ovejas y árboles, corta si caen los bots y da las causas de muerte. Medida 9: pico de hierro 7/8 (mediana del día 0,37), cama 3/8 (mediana 1,34) y 3/8 en el criterio, que pide ≥ 6/8. Lo que falta, según los registros, son cuatro habilidades concretas, no el diseño: cazar desde bajo tierra, árboles inalcanzables, ahogamiento y el tejado de `construir`. Ver [[2026-10-25-1401-banco-k-casual-medida-9]], [[Una presa que desaparece no está muerta]], [[Pedir ovejas elige llanos pelados]], [[El navegador pasa bloques sin posición a las exclusiones]] y [[El tejado de la cabaña no se alcanza desde fuera]].
 
 **F8.2 Minero, primer trozo (2026-11-02).** La orden «consigue N X» (`bot/conseguir.js`, `cavar_tunel`) resuelve pico, antorchas, bajada, túnel con la lava tapada y entrega; seco 44/44. Rol `minero` (M1-M6 sobre `conseguir`, 15 etapas, valida). Humo del banco: hierro 6/6 en 224 s, 0 muertes (el primero se ahogó en un lago: ahora sale del agua). Banco completo lanzado con `make nightly BENCHES=bench-gather`. Ver [[2026-11-02-recolector-conseguir]].
+Recolector aceptado por el usuario tras 4 rondas sin cumplir del todo el criterio (diamante 4/5, desde cero 2/5, 1 ahogado) y criterio del banco M medido en el inventario: [[2026-11-03-recolector-aceptado-y-criterio-m]].
 
 ## Siguiente paso
 Ver campo «siguiente». Casual es el primer rol completo (F8.1) y su red llega en F8.G; Speedrunner va al final (F8.7-F8.8).
