@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-03
-siguiente: "Arreglar lo que sacó el humo del banco M (ahogado cavando; tras morir el capataz no sigue y flota en bucle), repetir make bench-m-smoke y, si el usuario lo pide, make bench-m; luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
+siguiente: "Banco M: el capataz ya sigue tras morir, pero se atasca en la etapa comida y no recupera sus cosas si murió en la mina; decidir si se arregla antes de make bench-m; luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
