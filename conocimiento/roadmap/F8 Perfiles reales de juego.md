@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-03
-siguiente: "Humo del banco M (make bench-m-smoke) y, si el usuario lo pide, banco M completo (make bench-m); luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
+siguiente: "Arreglar lo que sacó el humo del banco M (ahogado cavando; tras morir el capataz no sigue y flota en bucle), repetir make bench-m-smoke y, si el usuario lo pide, make bench-m; luego F8.1 Casual. Pendiente conocido: conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
