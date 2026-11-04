@@ -132,6 +132,16 @@ const bk = mundoFalso({ inventario: [['stone_pickaxe', 1], ['stone_sword', 1], [
 const dk = capataz.decidir(bk, 'minero')
 ok(dk.habilidad === 'conseguir' && dk.args.join(' ') === 'carbon 32', `minero con el kit del banco M: empieza en conseguir carbon 32 (${dk.habilidad} ${(dk.args || []).join(' ')})`)
 
-fs.rmSync(tmp, { recursive: true, force: true })
-console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
-process.exit(fallos ? 1 : 0)
+// 10 · la etapa comida lleva comida también sin hambre (tras morir, «sin hambre» la dejaba dando vueltas)
+const bc = mundoFalso({ comida: 20 })
+const pc = capataz.rol('minero').etapas.find(x => x.id === 'comida').hacer[0]
+ok(pc === 'recoger_comida 24 - guardar', `el paso de la etapa comida guarda sin hambre (${pc})`)
+const recogerComida = require('./habilidades/recoger_comida')
+;(async () => {
+  bc.entities = bc.entities || {}
+  const sinPedir = await recogerComida(bc, ['24'], null), guardando = await recogerComida(bc, ['24', '-', 'guardar'], null)
+  ok(sinPedir.causa === 'sin hambre' && guardando.causa === 'nada que comer a la vista', `sin hambre: ${sinPedir.causa} / ${guardando.causa}`)
+  fs.rmSync(tmp, { recursive: true, force: true })
+  console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
+  process.exit(fallos ? 1 : 0)
+})()

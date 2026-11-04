@@ -1,4 +1,5 @@
-// recoger_comida [radio=24] (F7.2): conseguir comida de día y con hambre (≤ 12, como el simulador): primero la que hay en el suelo
+// recoger_comida [radio=24] [evitar] [guardar] (F7.2): conseguir comida de día y con hambre (≤ 12, como el simulador; «guardar»: también
+// sin hambre, para llevarla, como la etapa comida del capataz): primero la que hay en el suelo
 // a ≤ 8 (manzanas, carne de un animal muerto…); si no, caza el animal de granja más cercano a ≤ radio (vaca, cerdo, oveja, pollo,
 // conejo, champiñaca), con el arma que lleve o a puñetazos (atacar.pelear, sin romper bloques) y recoge lo que suelte.
 // Éxito «cazado» o «recogido» (sube la comida del inventario). Fallos: sin hambre · de noche · nada que comer a la vista · se escapó ·
@@ -16,10 +17,11 @@ const ANIMALES = new Set(['cow', 'pig', 'sheep', 'chicken', 'rabbit', 'mooshroom
 const comidaInv = (bot) => sv.comidas(bot).reduce((a, i) => a + i.count, 0)
 const esComida = (bot, e) => { try { const n = e.getDroppedItem().name; return !!bot.registry.foodsByName[n] && sv.comidaComible(n) } catch (_) { return false } }
 
-module.exports = async function recogerComida(bot, [radio, evitar], tarea) {
+module.exports = async function recogerComida(bot, [radio, evitar, para], tarea) {
   const R = parseFloat(radio) || 24, t0 = Date.now(), c0 = comidaInv(bot)
   const fin = (exito, causa, extra = {}) => ({ exito, causa, comida: [c0, comidaInv(bot)], s: +((Date.now() - t0) / 1000).toFixed(1), ...extra })
-  if (bot.food > HAMBRE) return fin(false, 'sin hambre')
+  // 2026-11-03, banco M: tras morir, la etapa comida no avanzaba hasta que le entraba hambre (≈ 5 min dando vueltas)
+  if (bot.food > HAMBRE && para !== 'guardar') return fin(false, 'sin hambre')
   if (sv.esNoche(bot)) return fin(false, 'de noche')
   // comida en el suelo
   const enSuelo = Object.values(bot.entities).filter(e => e.name === 'item' && dist(bot, e) <= SUELO && esComida(bot, e))

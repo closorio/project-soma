@@ -1610,7 +1610,7 @@ class Personaje {
         if (sitios[0].segunda) return { exito: false, texto: `He muerto 3 veces seguidas recuperando mis cosas: lo dejo.` }
         const peligro = () => sv.aLaVista(bot).filter(x => x.position.distanceTo(bot.entity.position) <= 12).length >= 3 || bot.health < 10
         const contar = () => bot.inventory.items().reduce((a, i) => a + i.count, 0)
-        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = []
+        const antes = contar(), total = sitios.reduce((a, x) => a + x.objetos, 0), fallos = [], sinLlegar = []
         this.recuperando = true
         try {
           for (const m of sitios) {
@@ -1626,7 +1626,7 @@ class Personaje {
               if (r !== 'listo') break
               await this.ejecutarHabilidad('comer', ['20'], tarea)
             }
-            if (r !== 'llegué') { fallos.push(`no llego a ${donde} (${r})`); continue }
+            if (r !== 'llegué') { fallos.push(`no llego a ${donde} (${r})`); sinLlegar.push(m); continue }
             for (let k = 0; k < 5 && !tarea.cancelada; k++) {
               if (sv.debeComerPorSalud(bot)) await this.ejecutarHabilidad('comer', ['20'], tarea)
               const q = await this.ejecutarHabilidad('recoger', ['12', '-', 'max:40', 'otra_vez'], tarea)
@@ -1634,7 +1634,8 @@ class Personaje {
             }
           }
         } finally { this.recuperando = false }
-        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x)) // los de una muerte nueva, para la próxima vuelta
+        // los de una muerte nueva, para la próxima vuelta; 2026-11-03, banco M: y aquellos a los que no llegó (el reintento decía «No he muerto»)
+        this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x) || sinLlegar.includes(x))
         const n = contar() - antes
         const texto = (n > 0 ? `Recuperé ${Math.min(n, total)}/${total}.` : 'No encontré mis cosas.') + (fallos.length ? ` (${fallos.join('; ')})` : '')
         if (!tarea.cancelada && peligro()) {
