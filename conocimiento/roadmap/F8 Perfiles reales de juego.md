@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-04
-siguiente: "Recuperar tras un golpe arreglado (0/3 → 6/6). El usuario decide si repite el banco M en las mismas zonas (≈ 80 min) para comparar con el 3/8. Pendiente: reaparecer en el spawn del mundo pese a spawnpoint; m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
+siguiente: "Banco M con terreno limpio: 2/8, no pasa. El usuario decide si se arregla el bucle del capataz en m_pozo (3 de los 6 fallos) y los otros fallos: recuperar cancelado por una orden, reaparecer en el spawn del mundo, último punto sin comprobar. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
