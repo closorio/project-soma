@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-04
-siguiente: "Banco M pasa justo (6/8, 0 muertes). El usuario decide: arreglar M3 en el techo del mundo (y≈318) y fundir cortado que pierde hierro, o pasar a F8.1 Casual. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
+siguiente: "Banco M no pasa con otras zonas (3/8, 6 muertes; antes 6/8): no comparable. Lo que más pesa: tras morir se abandona «recuperar mis cosas». El usuario decide si se arregla y se mide con las mismas zonas. Pendiente: reaparecer en el spawn del mundo pese a spawnpoint; m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
