@@ -97,9 +97,9 @@ async function subirUno(bot) {
 }
 
 // Del fondo del pozo a la boca (salida, encima): picar lo que haya sobre la cabeza y subir, hasta tener los pies a su altura.
-async function subirPozo(bot, salida, tarea) {
+async function subirPozo(bot, salida, tarea, parar) {
   let caidas = 0
-  for (let k = 0; k < 8 && nodo(bot).y < salida.y; k++) {
+  for (let k = 0; k < 8 && nodo(bot).y < salida.y && !(parar && parar(bot)); k++) {
     if (tarea && tarea.cancelada) return false
     const b = nodo(bot)
     // 2026-11-03, banco del recolector: subiendo en pilar bajo grava, la grava le cayó en la cabeza y murió asfixiado. Primero, la

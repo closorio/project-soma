@@ -49,6 +49,16 @@ function salidaLibre(bot) {
   })
 }
 const fuera = (bot) => alCielo(bot) && salidaLibre(bot)
+// ¿Ya no queda nada a lo que subir? Cielo a la vista y aire a los cuatro lados, a la altura de pies y cabeza (en una zanja hay paredes).
+// 2026-11-04, banco M: sobre un lago no hay suelo al lado a ninguna altura, fuera() no se cumplía nunca y el bot subió hasta y≈318.
+function alDescubierto(bot) {
+  if (!alCielo(bot)) return false
+  const b = nodo(bot)
+  return Object.values(DIRS).every(([dx, dz]) => [0, 1].every(dy => {
+    const k = bot.blockAt(b.offset(dx, dy, dz))
+    return k && !sv.solido(k) && !sv.esLiquido(k)
+  }))
+}
 const liquidoJunto = (bot, v) => {
   for (const [dx, dy, dz] of [[0, 0, 0], ...LADOS6]) {
     const k = bot.blockAt(v.offset(dx, dy, dz))
@@ -143,20 +153,22 @@ async function cavarEscalera(bot, [yArg, rumbo], tarea) {
 }
 
 async function subirASuperficie(bot, [rumbo], tarea) {
-  if (fuera(bot)) return { exito: true, causa: 'ya fuera', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [] }
+  if (fuera(bot) || alDescubierto(bot)) return { exito: true, causa: fuera(bot) ? 'ya fuera' : 'al descubierto', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [] }
   const ultima = memoria(bot).escalera
   const dir = rumbo ? dirDe(bot, rumbo) : ultima && !ultima.sube ? [-ultima.dir[0], -ultima.dir[1]] : dirDe(bot)
-  const r = await escalera(bot, { yMeta: Infinity, dir, hasta: () => fuera(bot) }, tarea)
+  const parar = (b) => fuera(b) || alDescubierto(b)
+  const r = await escalera(bot, { yMeta: Infinity, dir, hasta: () => parar(bot) }, tarea)
   if (r.exito || r.causa === 'cancelado') return { ...r, modo: 'escalera' }
   // sin escalera (líquido delante, protegido…): pilar recto hacia arriba
   const { subirPozo, paraSubir } = require('./salir_del_refugio')
   if (!paraSubir(bot).length) return { ...r, modo: 'escalera' }
-  for (let k = 0; k < 4 && !fuera(bot) && !(tarea && tarea.cancelada) && paraSubir(bot).length; k++) { // subirPozo: ≤ 8 por vez
+  for (let k = 0; k < 4 && !parar(bot) && !(tarea && tarea.cancelada) && paraSubir(bot).length; k++) { // subirPozo: ≤ 8 por vez
     const y = nodo(bot).y
-    await subirPozo(bot, nodo(bot).offset(0, CIELO, 0), tarea)
+    await subirPozo(bot, nodo(bot).offset(0, CIELO, 0), tarea, parar)
     if (nodo(bot).y === y) break
   }
-  return { ...r, exito: fuera(bot), causa: fuera(bot) ? 'fuera' : 'pilar: ' + r.causa, modo: 'pilar', y: nodo(bot).y }
+  const causa = fuera(bot) ? 'fuera' : alDescubierto(bot) ? 'al descubierto' : 'pilar: ' + r.causa
+  return { ...r, exito: parar(bot), causa, modo: 'pilar', y: nodo(bot).y }
 }
 
-module.exports = { cavarEscalera, subirASuperficie, alCielo, salidaLibre, fuera, dirDe, paso, escalera, abrir, liquidoJunto, DIRS }
+module.exports = { cavarEscalera, subirASuperficie, alCielo, salidaLibre, fuera, alDescubierto, dirDe, paso, escalera, abrir, liquidoJunto, DIRS }

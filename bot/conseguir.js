@@ -213,7 +213,9 @@ async function ejecutar(bot, material, n0, ctx) {
     }
     if (!entrega) { const [r, d] = await ctx.paso('depositar', []); pasos.push(d); entrega = r.exito ? 'cofre' : 'lo llevo' }
   }
-  return { exito: !!fin.exito, causa: fin.causa, conseguidos, pedidos: n, entrega, pasos, s: +((Date.now() - t0) / 1000).toFixed(1) }
+  // 2026-11-04, banco M: fin.exito se decide antes de fundir, y decía «hecho (14/32)» tras perder el hierro en el horno
+  const faltan = fin.exito && m.suelta ? n - conseguidos : 0
+  return { exito: !!fin.exito && faltan <= 0, causa: faltan > 0 ? `me faltan ${faltan}` : fin.causa, conseguidos, pedidos: n, entrega, pasos, s: +((Date.now() - t0) / 1000).toFixed(1) }
 }
 
 module.exports = { MATERIALES, ALIAS, siguiente, apuntar, estado, ejecutar }

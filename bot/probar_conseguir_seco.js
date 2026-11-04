@@ -13,7 +13,7 @@ const path = require('path')
 const mundo = require('./mundo')
 mundo.carpetaDatos = fs.mkdtempSync(path.join(os.tmpdir(), 'conseguir-'))
 const { mundoFalso } = require('./probar_sentidos_seco')
-const { siguiente, apuntar, ejecutar } = require('./conseguir')
+const { siguiente, apuntar, ejecutar, estado } = require('./conseguir')
 const ordenes = require('./ordenes')
 
 let pruebas = 0, fallos = 0
@@ -294,6 +294,32 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
   ok(rt2 === 'lava' && ct2.peligros[0].tipo === 'lava', `sin relleno, para: ${rt2}`)
 
   // 3 · órdenes
+  // 2026-11-04, banco M: el pilar sobre un lago no paraba; el horno de otro no se toca; «hecho» solo con lo pedido en la mano
+  const { alDescubierto, fuera } = require('./habilidades/escalera')
+  const { hornoLibre } = require('./habilidades/fundir')
+  const casilla = (name) => ({ name, boundingBox: name === 'air' || name === 'water' ? 'empty' : 'block' })
+  const terreno = (f) => ({ entity: { position: new Vec3(0.5, 70, 0.5) }, blockAt: (v) => casilla(f(v.x, v.y, v.z)) })
+  const yaSobreAgua = terreno((x, y) => (y < 65 ? 'water' : 'air')), enLaZanja = terreno((x, y, z) => (x === 0 && z === 0 ? 'air' : y < 72 ? 'stone' : 'air'))
+  const enAgua = terreno((x, y) => (y < 71 ? 'water' : 'air')), aRas = terreno((x, y) => (y < 70 ? 'stone' : 'air'))
+  ok(alDescubierto(yaSobreAgua) && !fuera(yaSobreAgua), 'sobre un lago: al descubierto, aunque nunca esté «fuera»')
+  ok(!alDescubierto(enLaZanja), 'en la zanja de la escalera: aún no')
+  ok(!alDescubierto(enAgua), 'con los pies en el agua: aún no')
+  ok(alDescubierto(aRas) && fuera(aRas), 'a ras de suelo: fuera, como siempre')
+  const libre = (dentro, nota) => hornoLibre(dentro, '1,2,3', nota)
+  ok(libre({}, null), 'horno vacío y apagado: libre')
+  ok(!libre({ entrada: 'raw_iron' }, null), 'con hierro de otro: no se toca')
+  ok(!libre({ salida: 'iron_ingot' }, null), 'con lingotes de otro: no se toca')
+  ok(!libre({ encendido: true }, null), 'encendido, sin nota: no se toca')
+  ok(libre({ entrada: 'raw_copper', salida: 'copper_ingot' }, { pos: '1,2,3', entrada: 'raw_copper', salida: 'copper_ingot' }), 'mis restos: libre')
+  ok(libre({ encendido: true }, { pos: '1,2,3' }), 'el mío, aún encendido: libre')
+  ok(!libre({ entrada: 'raw_iron' }, { pos: '1,2,3' }), 'mío, pero con hierro que no dejé: no se toca')
+  ok(!libre({ entrada: 'raw_iron' }, { pos: '9,9,9', entrada: 'raw_iron' }), 'mis restos son de otro horno: no se toca')
+  poner('raw_iron', 4)
+  let robado = false
+  const rp = await ejecutar(bot, 'hierro', estado(bot).tiene.hierro, { ...ctx, entregar: false,
+    paso: async (h) => { if (h === 'fundir') { quitar('raw_iron', 4); robado = true }; return [{ exito: false, causa: 'tiempo agotado' }, { habilidad: h, exito: false, causa: '' }] } })
+  ok(robado && !rp.exito && rp.causa === 'me faltan 4', `«hecho» sin lo pedido: ${rp.exito} ${rp.causa}`)
+
   const o = (t) => ordenes.interpretar(t)
   ok(JSON.stringify(o('consigue 5 diamantes')) === '{"tipo":"consigue","material":"diamante","n":5}', 'consigue 5 diamantes')
   ok(o('tráeme 32 de piedra roja').material === 'redstone', 'piedra roja')

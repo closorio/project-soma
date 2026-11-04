@@ -9,6 +9,7 @@ const { goals } = require('mineflayer-pathfinder')
 const { conLimite, esperar, moverHasta, lejania } = require('./comun')
 const { colocarAlLado } = require('./colocar')
 const persistente = require('../memoria_persistente')
+const memoria = require('../memoria')
 
 // lo que entra → lo que sale (alias en español y en inglés)
 const FUNDIR = {
@@ -50,8 +51,21 @@ function combustible(bot, n, pedido, entrada) {
   return null
 }
 
+// ¿Puedo usar este horno? Vacío y apagado, o con lo que yo dejé en él: nota = { pos: 'x,y,z', entrada, salida } de mi último horno.
+// 2026-11-04, banco M: se sacaba lo que hubiera de otro tipo y M4, fundiendo cobre, se llevó el hierro de M2 (dos bots, un horno).
+function hornoLibre({ entrada, salida, encendido }, pos, nota) {
+  if (!entrada && !salida && !encendido) return true
+  if (!nota || nota.pos !== pos) return false
+  return (!entrada || entrada === nota.entrada) && (!salida || salida === nota.salida)
+}
+
 async function hornoA(bot, tarea, nuevo = false) {
   const id = bot.registry.blocksByName.furnace.id, lit = (bot.registry.blocksByName.lit_furnace || {}).id
+  const nota = memoria(bot).hornoMio
+  if (!nuevo && nota) { // el mío, antes que otro más cerca
+    const m = bot.blockAt(new (require('vec3').Vec3)(...nota.pos.split(',').map(Number)))
+    if (m && (m.type === id || m.type === lit) && lejania(bot, m.position) <= RADIO_HORNO) return { b: m, puesto: false }
+  }
   let b = !nuevo && bot.findBlock({ matching: [id, lit].filter(x => x != null), maxDistance: RADIO_HORNO })
   if (b) return { b, puesto: false }
   if (!cuenta(bot, 'furnace')) {
@@ -86,17 +100,33 @@ module.exports = async function fundir(bot, [pedido, cantidad, comb], tarea) {
       pos = h.b.position
     } else if (r !== 'listo') return { exito: false, causa: 'no llego al horno: ' + r, ...datos }
   }
-  Object.assign(datos, { horno: [pos.x, pos.y, pos.z], puesto: h.puesto })
+  let horno
+  for (let intento = 0; ; intento++) {
+    Object.assign(datos, { horno: [pos.x, pos.y, pos.z], puesto: h.puesto })
+    const bloque = bot.blockAt(pos)
+    try { horno = await conLimite(bot.openFurnace(bloque), 8000) } catch (e) { return { exito: false, causa: 'no se abrió: ' + e.message, ...datos } }
+    const dentro = { entrada: (horno.inputItem() || {}).name, salida: (horno.outputItem() || {}).name, encendido: !!(bloque.getProperties && bloque.getProperties().lit) }
+    if (hornoLibre(dentro, pos.toArray().join(','), memoria(bot).hornoMio)) break
+    try { horno.close() } catch (_) {}
+    if (intento) return { exito: false, causa: 'horno ocupado', ...datos } // el que acabo de poner, ya ocupado
+    h = await hornoA(bot, tarea, true)
+    if (!h.b) return { exito: false, causa: `horno ocupado y no pude poner otro: ${h.causa}`, ...datos }
+    pos = h.b.position
+    if (lejania(bot, pos) > 4.3) {
+      const r = await moverHasta(bot, new goals.GoalNear(pos.x, pos.y, pos.z, 2), () => lejania(bot, pos) <= 4.3, { ms: 30000, tarea })
+      if (r !== 'listo') return { exito: false, causa: 'no llego al horno: ' + r, ...datos }
+    }
+  }
   // 2026-11-03, banco: el combustible (troncos) se elegía antes de hacer el horno, y la mesa para hacerlo se los comió
   const c2 = combustible(bot, n, comb, entrada)
-  if (!c2) return { exito: false, causa: 'sin combustible' + (comb ? ': ' + comb : ''), ...datos }
+  if (!c2) { try { horno.close() } catch (_) {} ; return { exito: false, causa: 'sin combustible' + (comb ? ': ' + comb : ''), ...datos } }
   c.splice(0, 2, ...c2)
   const antes = cuenta(bot, salida), t0 = Date.now()
-  let horno
-  try { horno = await conLimite(bot.openFurnace(bot.blockAt(pos)), 8000) } catch (e) { return { exito: false, causa: 'no se abrió: ' + e.message, ...datos } }
+  const mio = { pos: pos.toArray().join(',') }
+  memoria(bot).hornoMio = { ...mio, entrada, salida } // por si se corta a mitad: lo que quede dentro es mío
   try {
     const id = (x) => bot.registry.itemsByName[x].id
-    // 2026-11-03, banco: lo que quedó de un intento anterior ocupa el horno («destination full»): sacarlo, si es otra cosa
+    // 2026-11-03, banco: lo que quedó de un intento mío anterior ocupa el horno («destination full»): sacarlo, si es otra cosa
     if (horno.outputItem()) await conLimite(horno.takeOutput(), 3000)
     if (horno.inputItem() && horno.inputItem().name !== entrada) await conLimite(horno.takeInput(), 3000)
     if (horno.fuelItem() && horno.fuelItem().name !== c[0]) await conLimite(horno.takeFuel(), 3000)
@@ -111,10 +141,14 @@ module.exports = async function fundir(bot, [pedido, cantidad, comb], tarea) {
     if (horno.inputItem()) { try { await conLimite(horno.takeInput(), 3000) } catch (_) {} } // lo que no dio tiempo vuelve
   } catch (e) {
     return { exito: false, causa: 'no se pudo: ' + e.message, obtenido: cuenta(bot, salida) - antes, ...datos }
-  } finally { try { horno.close() } catch (_) {} }
+  } finally {
+    // lo que no pude sacar sigue siendo mío; lo que aparezca después, de otro
+    memoria(bot).hornoMio = { ...mio, entrada: (horno.inputItem() || {}).name, salida: (horno.outputItem() || {}).name }
+    try { horno.close() } catch (_) {}
+  }
   await esperar(300)
   const obtenido = cuenta(bot, salida) - antes
   const causa = obtenido >= n ? 'fundido' : tarea && tarea.cancelada ? 'cancelado' : 'tiempo agotado'
   return { exito: obtenido >= n, causa, obtenido, n, combustible: c, ...datos }
 }
-Object.assign(module.exports, { FUNDIR, ALIAS, entradaDe, salidaDe, combustible })
+Object.assign(module.exports, { FUNDIR, ALIAS, entradaDe, salidaDe, combustible, hornoLibre })
