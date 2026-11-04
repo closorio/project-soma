@@ -121,7 +121,7 @@ help:
 	@echo "  bench-m-smoke       humo del banco M: 1 bot, medio día (≈ 10 min)"
 	@echo "  bench-breath        respirar bajo el agua en dos recintos: aire a 6 bloques y techo de 1 (≈ 3 min)"
 	@echo "  bench-climb-furnace subir sobre un estanque y dos bots con un solo horno (≈ 5 min)"
-	@echo "  bench-recover       recuperar lo suyo tras morir, con un golpe por el camino (≈ 2 min)"
+	@echo "  bench-recover       recuperar lo suyo tras morir: golpe, pozo, charco y sellado (≈ 6 min)"
 	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"

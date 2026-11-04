@@ -155,6 +155,7 @@ const TERRENO = new Set(['refugiarse', 'salir_del_refugio', 'cavar_escalera', 's
 const decisores = require('./decisores') // F8.0a: quién decide en libre, por personaje (red, guion o capataz)
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
+const AHOGOS_RECUPERANDO = 4 // 2026-11-04: cortes por falta de aire antes de dar por inalcanzable el sitio de la muerte
 const AIRE_MIN = 10, RESPIRAR_MS = 30000 // 2026-11-03: aire de 0 a 20 (15 s bajo el agua); con la mitad, a respirar
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
@@ -304,6 +305,7 @@ class Personaje {
         // una urgencia de la agenda: va antes que lo que hacía y, al acabar, lo retoma («ataca a X sin parar» sigue tras recuperar)
         // 2026-11-03, banco M: la agenda pasa a modo órdenes y el capataz no volvía a dar un paso: al acabar, otra vez a libre
         if (this.modo === 'libre') this.libreTrasAgenda = true
+        this.ahogosRecuperando = 0
         const e = this.agenda.entrada({ tipo: 'recupera' }, 'recuperar mis cosas', 'auto')
         e.fin = new Promise(res => { e.resolver = res })
         for (const x of this.agenda.pila.filter(x => x.o.tipo === 'recupera')) { this.agenda.quitar(x); this.soltar(x, { exito: false, texto: '' }) } // la nueva cubre los dos sitios
@@ -625,6 +627,7 @@ class Personaje {
     this.defendiendo = (async () => {
       // 2026-11-03, banco M: sin motivo, la agenda lo tomaba por una orden nueva y dejaba «recuperar mis cosas»: se retoma al respirar
       if ((this.enConseguir || this.enVuelta) && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
+      if (this.enVuelta && this.enVuelta.o.tipo === 'recupera') this.ahogosRecuperando = (this.ahogosRecuperando || 0) + 1
       this.tarea.cancelada = true
       if (this.tareaReflejo) this.tareaReflejo.cancelada = true
       try { bot.pathfinder.setGoal(null); bot.stopDigging() } catch (_) {}
@@ -1619,12 +1622,17 @@ class Personaje {
             if (tarea.cancelada) break
             const edad = (Date.now() - m.t) / 1000, d = bot.entity.position.distanceTo(m.pos), donde = m.pos.floored().toArray().join(' ')
             if (m.causa && /lava|burn|fire|flames|void|out of the world|fell out/i.test(m.causa)) { fallos.push(`en ${donde} (${m.causa}) no queda nada`); continue }
+            // 2026-11-04, humo del banco M: sin camino, buceaba hacia el sitio y salía a respirar, 30 veces, hasta que caducaban los objetos
+            if ((this.ahogosRecuperando || 0) >= AHOGOS_RECUPERANDO) { fallos.push(`lo de ${donde} queda bajo el agua: lo dejo`); continue }
             // los objetos solo envejecen con el chunk cargado: muerto lejos de donde está (≥ 128), puede que sigan ahí aunque pase el tiempo
             if (edad > 290 && d < 128) { fallos.push(`lo de ${donde} ya habrá desaparecido`); continue }
             this.decir(`Voy a por mis cosas a ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques.`)
             let r
             for (let k = 0; k < 6 && !tarea.cancelada; k++) { // sin tope de distancia, por tramos; con poca vida come y sigue
-              r = await viajeLargo(bot, m.pos, () => sv.debeComerPorSalud(bot), { tarea, mov: prudentes(bot), cerca: 2 })
+              // 2026-11-04, humo del banco M: murió al fondo de un pozo de 8 que había cavado, y la caída por defecto llega a 4
+              const mov = prudentes(bot)
+              mov.maxDropDown = Math.min(12, Math.max(mov.maxDropDown, Math.floor(bot.health) - 8))
+              r = await viajeLargo(bot, m.pos, () => sv.debeComerPorSalud(bot), { tarea, mov, cerca: 2 })
               if (r !== 'listo') break
               await this.ejecutarHabilidad('comer', ['20'], tarea)
             }
