@@ -11,6 +11,8 @@ cada 3 días (se informa por ejecución). Escribe logs/rol-ROL-AAAAMMDD-HHMM.jso
 Terreno fijo (F8.1): --preparar-puntos RUTA --zona Z elige 8 puntos y fotografía sus regiones (servidor-local/banco_k/); luego
 --puntos RUTA restaura la foto antes de medir y pone a los 8 a la vez en sus puntos (una rotación), y --comparar JSON compara punto a
 punto con otra medida del mismo banco.
+Banco M (2026-11-03, --rol minero): empieza con el kit de PREPARACION y `time set 1000`; criterio fijado antes de medir: hierro crudo +
+lingotes en el inventario al acabar los 2 días ≥ 24 en ≥ 6/8 y 0 muertes por lava (decisión 2026-11-03-recolector-aceptado-y-criterio-m).
 Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]
      experimentos_roles.py --preparar-puntos entrenamiento/puntos_k.json --zona 60
      experimentos_roles.py --puntos entrenamiento/puntos_k.json [--comparar logs/rol-casual-….json]"""
@@ -32,6 +34,9 @@ HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv:
          "antorchas": lambda inv: inv.get("antorchas", 0) >= 8, "horno": lambda inv: inv.get("horno", 0) >= 1,
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
 HITOS_MEMORIA = ("casa",)  # los de progresion.estado().memoria (la casa construida queda en la memoria persistente)
+# el kit y la hora de salida de cada rol (por defecto, sin nada y `time set 0`); kit del minero: las etapas previas a m_carbon ya cumplidas
+PREPARACION = {"minero": {"kit": ["stone_pickaxe", "stone_sword", "oak_log 6", "cobblestone 8", "bread 16", "coal 8", "torch 8"], "hora": 1000}}
+HIERRO_M = 24  # banco M: hierro al acabar para contar como bien
 MIN_MB = 800
 TRONCOS = 3  # árboles mínimos en la rejilla de terreno() para un punto de salida
 
@@ -263,6 +268,8 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
     for n in nombres:
         (RAIZ / "mundos" / MUNDO / f"memoria_{n}.json").unlink(missing_ok=True)
     args = [f"{n}:{p}:recolector:ordenes:capataz@{a.rol}" for n, p in zip(nombres, puertos)]
+    prep = PREPARACION.get(a.rol, {})
+    hora0 = prep.get("hora", 0)
     log = open(LOGS / f"bots-rol-{a.rol}-{k}.log", "w")
     bot = subprocess.Popen(["node", "io.js", *args], cwd=RAIZ / "bot", stdout=log, stderr=subprocess.STDOUT,
                            env={**os.environ, "IO_SERVIDOR": MUNDO, "IO_BOTS": ",".join(nombres)}, start_new_session=True)
@@ -279,6 +286,8 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
         for i, (n, p) in enumerate(zip(nombres, puertos)):
             px, pz, nov = puntos[i]
             r(f"clear {n}")
+            for g in prep.get("kit", []):
+                r(f"give {n} minecraft:{g}")
             r(f"effect clear {n}")
             r(f"effect give {n} minecraft:instant_health 1 10 true")
             r(f"effect give {n} minecraft:saturation 1 20 true")
@@ -286,7 +295,7 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             orden(p, "campamento aqui")
             orden(p, "reflejos si")
             filas[n] = {"rotacion": k, "punto": [px, pz], "ovejas": nov, "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
-        r("time set 0")
+        r(f"time set {hora0}")
         dia0, _ = hora(MUNDO)
         inicio = time.strftime("%H:%M:%S")
         for p in puertos:
@@ -308,7 +317,7 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             if memoria_mb() < MIN_MB:
                 raise SystemExit(f"solo quedan {memoria_mb()} MB de memoria disponible: paro")
             dia, ticks = hora(MUNDO)
-            dias = (dia - dia0) + ticks / 24000 if dia is not None else (time.time() - t0) / 1200
+            dias = (dia - dia0) + (ticks - hora0) / 24000 if dia is not None else (time.time() - t0) / 1200
             for n, p in zip(nombres, puertos):
                 try:
                     pr = json.loads(orden(p, "progreso", 10))
@@ -319,6 +328,8 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
                 for id_, h in (pr.get("hechas") or {}).items():
                     f["etapas"].setdefault(id_, {"dias": round(dias, 2), **h})
                 inv = (pr.get("estado") or {}).get("inv", {})
+                f["hierro_final"] = inv.get("hierro", 0) + inv.get("hierro_mena", 0)
+                f["hierro_max"] = max(f.get("hierro_max", 0), f["hierro_final"])  # solo informa: lo que perdió al morir
                 for h, ok in HITOS.items():
                     if ok(inv) and h not in f["hitos"]:
                         f["hitos"][h] = round(dias, 2)
@@ -408,9 +419,19 @@ def main():
     resumen = {"pico_hierro_y_cama_en_2_dias": len(bien), "de": len(filas), "pasa": len(bien) >= 6 * len(filas) / 8,
                "muertes_por_3_dias": muertes_3d, "muertes_ok": all(m <= 1 for m in muertes_3d),
                "hitos": {h: hito(h) for h in ("pico_hierro", "cama", "casa")}, "causas_de_muerte": causas}
-    print(f"pico de hierro y cama en ≤ 2 días: {len(bien)}/{len(filas)} (criterio ≥ 6/8: {'PASA' if resumen['pasa'] else 'NO PASA'}) · "
-          f"muertes por 3 días {muertes_3d} ({'bien' if resumen['muertes_ok'] else 'demasiadas'})", flush=True)
-    print("hitos: " + " · ".join(f"{h} {v['n']}/{v['de']} (mediana día {v['mediana']})" for h, v in resumen["hitos"].items()), flush=True)
+    if a.rol == "minero":  # banco M
+        hierro = sorted(f.get("hierro_final", 0) for f in filas)
+        bien_m = sum(h >= HIERRO_M for h in hierro)
+        lava = sum(n for c, n in causas.items() if "lava" in c)
+        resumen = {"hierro_24": bien_m, "de": len(filas), "pasa": bien_m >= 6 * len(filas) / 8 and lava == 0, "muertes_lava": lava,
+                   "hierro_mediana": hierro[len(hierro) // 2], "hierro_final": hierro, "hierro_max": sorted(f.get("hierro_max", 0) for f in filas),
+                   "muertes_por_3_dias": muertes_3d, "causas_de_muerte": causas}
+        print(f"hierro ≥ {HIERRO_M} al acabar: {bien_m}/{len(filas)} (mediana {resumen['hierro_mediana']}) · muertes por lava {lava} "
+              f"(criterio ≥ 6/8 y 0: {'PASA' if resumen['pasa'] else 'NO PASA'})", flush=True)
+    else:
+        print(f"pico de hierro y cama en ≤ 2 días: {len(bien)}/{len(filas)} (criterio ≥ 6/8: {'PASA' if resumen['pasa'] else 'NO PASA'}) · "
+              f"muertes por 3 días {muertes_3d} ({'bien' if resumen['muertes_ok'] else 'demasiadas'})", flush=True)
+        print("hitos: " + " · ".join(f"{h} {v['n']}/{v['de']} (mediana día {v['mediana']})" for h, v in resumen["hitos"].items()), flush=True)
     print("causas de muerte: " + (", ".join(f"{c} ×{n}" for c, n in sorted(causas.items(), key=lambda x: -x[1])) or "ninguna"), flush=True)
     salida.write_text(json.dumps({"rol": a.rol, "mundo": MUNDO, "dias": a.dias, "puntos": a.puntos, "resumen": resumen, "resultados": res},
                                  ensure_ascii=False, indent=1) + "\n")

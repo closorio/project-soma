@@ -127,6 +127,11 @@ const dm = capataz.decidir(bm, 'minero')
 ok(dm.habilidad === 'conseguir' && dm.args.join(' ') === 'hierro 32', `minero: el paso de m_hierro es conseguir hierro 32 (${dm.habilidad} ${(dm.args || []).join(' ')})`)
 ok(progresion.estado(bm).memoria.mina === true, 'minero: el pozo hasta y ≤ 0 cuenta como mina')
 
+// 9 · banco M (2026-11-03): con el kit de PREPARACION (experimentos_roles.py), las etapas previas se dan por hechas y toca m_carbon
+const bk = mundoFalso({ inventario: [['stone_pickaxe', 1], ['stone_sword', 1], ['oak_log', 6], ['cobblestone', 8], ['bread', 16], ['coal', 8], ['torch', 8]] })
+const dk = capataz.decidir(bk, 'minero')
+ok(dk.habilidad === 'conseguir' && dk.args.join(' ') === 'carbon 32', `minero con el kit del banco M: empieza en conseguir carbon 32 (${dk.habilidad} ${(dk.args || []).join(' ')})`)
+
 fs.rmSync(tmp, { recursive: true, force: true })
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

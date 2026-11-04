@@ -270,7 +270,7 @@ Todos en el servidor local 26.1.2, con 4 bots en cuadrado latino (plantilla `exp
 |---|---|---|---|---|
 | H-hab | arena de `probar_supervivencia.py` (y=150) o arena enterrada para minería (piedra con lava a 3) | 10 por habilidad | éxitos (s mediana → `habilidades_medidas_sv.json`) | fundir, sacar_del_cofre, poner, arar/sembrar/cosechar 10/10; iluminar, recoger_agua/verter, colocar_redstone, lanzar_ojo (±10°) ≥ 9; cavar_escalera ≥ 8 y **0 contactos con lava**; criar ≥ 7; cruzar_portal 10/10 |
 | K Casual | inventario vacío, `time set 0` | 4 puntos × 2 rotaciones | día y hora de cada hito (carbón, antorchas, horno, hierro, cama, casa) | hierro + cama ≤ 2 días en ≥ 6/8; muertes ≤ 1 cada 3 días |
-| M Minero | kit C3, `time set 1000` | 4×2 | hierro crudo en el cofre tras 2 días | ≥ 24 en ≥ 6/8; 0 muertes por lava |
+| M Minero | kit C3, `time set 1000` | 4×2 | hierro crudo + lingotes en el inventario tras 2 días (2026-11-03: antes «en el cofre»; el rol se lo queda) | ≥ 24 en ≥ 6/8; 0 muertes por lava |
 | G Granjero | azada, cubo de agua, 8 semillas, 2 vacas | 4×2 | huerto sembrado + 2 crías en 1 día (el banco madura con `setblock wheat[age=7]`) | huertos ≥ 7/8; cosecha 9/9; ≥ 1 cría en 6/8 |
 | E Explorador | el banco usa `/locate` y planta al bot a 150-250 bloques | 4 estructuras × 4 puntos | encontrada (sí/no) y minutos | aldea ≥ 3/4, portal ≥ 2/4 |
 | B Builder | parcela con desnivel 3, cofre con los materiales exactos | 3 planos × 4 puntos | % de bloques correctos (`execute if block` por cada bloque del plano) | 150: 100 % 4/4; 400: ≥ 95 % 3/4 |

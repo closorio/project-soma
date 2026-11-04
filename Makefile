@@ -62,7 +62,7 @@ publicar:
         rcon partner-ping partner-proxy-start partner-proxy-stop partner partner-stop paper-server-download paper-server-start paper-server-stop paper-proxy-start paper-proxy-stop user-server-download user-server-start user-server-stop user-server-save user-server-status \
         creative-server-download creative-server-start creative-server-stop creative-server-save creative-rcon \
         proxy-download proxy-start proxy-stop proxy-ping assistant smoke-26-3 report nightly verify bench-detour bench-assistant bots casual speedrunner bots-stop bots-log status status-all progress role style decider free idle \
-        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare bench-gather
+        order go move-log zone zones zone-delete import-structure structures launcher-start launcher-stop share test validate-profiles bench-smoke bench-k bench-prepare bench-gather bench-m bench-m-smoke
 
 help:
 	@echo "project-soma · make TARGET [VARIABLE=value …]"
@@ -117,6 +117,8 @@ help:
 	@echo "  verify              todo lo que se comprueba sin servidor: pruebas en seco, perfiles, herramientas del vault, Python"
 	@echo "  bench-assistant PHASE=A2 [WORLD=local]   la puerta de una fase del asistente (entrenamiento/banco_asistente.py)"
 	@echo "  bench-gather [ONLY=…] [N=5] [SEGUIR=json]   «consigue N X» en el terreno local: lo pedido en ≥ 4/5 y 0 muertes"
+	@echo "  bench-m [DAYS=2]    banco M del Minero: 4 bots × 2 rotaciones (≈ 90 min): ≥ 24 de hierro en ≥ 6/8 y 0 muertes por lava"
+	@echo "  bench-m-smoke       humo del banco M: 1 bot, medio día (≈ 10 min)"
 	@echo "  bench-detour [WORLD=local|usuario]   llano, escalón de 1 y muro que rodear: ¿llega? ¿lo recoloca el server?"
 	@echo
 	@echo "Now: WORLD=$(WORLD_) ROLE=$(ROLE_) BOTS=\"$(strip $(BOTS))\" PORT=$(strip $(PORT))"
@@ -442,6 +444,12 @@ bench-smoke:
 bench-k:
 	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --puntos entrenamiento/puntos_k.json --dias $(strip $(DAYS)) \
 	  $(if $(strip $(BASE)),--comparar $(strip $(BASE)))
+
+bench-m:
+	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --dias $(strip $(DAYS)) --prefijo M
+
+bench-m-smoke:
+	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --n 1 --rotaciones 1 --dias 0.5 --prefijo M
 
 bench-prepare:
 	@test -n "$(strip $(ZONE))" || { echo "falta ZONE=… (una sin usar; las medidas hasta ahora llegan a la 77)"; exit 1; }
