@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F8
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-11-03
-siguiente: "make bench-m (≈ 90 min) si el usuario lo pide: el humo con muerte forzada ya sigue trabajando tras morir; luego F8.1 Casual. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
+actualizado: 2026-11-04
+siguiente: "Banco M pasa justo (6/8, 0 muertes). El usuario decide: arreglar M3 en el techo del mundo (y≈318) y fundir cortado que pierde hierro, o pasar a F8.1 Casual. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
