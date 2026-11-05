@@ -156,6 +156,7 @@ const decisores = require('./decisores') // F8.0a: quién decide en libre, por p
 const { ARGS } = libre
 const REPOSO_MS = 2000 // F7.2: cada cuánto mira los reflejos de supervivencia en reposo
 const AHOGOS_RECUPERANDO = 4 // 2026-11-04: cortes por falta de aire antes de dar por inalcanzable el sitio de la muerte
+const LEJOS_RECUPERANDO = 1000 // bloques: más lejos, no compensa el viaje
 const AIRE_MIN = 10, RESPIRAR_MS = 30000 // 2026-11-03: aire de 0 a 20 (15 s bajo el agua); con la mitad, a respirar
 // El modo libre va por tramos (un episodio de la red cada uno; una línea en el diario): 5 min con la red del mundo del usuario,
 // un día de Minecraft (1200 s) con la de supervivencia (libre.TRAMO).
@@ -306,6 +307,7 @@ class Personaje {
         // 2026-11-03, banco M: la agenda pasa a modo órdenes y el capataz no volvía a dar un paso: al acabar, otra vez a libre
         if (this.modo === 'libre') this.libreTrasAgenda = true
         this.ahogosRecuperando = 0
+        this.recuperados = 0
         const e = this.agenda.entrada({ tipo: 'recupera' }, 'recuperar mis cosas', 'auto')
         e.fin = new Promise(res => { e.resolver = res })
         for (const x of this.agenda.pila.filter(x => x.o.tipo === 'recupera')) { this.agenda.quitar(x); this.soltar(x, { exito: false, texto: '' }) } // la nueva cubre los dos sitios
@@ -581,9 +583,8 @@ class Personaje {
     this.defendiendo = (async () => {
       // 2026-11-02: una obra del catálogo no se pierde por una pelea: queda en pausa (agenda: interrumpida) y se retoma al acabar
       const ev = this.enVuelta
-      if (ev && ev.o.tipo === 'construye' && ev.o.estructura) this.tarea.motivo = 'interrupcion'
-      // 2026-11-04, banco M: ni «recuperar mis cosas»: sin motivo, la agenda lo tomaba por una orden nueva y M4 perdió 477 objetos
-      if (ev && ev.o.tipo === 'recupera' && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
+      // 2026-11-04, banco M: ni «recuperar mis cosas» (M4 perdió 477 objetos) ni ninguna otra: sin motivo, la agenda lo tomaba por una orden nueva y la borraba
+      if (ev && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       // 2026-11-03: tampoco un «consigue» (banco: un golpe en «ármate» lo canceló entero): se defiende y conseguir sigue (reanudar)
       if (this.enConseguir && !this.tarea.cancelada) this.tarea.motivo = 'interrupcion'
       this.tarea.cancelada = true
@@ -1628,6 +1629,8 @@ class Personaje {
             if ((this.ahogosRecuperando || 0) >= AHOGOS_RECUPERANDO) { fallos.push(`lo de ${donde} queda bajo el agua: lo dejo`); continue }
             // los objetos solo envejecen con el chunk cargado: muerto lejos de donde está (≥ 128), puede que sigan ahí aunque pase el tiempo
             if (edad > 290 && d < 128) { fallos.push(`lo de ${donde} ya habrá desaparecido`); continue }
+            // 2026-11-04, banco M: M3 reapareció a 6000 bloques y gastó la medida andando (murió por el camino sin llegar)
+            if (d > LEJOS_RECUPERANDO) { fallos.push(`lo de ${donde} queda a ${Math.round(d)} bloques: lo dejo`); continue }
             this.decir(`Voy a por mis cosas a ${donde}${m.causa ? ` (${m.causa})` : ''}, a ${Math.round(d)} bloques.`)
             let r
             for (let k = 0; k < 6 && !tarea.cancelada; k++) { // sin tope de distancia, por tramos; con poca vida come y sigue
@@ -1637,6 +1640,12 @@ class Personaje {
               r = await viajeLargo(bot, m.pos, () => sv.debeComerPorSalud(bot), { tarea, mov, cerca: 2 })
               if (r !== 'listo') break
               await this.ejecutarHabilidad('comer', ['20'], tarea)
+            }
+            // 2026-11-04: los pozos de más de 12 y las cámaras selladas no tienen camino a pie: si lleva pico, cavando
+            if (/sin camino/.test(String(r)) && !tarea.cancelada && bot.inventory.items().some(i => i.name.endsWith('_pickaxe'))) {
+              const mov = prudentes(bot)
+              mov.canDig = true
+              r = await viajeLargo(bot, m.pos, () => false, { tarea, mov, cerca: 2 })
             }
             if (r !== 'llegué') { fallos.push(`no llego a ${donde} (${r})`); sinLlegar.push(m); continue }
             for (let k = 0; k < 5 && !tarea.cancelada; k++) {
@@ -1650,7 +1659,9 @@ class Personaje {
         // los de una muerte nueva, para la próxima vuelta; 2026-11-03, banco M: y aquellos a los que no llegó (el reintento decía «No he muerto»)
         // 2026-11-04: y si un golpe lo cortó, los que no terminó, para cuando se retome
         this.sitiosMuerte = (this.sitiosMuerte || []).filter(x => !sitios.includes(x) || sinLlegar.includes(x) || (tarea.cancelada && !recogidos.includes(x)))
-        const n = contar() - antes
+        // 2026-11-04, banco M: tras una pausa solo contaba el último viaje («Recuperé 9/248» con casi todo recogido)
+        const n = (this.recuperados || 0) + contar() - antes
+        this.recuperados = tarea.cancelada ? n : 0
         const texto = (n > 0 ? `Recuperé ${Math.min(n, total)}/${total}.` : 'No encontré mis cosas.') + (fallos.length ? ` (${fallos.join('; ')})` : '')
         if (!tarea.cancelada && peligro()) {
           this.decir(texto + ' Hay peligro: vuelvo a casa.')
