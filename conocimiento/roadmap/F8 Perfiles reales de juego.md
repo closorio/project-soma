@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-04
-siguiente: "Banco M con terreno limpio: 2/8, no pasa. El usuario decide si se arregla el bucle del capataz en m_pozo (3 de los 6 fallos) y los otros fallos: recuperar cancelado por una orden, reaparecer en el spawn del mundo, último punto sin comprobar. Pendiente: m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
+siguiente: "Bucle del capataz en m_pozo arreglado (probado en seco) y reinicio tardío del modo libre cortado (sin reproducir); sin medir en banco. El usuario decide si repite el banco M (≈ 80 min). Pendiente: reaparecer en el spawn del mundo, último punto de AL_LADO sin comprobar; m_pico_diamante se marca con el pico de hierro; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 

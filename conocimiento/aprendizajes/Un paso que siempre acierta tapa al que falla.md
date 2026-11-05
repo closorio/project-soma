@@ -13,3 +13,6 @@ La etapa `m_pozo` tiene dos pasos: `cavar_escalera 0 -` y `subir_a_superficie`. 
 En el banco M [[2026-11-04-1657-banco-m-con-terreno-limpio-tras-recuperar-y-subir]] pasó a 3 de 8 bots (414, 503 y 695 repeticiones; acabaron con 3, 6 y 5 de hierro). Puede pasar en cualquier etapa con un paso que acierte sin hacer nada.
 
 Al mirar un banco, las etapas en `ultima.falta` y un recuento de líneas repetidas por bot lo delatan enseguida.
+
+## Arreglo
+`alResultado` cuenta los aciertos mientras otro paso sigue agotado (`st.sinSalida`). A los dos lanza `alternativa` y vacía los fallos, de modo que se vuelve a intentar todo. Probado en seco en `bot/probar_capataz_seco.js` (fallaba antes del arreglo). Falta medirlo en un banco.
