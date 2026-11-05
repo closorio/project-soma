@@ -4,7 +4,7 @@ Experimento A: personajes de Minecraft (Oqva, antes Soma; Eco, Iris y Alma) que 
 El cuerpo es un bot de [mineflayer](https://github.com/PrismarineJS/mineflayer) (`bot/`) con habilidades escritas a mano
 (talar, minar, fabricar, construir, refugiarse…). Encima va un guion o una red pequeña entrenada por DAgger en un simulador
 de Python (`entrenamiento/`), y para Alma, una «mente» con Claude (`mente/`). Trabajamos dos personas, cada una con su
-Claude Code, coordinadas por un hub en la LAN y un vault de Obsidian.
+Claude Code, coordinadas por un vault de Obsidian (el hub en la LAN está en pausa desde el 2026-11-02).
 
 ## Quién hace qué
 
@@ -14,6 +14,8 @@ Claude Code, coordinadas por un hub en la LAN y un vault de Obsidian.
 | **count** | roles F8 **Builder**, **Redstoner** y **Sentinela**; su server 26.x (`WORLD=companero`) y el hub (`compartido/`) en su PC |
 
 Decisión: [conocimiento/decisiones/2026-11-01-reparto-de-roles-f8.md](conocimiento/decisiones/2026-11-01-reparto-de-roles-f8.md).
+Hay una propuesta, pendiente de que count la revise, para ordenar este reparto en épicas con dueño:
+[conocimiento/decisiones/2026-11-05-epicas-y-duenos.md](conocimiento/decisiones/2026-11-05-epicas-y-duenos.md).
 
 ## Empezar
 
@@ -45,25 +47,31 @@ por wifi), `usuario` (26.3 por ViaProxy) y `supervivencia`. Cómo apuntar a cada
 
 Además: multi-personaje en un proceso (fase B), zonas de trabajo (2026-10-31), puertas y camas.
 
+Y de count (funcionan, pero aún sin perfil v2 ni banco): centinela y patrulla, guardaespaldas, aliados, oficios de cosechar y
+herrero, zona de hogar y zonas por dueño, y el plugin `SomaConnect` (`/connect`, `/bo`, colores, inventario).
+
 ## En curso
 
 **Roadmap principal** (`PLAN.md`, notas en `conocimiento/roadmap/`):
 
 | fase | estado / siguiente paso |
 |---|---|
-| F6 La mente de Alma | medir T1-T3 con `entrenamiento/experimento_mente.py` |
-| F7 Supervivencia en un mundo normal | F7.0-F7.4 hechas (red DAgger, semilla 0); falta la medición real F7.6 |
+| F7 Supervivencia en un mundo normal | F7.0-F7.4 hechas (red DAgger, semilla 0); F7.5 sin cierre confirmado; falta la medición real F7.6 |
 | F8.1 Casual | parada: el banco K da 2-3/8 y pide ≥ 6/8. Faltan cazar bajo tierra, árboles inalcanzables, ahogamiento y el tejado de la cabaña |
-| F8 resto | Minero ∥ Granjero → primera red (F8.G) → Explorador → **Builder** → **Redstoner** → Speedrunner (`PLAN_F8_perfiles.md`, «Orden recomendado») |
+| F8.2 Minero | el banco M da 4/8 y pide ≥ 6/8. Antes de más arreglos se está midiendo el ruido del banco, porque un mismo punto salta de 32 a 0 de hierro entre tiradas |
+| F8 resto | Granjero → primera red (F8.G) → Explorador → **Builder** → **Redstoner** → Speedrunner (`PLAN_F8_perfiles.md`, «Orden recomendado») |
 
 **Líneas laterales activas:**
 
 | línea | siguiente paso |
 |---|---|
+| Arquitectura de comandos | propuesta pendiente de revisión: [2026-11-05-arquitectura-de-comandos.md](conocimiento/decisiones/2026-11-05-arquitectura-de-comandos.md) |
 | Asistente personal | pausada hasta el 2026-11-07 por el límite semanal; luego A1 (`planes/asistente/A1.md`) |
+| Catálogo de estructuras | andamio sobre los suelos ya puestos para terminar la torre (para en 1086/3210) y luego el castillo |
 | Conocimiento compartido en Obsidian | abrir `conocimiento/` en los dos PCs y comprobar que cargan las Bases |
-| Trabajo a dos | count arranca el hub en su PC; los dos ponen `.claude/settings.local.json` y se prueba `compartido/claude-canal` |
-| Varios personajes con un modelo compartido | medir la red de equipo en Minecraft (solo, dúo y trío) y repetir el trío con el arreglo de `picar_tronco` |
+
+**Aparcadas** (se retoman por el campo `siguiente` de su nota en `conocimiento/roadmap/`): F6 La mente de Alma, Varios personajes
+con un modelo compartido y Trabajo a dos (el hub).
 
 ## La parte de count
 
@@ -95,9 +103,8 @@ defecto**; se activa por máquina con `SOMA_OLLAMA_MODELO` en `local.env`. Detal
 
 ## Reglas de trabajo a dos
 
-- **Hub** (`compartido/README.md`): publica `estado` al empezar, al decidir algo que afecte al otro y al terminar. Lo
-  urgente, con `enviar`. Si el otro está tocando un archivo, avisa antes de editarlo. Las reglas para los agentes están en
-  [CLAUDE.md](CLAUDE.md).
+- **Hub** (`compartido/README.md`): en pausa desde el 2026-11-02; no hace falta publicar estado. Las reglas para los agentes
+  están en [CLAUDE.md](CLAUDE.md).
 - **Vault** (`conocimiento/`, ábrelo en Obsidian): cada decisión, experimento o aprendizaje es una nota con su plantilla.
   El roadmap de cada fase vive en `conocimiento/roadmap/` (los campos `responsable` y `siguiente`). `git pull` antes de
   escribir.

@@ -1,9 +1,9 @@
 ---
 tipo: roadmap
 fase: F-multi
-estado: en-curso
+estado: aparcado
 responsable: seppuq
-actualizado: 2026-10-23
+actualizado: 2026-11-05
 siguiente: "Medir la red de equipo en Minecraft (solo, dúo y trío desde los mismos puntos) y repetir el trío con el arreglo de picar_tronco"
 ---
 # Varios personajes con un modelo compartido
@@ -12,7 +12,7 @@ siguiente: "Medir la red de equipo en Minecraft (solo, dúo y trío desde los mi
 2-3 personajes en el mismo mundo, con la misma red y la misma tasa de éxito que uno solo.
 
 ## Estado
-Fases A, B y C hechas. Fase D a medias: la puerta con Io solo pasa (95 %) y la carga del servidor es asumible, pero falta la red nueva en Minecraft.
+Fases A, B y C hechas. Fase D a medias: la puerta con Io solo pasa (95 %) y la carga del servidor es asumible, pero falta la red nueva en Minecraft. Aparcada por seppuq el 2026-11-05 mientras se ordena la arquitectura de comandos; se retoma por el campo «siguiente».
 
 ## Siguiente paso
 Ver campo «siguiente». Luego, perfiles opuestos a la vez y una regla de «ceder el árbol».

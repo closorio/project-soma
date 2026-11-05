@@ -1,10 +1,10 @@
 ---
 tipo: roadmap
 fase: F8-count
-estado: pendiente
+estado: en-curso
 responsable: count
-actualizado: "2026-11-01"
-siguiente: "Leer README.md y PLAN_F8_perfiles.md; empezar por B1 (construir_json) y diseñar Sentinela"
+actualizado: "2026-11-05"
+siguiente: "Revisar las propuestas 2026-11-05-epicas-y-duenos y 2026-11-05-arquitectura-de-comandos (dos puntos por cerrar: catálogo y Granjero); luego plan y banco de Sentinela o B1 de Builder"
 ---
 # F8 Roles de count
 
@@ -13,8 +13,13 @@ Los roles Builder (B1-B6), Redstoner (R1-R7) y Sentinela (protector o atacante) 
 su banco pasado.
 
 ## Estado
-Sin empezar. La base de Builder ya existe (`construir`, `deshacer`, `bot/planos.js`, obras y zonas de trabajo). Sentinela
-no tiene plan.
+Ningún rol tiene todavía perfil v2 ni banco, pero count ya hizo mucho trabajo cercano:
+- **Guardia:** centinela y patrulla, guardaespaldas, aliados. Es la base de Sentinela, que sigue sin plan.
+- **Oficios:** `cosechar` y `herrero`. `cosechar` se solapa con el Granjero.
+- **Operación:** plugin (`/connect`, `/bo`, colores, inventario), lanzador, zona de hogar y zonas por dueño.
+
+La base de Builder ya existe (`construir`, `deshacer`, `bot/planos.js`, obras y zonas de trabajo). Propuesta de reparto en
+épicas: [[2026-11-05-epicas-y-duenos]].
 
 ## Siguiente paso
 Ver campo «siguiente».
