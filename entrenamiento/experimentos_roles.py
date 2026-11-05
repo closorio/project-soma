@@ -402,6 +402,40 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
     return filas
 
 
+VENTANA_ZONA = 1536  # bloques alrededor del centro de una zona (1500·zona) que se regeneran: los puntos y lo que los bots recorren
+
+
+def regiones_de_zonas(zonas):
+    """Los ficheros r.X.Z.mca que cubren ±VENTANA_ZONA alrededor del centro de cada zona."""
+    rr = set()
+    for zona in zonas:
+        o = 1500 * zona
+        for gx in range((o - VENTANA_ZONA) // 512, (o + VENTANA_ZONA) // 512 + 1):
+            for gz in range((o - VENTANA_ZONA) // 512, (o + VENTANA_ZONA) // 512 + 1):
+                rr.add(f"r.{gx}.{gz}.mca")
+    return rr
+
+
+def regenerar_zonas(zonas, nombres):
+    """Con el server parado, mueve las regiones de las zonas a servidor-local/regiones-previas-FECHA (no borra nada) para que se
+    regeneren desde la semilla, y borra dónde se quedaron los personajes: sin eso aparecerían dentro de piedra (ver restaurar)."""
+    r("save-all flush")
+    servidor("parar")
+    destino = LOCAL / f"regiones-previas-{time.strftime('%Y%m%d-%H%M')}"
+    n = 0
+    for capa in CAPAS:
+        for f in regiones_de_zonas(zonas):
+            if (OVERWORLD / capa / f).exists():
+                (destino / capa).mkdir(parents=True, exist_ok=True)
+                shutil.move(OVERWORLD / capa / f, destino / capa / f)
+                n += 1
+    for nombre in nombres:
+        for f in (LOCAL / "world" / "players" / "data").glob(uuid_offline(nombre) + ".dat*"):
+            f.unlink()
+    servidor("arrancar")
+    print(f"   regeneradas las zonas {zonas}: {n} ficheros apartados en {destino.name}", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--rol", default="casual")
@@ -415,6 +449,7 @@ def main():
     ap.add_argument("--preparar-puntos", metavar="RUTA", help="elige 8 puntos (desde --zona), fotografía su terreno y los guarda en RUTA")
     ap.add_argument("--puntos", metavar="RUTA", help="terreno fijo: restaura la foto y usa sus puntos (8 personajes, 1 rotación)")
     ap.add_argument("--sin-restaurar", action="store_true", help="con --puntos, no restaurar la foto (p. ej. un humo seguido de la medida)")
+    ap.add_argument("--regenerar", action="store_true", help="con --zona, aparta antes las regiones de la medida para que el server las regenere desde la semilla")
     ap.add_argument("--comparar", metavar="JSON", help="al acabar, tabla punto a punto con otra medida del mismo banco")
     a = ap.parse_args()
     try:
@@ -436,6 +471,11 @@ def main():
     zona = a.zona if a.zona is not None else int(time.time() // 3600) % 40 + 1
     donde = f"puntos fijos de {a.puntos}" if banco else f"zonas desde {zona}"
     print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · {donde}", flush=True)
+    zonas_medida = [zona + 7 * k for k in range(a.rotaciones)]
+    if a.regenerar:
+        if banco or a.zona is None:
+            sys.exit("--regenerar pide --zona y no vale con --puntos (los puntos fijos ya restauran su foto)")
+        regenerar_zonas(zonas_medida, nombres)
     res = {}
     for k in range(a.rotaciones):
         print(f"== rotación {k + 1}", flush=True)
@@ -445,6 +485,11 @@ def main():
             puntos = [(x, z, ov) for x, z, ov, _ in banco["puntos"]]
         else:
             puntos = elegir_puntos(a.n, k, zona + 7 * k, ovejas)  # cada rotación en zonas sin estrenar (las de la anterior quedan atrás)
+            if a.regenerar:
+                ventana = regiones_de_zonas(zonas_medida)
+                fuera = [p[:2] for p in puntos if f"r.{p[0] // 512}.{p[1] // 512}.mca" not in ventana]
+                if fuera:
+                    print(f"   AVISO: puntos fuera del terreno regenerado: {fuera}", flush=True)
         rotacion(a, k, puntos, nombres, puertos, salida, res)
     filas = [f for rot in res.values() for f in rot.values()]
     bien = [f for f in filas if f["hitos"].get("pico_hierro", 99) <= 2 and f["hitos"].get("cama", 99) <= 2]
