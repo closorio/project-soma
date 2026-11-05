@@ -4,7 +4,7 @@ fase: F8-count
 estado: en-curso
 responsable: count
 actualizado: "2026-11-05"
-siguiente: "Revisar las propuestas 2026-11-05-epicas-y-duenos y 2026-11-05-arquitectura-de-comandos (dos puntos por cerrar: catálogo y Granjero); luego plan y banco de Sentinela o B1 de Builder"
+siguiente: "Revisar las propuestas 2026-11-05-arquitectura-de-roles, 2026-11-05-epicas-y-duenos y 2026-11-05-arquitectura-de-comandos (por cerrar: granjero y herrero, constructor y catálogo, madurez de sus submodos); luego plan y banco de centinela o B1 de Builder"
 ---
 # F8 Roles de count
 
@@ -25,6 +25,6 @@ La base de Builder ya existe (`construir`, `deshacer`, `bot/planos.js`, obras y 
 Ver campo «siguiente».
 
 ## Enlaces
-- Decisiones: [[2026-11-01-reparto-de-roles-f8]]
+- Decisiones: [[2026-11-01-reparto-de-roles-f8]]; propuesta que la sustituiría: [[2026-11-05-arquitectura-de-roles]]
 - Fase madre: [[F8 Perfiles reales de juego]]
 - Detalle: `PLAN_F8_perfiles.md` (Builder B1-B6, Redstoner R1-R7, bancos B y R) y `README.md`.
