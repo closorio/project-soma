@@ -16,7 +16,8 @@ lingotes en el inventario al acabar los 2 días ≥ 24 en ≥ 6/8 y 0 muertes po
 Uso: experimentos_roles.py [--rol casual] [--dias 2] [--rotaciones 2] [--puertos 3201] [--prefijo K]
      experimentos_roles.py --preparar-puntos entrenamiento/puntos_k.json --zona 60
      experimentos_roles.py --puntos entrenamiento/puntos_k.json [--comparar logs/rol-casual-….json]"""
-import argparse, json, math, os, re, signal, subprocess, sys, time, urllib.parse, urllib.request
+import argparse, json, math, os, re, shutil, signal, subprocess, sys, time, urllib.parse, urllib.request
+from collections import Counter
 from pathlib import Path
 
 AQUI = Path(__file__).resolve().parent
@@ -35,7 +36,9 @@ HITOS = {"pico_hierro": lambda inv: inv.get("pico", 0) >= 1, "cama": lambda inv:
          "hierro": lambda inv: inv.get("hierro", 0) + inv.get("hierro_mena", 0) >= 3}
 HITOS_MEMORIA = ("casa",)  # los de progresion.estado().memoria (la casa construida queda en la memoria persistente)
 # el kit y la hora de salida de cada rol (por defecto, sin nada y `time set 0`); kit del minero: las etapas previas a m_carbon ya cumplidas
-AL_LADO = [(24, 0), (0, 24), (-24, 0), (0, -24), (48, 0), (0, 48)]  # si el punto de salida cae en agua
+AL_LADO = [(24, 0), (0, 24), (-24, 0), (0, -24), (48, 0), (0, 48), (-48, 0), (0, -48),
+           (72, 0), (0, 72), (-72, 0), (0, -72), (96, 0), (0, 96), (-96, 0), (0, -96)]  # si el punto de salida cae en agua
+HOSTILES = ["zombie", "husk", "drowned", "skeleton", "stray", "bogged", "creeper", "spider", "cave_spider", "witch"]  # los de la superficie
 PREPARACION = {"minero": {"kit": ["stone_pickaxe", "stone_sword", "oak_log 6", "cobblestone 8", "bread 16", "coal 8", "torch 8"], "hora": 1000}}
 HIERRO_M = 24  # banco M: hierro al acabar para contar como bien
 MIN_MB = 800
@@ -73,6 +76,18 @@ def poner_en(nombre, x, z):
     r(f"{OW} positioned {x} 0 {z} positioned over motion_blocking_no_leaves run tp {nombre} ~ ~ ~")
     time.sleep(1.5)
     r(f"forceload remove {x} {z}")
+
+
+def sin_liquido(nombre):
+    """2026-11-04: el server rechaza un spawnpoint en líquido y reaparece en el spawn del mundo: ni en los pies, ni en la cabeza, ni debajo."""
+    return not any("passed" in r(f"execute at {nombre} if block ~ ~{dy} ~ minecraft:{b}") for dy in (0, 1, -1) for b in ("water", "lava"))
+
+
+def bucles(ruta, minimo=100):
+    """Las líneas de cada bot repetidas ≥ minimo veces, sin los números: delata un bucle sin tener que leer el registro."""
+    cuenta = Counter(re.sub(r"-?\d+(\.\d+)?", "N", l.strip())[:90] for l in ruta.read_text(errors="replace").splitlines()
+                     if re.match(r"\[[^]]+\] \[(hab|reflejo|rutina)\]", l))
+    return [(n, l) for l, n in cuenta.most_common() if n >= minimo]
 
 
 def muertes(nombre):
@@ -282,7 +297,9 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             time.sleep(1)
         else:
             raise SystemExit("los bots no se conectaron en 90 s")
-        r("gamerule spawn_monsters true")
+        # 2026-11-04, banco M: con monstruos activos durante la colocación, M3 huía de un creeper antes de empezar y murió a los 2 min
+        r("gamerule spawn_monsters false")
+        r(f"time set {hora0}")
         r("weather clear")
         for i, (n, p) in enumerate(zip(nombres, puertos)):
             px, pz, nov = puntos[i]
@@ -296,16 +313,23 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
             # 2026-11-04, banco M: poner_en cae sobre el agua (motion_blocking la incluye): M3 y M4 salieron en un lago y, con el spawnpoint
             # ahí, M4 reapareció en el spawn del mundo. Otro punto en tierra, antes del spawnpoint
             for dx, dz in AL_LADO:
-                if "passed" not in r(f"execute at {n} if block ~ ~ ~ minecraft:water") + r(f"execute at {n} if block ~ ~-1 ~ minecraft:water"):
+                if sin_liquido(n):
                     break
                 print(f"   {n}: agua en ({px}, {pz}), pruebo a {puntos[i][0] + dx}, {puntos[i][1] + dz}", flush=True)
                 px, pz = puntos[i][0] + dx, puntos[i][1] + dz
                 poner_en(n, px, pz)
+            else:
+                if not sin_liquido(n):  # el último candidato también se mira: sin esto, M3 fijó el spawnpoint en agua
+                    raise SystemExit(f"{n}: sin tierra a ≤ 96 bloques de {puntos[i][:2]}: no mido en un mal punto")
             # 2026-11-03: reaparecía en el spawn del mundo, a decenas de miles de bloques: sin vuelta a sus cosas (humo del banco M)
             r(f"execute at {n} run spawnpoint {n} ~ ~ ~")
             orden(p, "campamento aqui")
             orden(p, "reflejos si")
             filas[n] = {"rotacion": k, "punto": [px, pz], "ovejas": nov, "hitos": {}, "etapas": {}, "muertes": 0, "ultima": None}
+        for n in nombres:
+            for h in HOSTILES:
+                r(f"execute at {n} run kill @e[type=minecraft:{h},distance=..32]")
+        r("gamerule spawn_monsters true")
         r(f"time set {hora0}")
         dia0, _ = hora(MUNDO)
         inicio = time.strftime("%H:%M:%S")
@@ -369,6 +393,12 @@ def rotacion(a, k, puntos, nombres, puertos, salida, res):
                 os.killpg(bot.pid, signal.SIGKILL)
             except Exception:
                 pass
+        # 2026-11-04: cada medida pisaba los registros de la anterior y ya no se podía comprobar nada del 3/8
+        log.close()
+        ruta = LOGS / f"bots-rol-{a.rol}-{k}.log"
+        shutil.copyfile(ruta, LOGS / f"{salida.stem}-bots-{k}.log")
+        for n_veces, linea in bucles(ruta):
+            print(f"  ¿bucle? {n_veces} × {linea}", flush=True)
     return filas
 
 
