@@ -137,6 +137,31 @@ const bc = mundoFalso({ comida: 20 })
 const pc = capataz.rol('minero').etapas.find(x => x.id === 'comida').hacer[0]
 ok(pc === 'recoger_comida 24 - guardar', `el paso de la etapa comida guarda sin hambre (${pc})`)
 const recogerComida = require('./habilidades/recoger_comida')
+
+// 11 · un paso que acierta sin hacer nada no tapa al agotado (2026-11-04, banco M: 695 «subir_a_superficie → ya fuera» en m_pozo)
+const enPozo = () => {
+  const b = mundoFalso({ comida: 20, inventario: [['iron_pickaxe', 1], ['torch', 16], ['bread', 8]] })
+  for (const et of capataz.rol('minero').etapas) { if (et.id === 'm_pozo') break; capataz.marcarHecha(b, 'minero', et.id) }
+  return b
+}
+const bp = enPozo(), vistosPozo = []
+for (let k = 0; k < 8; k++) {
+  const dp = capataz.decidir(bp, 'minero')
+  vistosPozo.push(dp.alternativa ? 'alt' : dp.habilidad)
+  capataz.alResultado(bp, 'minero', dp, dp.habilidad === 'cavar_escalera' && !dp.alternativa ? { exito: false, causa: 'agua delante' } : { exito: true, causa: 'ya fuera' })
+}
+const iAlt = vistosPozo.indexOf('alt')
+ok(vistosPozo.slice(0, 2).every(v => v === 'cavar_escalera'), `m_pozo empieza cavando: ${vistosPozo.join(' ')}`)
+ok(iAlt >= 0 && iAlt <= 4, `sin alternativa tras cavar ✗✗ y subir ✓✓: ${vistosPozo.join(' ')}`)
+ok(iAlt >= 0 && vistosPozo[iAlt + 1] === 'cavar_escalera', `tras la alternativa no vuelve a cavar: ${vistosPozo.join(' ')}`)
+const bq = enPozo(), vistosBien = []
+for (let k = 0; k < 8; k++) {
+  const dq = capataz.decidir(bq, 'minero')
+  vistosBien.push(dq.alternativa ? 'alt' : dq.habilidad)
+  capataz.alResultado(bq, 'minero', dq, { exito: true })
+}
+ok(!vistosBien.includes('alt'), `con los pasos acertando no hay alternativa: ${vistosBien.join(' ')}`)
+console.log('  11 · cavar ✗✗ y subir ✓✓ → alternativa y a cavar otra vez; si todo acierta, ninguna alternativa')
 ;(async () => {
   bc.entities = bc.entities || {}
   const sinPedir = await recogerComida(bc, ['24'], null), guardando = await recogerComida(bc, ['24', '-', 'guardar'], null)

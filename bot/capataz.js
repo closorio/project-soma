@@ -119,7 +119,7 @@ function decidir(bot, nombre) {
   }
   if (!et) return { habilidad: 'explorar', args: [], motivo: 'rol completo' }
   const st = estadoCapataz(bot)
-  if (st.etapa !== et.id) Object.assign(st, { etapa: et.id, paso: 0, fallos: {}, alternativas: 0, luego: null })
+  if (st.etapa !== et.id) Object.assign(st, { etapa: et.id, paso: 0, fallos: {}, alternativas: 0, sinSalida: 0, luego: null })
   if (st.luego) { const l = st.luego; st.luego = null; return { ...l, ...{ etapa: et.id, falta: progresion.falta(et.objetivo, e) } } }
   const pasos = et.hacer.filter(h => !h.startsWith('pendiente:'))
   const datos = { etapa: et.id, falta: progresion.falta(et.objetivo, e) }
@@ -135,7 +135,16 @@ function decidir(bot, nombre) {
 function alResultado(bot, nombre, d, r) {
   const st = estadoCapataz(bot)
   if (d.paso != null && st.etapa === d.etapa) {
-    if (r.exito) { st.fallos[d.paso] = 0; st.paso = d.paso + 1 } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
+    if (r.exito) {
+      // 2026-11-04, banco M: en m_pozo, tras dos fallos de cavar solo quedaba subir, que acierta al momento («ya fuera»): 695 veces hasta el final.
+      // Acertar mientras otro paso sigue agotado no lo saca del apuro: a las dos veces, la alternativa, y todos los pasos otra vez
+      const agotado = Object.entries(st.fallos).some(([i, n]) => Number(i) !== d.paso && n >= FALLOS_PASO)
+      st.fallos[d.paso] = 0
+      st.paso = d.paso + 1
+      st.sinSalida = agotado ? (st.sinSalida || 0) + 1 : 0
+      const et = st.sinSalida >= FALLOS_PASO && rol(nombre).etapas.find(x => x.id === d.etapa)
+      if (et) { st.fallos = {}; st.sinSalida = 0; st.luego = { ...alternativa(bot, et, st.alternativas++), alternativa: true } }
+    } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
     // minar no ve la mena (está enterrada): lo siguiente, ir hasta la más cercana cavando, y luego minar otra vez
     if (d.habilidad === 'minar' && !r.exito && /nada que minar|no piqué/.test(String(r.causa))) st.luego = { habilidad: 'ir_a_mena', args: [d.args[0], '32'], motivo: 'mena enterrada' }
     // la casa pide 71 tablones (≈ 18 troncos) y las etapas de antes gastan la madera: talar lo que falte (1 tronco → 4) y volver
