@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}</style>
+</head>
+<body>
+<title>Mapa de project-soma</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Plano de ingeniería: fondo de piedra fría, un color por dueño y uno solo para la zona donde chocan los dos. */
+:root {
+  --bg: #f1f4f3; --panel: #ffffff; --fg: #17211f; --muted: #55635f; --line: #7b8a86; --rule: #d3dbd8;
+  --seppuq: #0b6b73; --seppuq-t: #dcf0f0;
+  --count: #6a3d9e; --count-t: #ece4f7;
+  --hot: #b4233c; --hot-t: #fbe3e6;
+  --warn: #93600a; --warn-t: #fbeed2;
+  --ok: #2c7a4b; --on: #ffffff;
+  --sans: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121817; --panel: #1b2321; --fg: #e8eeec; --muted: #a2b0ac; --line: #8b9a96; --rule: #2f3a37;
+  --seppuq: #5cc4cc; --seppuq-t: #14393c;
+  --count: #b894e8; --count-t: #30234a;
+  --hot: #f0798c; --hot-t: #47202a;
+  --warn: #e2b04f; --warn-t: #41321a;
+  --ok: #6fce96; --on: #121817; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #121817; --panel: #1b2321; --fg: #e8eeec; --muted: #a2b0ac; --line: #8b9a96; --rule: #2f3a37;
+  --seppuq: #5cc4cc; --seppuq-t: #14393c;
+  --count: #b894e8; --count-t: #30234a;
+  --hot: #f0798c; --hot-t: #47202a;
+  --warn: #e2b04f; --warn-t: #41321a;
+  --ok: #6fce96; --on: #121817; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font: 16px/1.55 var(--sans); }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 48px; }
+.wrap > * { min-width: 0; }
+header { display: grid; gap: 12px; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: -.02em; text-wrap: balance; }
+h2 { font-size: 23px; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+.fecha { font: 500 13px var(--mono); color: var(--muted); margin: 0; }
+.lead { font-size: 18px; max-width: 68ch; margin: 0; }
+section { display: grid; gap: 16px; }
+section > * { min-width: 0; }
+section > p { margin: 0; max-width: 72ch; }
+figure { margin: 0; display: grid; gap: 12px; }
+figure > * { min-width: 0; }
+.scroll { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 8px; }
+.scroll svg { display: block; width: 100%; min-width: 800px; height: auto; color: var(--line); }
+figcaption { font-size: 14.5px; color: var(--muted); max-width: 78ch; }
+.clave { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mues { width: 12px; height: 12px; border-radius: 2px; border: 1.5px solid; display: inline-block; }
+
+/* SVG */
+svg text { font-family: var(--sans); fill: var(--fg); }
+svg .t { font-size: 13.5px; font-weight: 600; text-anchor: middle; }
+svg .s { font-size: 11.5px; fill: var(--muted); text-anchor: middle; }
+svg .a { font-size: 11.5px; fill: var(--muted); font-family: var(--mono); }
+svg .h { font-size: 15px; font-weight: 700; text-anchor: middle; }
+svg .bl { font-size: 11.5px; font-weight: 600; fill: var(--on); text-anchor: middle; font-family: var(--mono); }
+svg rect { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+svg path, svg line { fill: none; stroke: currentColor; stroke-width: 1.4; }
+svg rect.io { fill: var(--hot-t); stroke: var(--hot); }
+svg rect.sep { fill: var(--seppuq-t); stroke: var(--seppuq); }
+svg rect.cou { fill: var(--count-t); stroke: var(--count); }
+svg rect.wrn { fill: var(--warn-t); stroke: var(--warn); stroke-dasharray: 5 3; }
+svg rect.nota { fill: none; stroke: var(--line); stroke-dasharray: 4 3; }
+svg rect.fuerte { stroke-width: 2.4; }
+svg rect.bs { fill: var(--seppuq); stroke: none; }
+svg rect.bc { fill: var(--count); stroke: none; }
+svg rect.banda { fill: var(--bg); stroke: none; }
+svg path.w { stroke: var(--warn); stroke-dasharray: 6 3; }
+svg path.c-sep { stroke: var(--seppuq); }
+svg path.c-cou { stroke: var(--count); }
+svg .sep-tx { fill: var(--seppuq); }
+svg .cou-tx { fill: var(--count); }
+svg .mk { fill: var(--line); }
+svg .mk-w { fill: var(--warn); }
+svg .mk-s { fill: var(--seppuq); }
+svg .mk-c { fill: var(--count); }
+
+/* Camino de F8 */
+.camino { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.camino li { flex: 1 1 128px; min-width: 0; border: 1.5px solid var(--rule); background: var(--panel); border-radius: 5px; padding: 8px 10px; display: grid; gap: 2px; align-content: start; }
+.camino b { font-weight: 600; font-size: 14.5px; line-height: 1.25; }
+.camino .cod { font: 500 11.5px var(--mono); color: var(--muted); }
+.camino .est { font-size: 12.5px; font-weight: 600; }
+.camino .hecho { border-color: var(--ok); } .camino .hecho .est { color: var(--ok); }
+.camino .parado { border-color: var(--hot); background: var(--hot-t); } .camino .parado .est { color: var(--hot); }
+.camino .midiendo { border-color: var(--warn); background: var(--warn-t); border-style: dashed; } .camino .midiendo .est { color: var(--warn); }
+.camino .falta { border-style: dotted; border-color: var(--line); } .camino .falta .est { color: var(--muted); font-weight: 500; }
+.camino .fin-count { box-shadow: inset 0 3px 0 var(--count); }
+.camino .fin-sep { box-shadow: inset 0 3px 0 var(--seppuq); }
+
+/* Tablas */
+.tabla { overflow-x: auto; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-size: 12.5px; color: var(--muted); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+code { font: 500 .88em var(--mono); }
+td:first-child { font-weight: 600; white-space: nowrap; }
+.pil { display: inline-block; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.p-a { color: var(--ok); } .p-e { color: var(--warn); } .p-p { color: var(--muted); }
+</style>
+
+<div class="wrap">
+<header>
+  <p class="fecha">Foto del 2026-11-05, 14:30 · rama develop</p>
+  <h1>Mapa de project-soma</h1>
+  <p class="lead">Las órdenes de todos los bots pasan por un mismo archivo, y ahí chocan los dos devs. Ahora mismo se mide el ruido del banco M y se espera a que count revise la propuesta para resolverlo. Hasta entonces, nadie toca <code>bot/</code>.</p>
+</header>
+
+<section>
+  <h2>Cómo está hecho: el camino de una orden</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1210 440" role="img" aria-label="Camino de una orden: del chat o el puerto HTTP, pasando por ordenes.js, agenda.js y hacer() hasta las habilidades, mineflayer y los servidores. Casi todos los pasos de entrada y control viven en bot/io.js.">
+      <defs>
+        <marker id="fl" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L8 4L0 8Z" class="mk" style="stroke:none"/></marker>
+      </defs>
+
+      <!-- fuentes -->
+      <rect x="20" y="50" width="130" height="50" rx="4"/><text class="t" x="85" y="71">Jugador</text><text class="s" x="85" y="88">chat del juego</text>
+      <rect x="20" y="210" width="130" height="50" rx="4"/><text class="t" x="85" y="231">make · Ío · mente</text><text class="s" x="85" y="248">y los bancos</text>
+      <rect x="20" y="370" width="130" height="50" rx="4"/><text class="t" x="85" y="391">SomaConnect</text><text class="s" x="85" y="408">/connect, /bo</text>
+
+      <!-- entradas -->
+      <rect class="io" x="190" y="50" width="140" height="50" rx="4"/><text class="t" x="260" y="71">Manejador de chat</text><text class="s" x="260" y="88">permisos, aquí</text>
+      <rect class="io" x="190" y="130" width="140" height="50" rx="4"/><text class="t" x="260" y="151">ordenZona()</text><text class="s" x="260" y="168">camino aparte</text>
+      <rect class="io" x="190" y="210" width="140" height="50" rx="4"/><text class="t" x="260" y="231">Puerto HTTP</text><text class="s" x="260" y="248">uno por bot</text>
+      <rect class="io" x="190" y="290" width="140" height="50" rx="4"/><text class="t" x="260" y="311">crearOrdenes()</text><text class="s" x="260" y="328">otra tabla de órdenes</text>
+      <rect x="190" y="370" width="140" height="50" rx="4"/><text class="t" x="260" y="391">lanzador.js</text><text class="s" x="260" y="408">arranca los bots</text>
+
+      <!-- cadena -->
+      <rect x="370" y="50" width="130" height="50" rx="4"/><text class="t" x="435" y="71">ordenes.js</text><text class="s" x="435" y="88">regex + LLM opcional</text>
+      <rect x="540" y="50" width="130" height="50" rx="4"/><text class="t" x="605" y="71">agenda.js</text><text class="s" x="605" y="88">cola y urgencias</text>
+      <rect class="io fuerte" x="710" y="50" width="140" height="50" rx="4"/><text class="t" x="780" y="71">hacer()</text><text class="s" x="780" y="88">switch ≈ 750 líneas</text>
+      <rect x="890" y="50" width="120" height="50" rx="4"/><text class="t" x="950" y="71">habilidades/</text><text class="s" x="950" y="88">44 archivos</text>
+      <rect x="1050" y="50" width="140" height="50" rx="4"/><text class="t" x="1120" y="71">mineflayer</text><text class="s" x="1120" y="88">cuerpo del bot</text>
+      <rect x="1050" y="140" width="140" height="104" rx="4"/><text class="t" x="1120" y="161">5 servidores</text><text class="s" x="1120" y="179">local · companero</text><text class="s" x="1120" y="196">usuario</text><text class="s" x="1120" y="213">supervivencia</text><text class="s" x="1120" y="230">creativo</text>
+
+      <!-- modo libre -->
+      <rect class="io" x="540" y="190" width="130" height="50" rx="4"/><text class="t" x="605" y="211">Campos de control</text><text class="s" x="605" y="228">modo, encargos</text>
+      <rect x="710" y="190" width="140" height="50" rx="4"/><text class="t" x="780" y="211">decisores.js</text><text class="s" x="780" y="228">red · guion · capataz</text>
+      <rect x="640" y="370" width="120" height="50" rx="4"/><text class="t" x="700" y="391">perfiles/v2</text><text class="s" x="700" y="408">roles y etapas</text>
+      <rect x="790" y="370" width="150" height="50" rx="4"/><text class="t" x="865" y="391">entrenamiento/</text><text class="s" x="865" y="408">simulador y DAgger</text>
+
+      <!-- flechas fila 1 -->
+      <path d="M150 75H189" marker-end="url(#fl)"/><text class="a" x="153" y="67">orden</text>
+      <path d="M330 75H369" marker-end="url(#fl)"/><text class="a" x="334" y="67">texto</text>
+      <path d="M500 75H539" marker-end="url(#fl)"/><text class="a" x="504" y="67">tipo</text>
+      <path d="M670 75H709" marker-end="url(#fl)"/><text class="a" x="674" y="67">turno</text>
+      <path d="M850 75H889" marker-end="url(#fl)"/><text class="a" x="854" y="67">paso</text>
+      <path d="M1010 75H1049" marker-end="url(#fl)"/><text class="a" x="1013" y="67">actúa</text>
+      <path d="M1120 100V139" marker-end="url(#fl)"/><text class="a" x="1127" y="124">juega en</text>
+
+      <!-- entradas -->
+      <path d="M260 100V129" marker-end="url(#fl)"/><text class="a" x="267" y="119">!zona</text>
+      <path d="M150 235H189" marker-end="url(#fl)"/><text class="a" x="157" y="227">?c=</text>
+      <path d="M260 260V289" marker-end="url(#fl)"/><text class="a" x="267" y="279">otros c=</text>
+      <path d="M150 395H189" marker-end="url(#fl)"/><text class="a" x="156" y="387">pide</text>
+      <path d="M330 235H435V101" marker-end="url(#fl)"/><text class="a" x="441" y="170">c=orden</text>
+
+      <!-- control -->
+      <path d="M330 305H605V241" marker-end="url(#fl)"/><text class="a" x="440" y="298">c=modo, decisor</text>
+      <path d="M605 190V101" marker-end="url(#fl)"/><text class="a" x="540" y="150" >retoma</text><text class="a" x="540" y="164">encargos</text>
+      <path d="M670 215H709" marker-end="url(#fl)"/><text class="a" x="673" y="207">libre</text>
+      <path d="M850 215H930V101" marker-end="url(#fl)"/><text class="a" x="862" y="207">elige</text>
+      <path d="M330 328H985V101" marker-end="url(#fl)"/><text class="a" x="440" y="321">c=hab, ir, talar</text>
+      <path d="M740 370V241" marker-end="url(#fl)"/><text class="a" x="686" y="355">etapas</text>
+      <path d="M820 370V241" marker-end="url(#fl)"/><text class="a" x="826" y="355">red</text>
+    </svg>
+    </div>
+    <figcaption><span class="clave"><span class="mues" style="background:var(--hot-t);border-color:var(--hot)"></span>vive en <code>bot/io.js</code></span> (2487 líneas). Hay tres caminos de entrada, y una orden nueva toca el parser, el <code>switch</code> y la ayuda. Esa es la causa de los choques entre los dos devs.</figcaption>
+  </figure>
+
+  <div class="tabla"><table>
+    <thead><tr><th>Carpeta</th><th>Qué hay</th></tr></thead>
+    <tbody>
+      <tr><td><code>bot/</code></td><td>El bot: órdenes, cola, habilidades y sus pruebas en seco</td></tr>
+      <tr><td><code>perfiles/</code>, <code>catalogo/</code></td><td>Roles con sus etapas · plantillas de estructuras</td></tr>
+      <tr><td><code>entrenamiento/</code></td><td>Simulador, redes y bancos de medida</td></tr>
+      <tr><td><code>mente/</code></td><td>La mente de Alma con Claude (aparcada)</td></tr>
+      <tr><td><code>plugin-connect/</code></td><td>Plugin del servidor: <code>/connect</code>, <code>/bo</code>, dueños</td></tr>
+      <tr><td><code>servidor*/</code>, <code>mundos/</code></td><td>Servidores locales · configuración y datos de cada mundo por dueño</td></tr>
+      <tr><td><code>conocimiento/</code></td><td>Vault: roadmap, decisiones, experimentos, aprendizajes, diarios</td></tr>
+      <tr><td><code>PLAN*.md</code>, <code>planes/</code></td><td>Detalle técnico de cada fase · plan del asistente</td></tr>
+      <tr><td><code>compartido/</code></td><td>Hub entre agentes (en pausa)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Cómo está repartido: 8 épicas con dueño</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1000 440" role="img" aria-label="Reparto propuesto: seppuq lleva E1, E6 y E7; count lleva E2, E3, E4 y E5; todas dependen de E0, la plataforma de comandos. Catálogo de estructuras y Granjero pasarían de seppuq a count si lo acepta.">
+      <defs>
+        <marker id="fs" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8Z" class="mk-s" style="stroke:none"/></marker>
+        <marker id="fc" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8Z" class="mk-c" style="stroke:none"/></marker>
+        <marker id="fw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8Z" class="mk-w" style="stroke:none"/></marker>
+      </defs>
+      <text class="h sep-tx" x="150" y="26">seppuq</text>
+      <text class="h" x="500" y="26">Capa común</text>
+      <text class="h cou-tx" x="850" y="26">count</text>
+
+      <!-- seppuq -->
+      <rect class="sep" x="20" y="40" width="260" height="56" rx="4"/><text class="t" x="150" y="63">E1 Recursos y progresión</text><text class="s" x="150" y="81">conseguir, Minero, Casual, Speedrunner, F8.G</text>
+      <rect class="sep" x="20" y="120" width="260" height="56" rx="4"/><text class="t" x="150" y="143">E6 Asistente personal</text><text class="s" x="150" y="161">plan A1-A5, voz, mundo del usuario</text>
+      <rect class="sep" x="20" y="200" width="260" height="56" rx="4"/><text class="t" x="150" y="223">E7 Autonomía a largo plazo</text><text class="s" x="150" y="241">F7 activo · F6 y Varios aparcados</text>
+      <rect class="wrn" x="20" y="285" width="260" height="56" rx="4"/><text class="t" x="150" y="308">Catálogo de estructuras</text><text class="s" x="150" y="326">hoy de seppuq: torre a medias</text>
+      <rect class="wrn" x="20" y="369" width="260" height="56" rx="4"/><text class="t" x="150" y="392">Granjero</text><text class="s" x="150" y="410">hoy asignado a seppuq</text>
+
+      <!-- común -->
+      <rect class="io" x="380" y="40" width="240" height="216" rx="4"/>
+      <text class="t" x="500" y="63">E0 Plataforma de comandos</text>
+      <text class="s" x="500" y="81">entradas, catálogo, control</text>
+      <text class="s" x="500" y="97">dueño: seppuq · revisa count</text>
+      <text class="a" x="395" y="125">bot/io.js</text>
+      <rect class="bs" x="395" y="131" width="107" height="22"/><rect class="bc" x="502" y="131" width="62" height="22"/>
+      <text class="bl" x="448" y="146">67</text><text class="bl" x="533" y="146">39</text>
+      <text class="a" x="395" y="175">bot/ordenes.js</text>
+      <rect class="bs" x="395" y="181" width="35" height="22"/><rect class="bc" x="430" y="181" width="18" height="22"/>
+      <text class="bl" x="412" y="196">22</text><text class="bl" x="439" y="196">11</text>
+      <text class="s" x="500" y="225">commits desde el 20 oct</text>
+      <text class="s" x="500" y="242">24 archivos tocados por los dos</text>
+
+      <!-- count -->
+      <rect class="cou" x="720" y="40" width="260" height="56" rx="4"/><text class="t" x="850" y="63">E2 Guardia</text><text class="s" x="850" y="81">Sentinela, guardaespaldas, aliados</text>
+      <rect class="cou" x="720" y="120" width="260" height="56" rx="4"/><text class="t" x="850" y="143">E5 Operación multijugador</text><text class="s" x="850" y="161">plugin, lanzador, zonas por dueño</text>
+      <rect class="nota" x="720" y="200" width="260" height="56" rx="4"/><text class="s" x="850" y="223">Sentinela y oficios ya funcionan;</text><text class="s" x="850" y="241">les faltan perfil v2 y banco</text>
+      <rect class="cou" x="720" y="285" width="260" height="56" rx="4"/><text class="t" x="850" y="308">E3 Obras</text><text class="s" x="850" y="326">Builder, Redstoner</text>
+      <rect class="cou" x="720" y="369" width="260" height="56" rx="4"/><text class="t" x="850" y="392">E4 Oficios y base</text><text class="s" x="850" y="410">cosechar, herrero, hogar</text>
+
+      <!-- dependencias -->
+      <path class="c-sep" d="M280 68H379" marker-end="url(#fs)"/><text class="a" x="286" y="60">añade órdenes</text>
+      <path class="c-sep" d="M280 148H379" marker-end="url(#fs)"/><text class="a" x="286" y="140">usa el puerto</text>
+      <path class="c-sep" d="M280 228H379" marker-end="url(#fs)"/><text class="a" x="286" y="220">usa el modo</text>
+      <path class="c-cou" d="M720 68H621" marker-end="url(#fc)"/><text class="a" x="625" y="60">añade órdenes</text>
+      <path class="c-cou" d="M720 148H621" marker-end="url(#fc)"/><text class="a" x="625" y="140">zonas, dueños</text>
+      <path class="c-cou" d="M720 298H600V257" marker-end="url(#fc)"/><text class="a" x="608" y="291">añade órdenes</text>
+      <path class="c-cou" d="M720 382H560V257" marker-end="url(#fc)"/><text class="a" x="568" y="375">añade órdenes</text>
+
+      <!-- traspasos -->
+      <path class="w" d="M280 322H719" marker-end="url(#fw)"/><text class="a" x="290" y="315">al acabar torre y castillo</text>
+      <path class="w" d="M280 406H719" marker-end="url(#fw)"/><text class="a" x="290" y="399">propuesta: count ya hizo cosechar</text>
+    </svg>
+    </div>
+    <figcaption><strong>El reparto es una propuesta y count aún no lo ha aceptado.</strong> <span class="clave"><span class="mues" style="background:var(--warn-t);border-color:var(--warn);border-style:dashed"></span>Discontinuo</span>: los dos traspasos por cerrar con count. Las barras están a escala y separan los commits de cada dev. Mientras no se haga el refactor, E0 sigue siendo un punto de choque.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2>Cómo está planteado: el camino de F8</h2>
+  <p>La fase principal avanza en este orden. El borde superior de color marca lo que lleva count, y el resto es de seppuq.</p>
+  <ol class="camino">
+    <li class="hecho"><span class="cod">F1-F5</span><b>Base y modos</b><span class="est">Hecho</span></li>
+    <li class="hecho"><span class="cod">F8.0a-b</span><b>Infraestructura y cuerpo</b><span class="est">Hecho</span></li>
+    <li class="parado"><span class="cod">F8.1</span><b>Casual</b><span class="est">Parado: 3/8, pide 6/8</span></li>
+    <li class="midiendo"><span class="cod">F8.2</span><b>Minero</b><span class="est">4/8, midiendo el ruido</span></li>
+    <li class="falta"><span class="cod">F8.3</span><b>Granjero</b><span class="est">Dueño por cerrar</span></li>
+    <li class="falta"><span class="cod">F8.G</span><b>Primera red de roles</b><span class="est">Pendiente</span></li>
+    <li class="falta"><span class="cod">F8.9 mínimo</span><b>Casual + Minero</b><span class="est">Pendiente</span></li>
+    <li class="falta"><span class="cod">F8.4</span><b>Explorador</b><span class="est">Pendiente</span></li>
+    <li class="falta fin-count"><span class="cod">F8.5</span><b>Builder</b><span class="est">Pendiente</span></li>
+    <li class="falta fin-count"><span class="cod">F8.6</span><b>Redstoner</b><span class="est">Pendiente</span></li>
+    <li class="falta fin-count"><span class="cod">sin fase</span><b>Sentinela</b><span class="est">Sin plan ni banco</span></li>
+    <li class="falta"><span class="cod">F8.7-8</span><b>Speedrunner</b><span class="est">Pendiente</span></li>
+  </ol>
+</section>
+
+<section>
+  <h2>Qué está pendiente ahora</h2>
+  <figure>
+    <div class="scroll">
+    <svg viewBox="0 0 1000 345" role="img" aria-label="El refactor espera dos cosas: las tiradas del banco M con su nota de ruido, y la revisión de count. Después se elige la siguiente ruta de F8. Asistente, catálogo, F7 y la pausa del hub van aparte.">
+      <defs>
+        <marker id="fg" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8Z" class="mk" style="stroke:none"/></marker>
+      </defs>
+      <!-- fila bancos -->
+      <rect class="wrn" x="20" y="30" width="180" height="62" rx="4"/><text class="t" x="110" y="54">Banco M × 3</text><text class="s" x="110" y="73">en marcha · fin ≈ 18:20</text>
+      <rect class="sep" x="245" y="30" width="170" height="62" rx="4"/><text class="t" x="330" y="54">Nota de ruido</text><text class="s" x="330" y="73">cuántas tiradas hacen falta</text>
+      <!-- fila count -->
+      <rect class="cou" x="20" y="165" width="180" height="62" rx="4"/><text class="t" x="110" y="189">Count revisa</text><text class="s" x="110" y="208">arquitectura y épicas</text>
+      <rect class="cou" x="245" y="165" width="170" height="62" rx="4"/><text class="t" x="330" y="189">Cierra 2 traspasos</text><text class="s" x="330" y="208">catálogo y Granjero</text>
+      <!-- puerta y salida -->
+      <rect x="480" y="105" width="110" height="55" rx="4" class="fuerte"/><text class="t" x="535" y="128">Puerta</text><text class="s" x="535" y="146">las dos ramas</text>
+      <rect class="sep" x="635" y="105" width="175" height="55" rx="4"/><text class="t" x="722" y="128">Refactor E0</text><text class="s" x="722" y="146">5 trozos en PR cortas</text>
+      <rect class="sep" x="855" y="105" width="125" height="55" rx="4"/><text class="t" x="917" y="128">Elegir ruta F8</text><text class="s" x="917" y="146">Minero, Casual o F8.G</text>
+      <!-- flechas -->
+      <path d="M200 61H244" marker-end="url(#fg)"/><text class="a" x="203" y="53">JSON</text>
+      <path d="M200 196H244" marker-end="url(#fg)"/><text class="a" x="203" y="188">pega</text>
+      <path d="M415 75H535V104" marker-end="url(#fg)"/><text class="a" x="422" y="68">criterio</text>
+      <path d="M415 196H535V161" marker-end="url(#fg)"/><text class="a" x="422" y="189">acuerdo</text>
+      <path d="M415 45H722V104" marker-end="url(#fg)"/><text class="a" x="560" y="38">línea base para comparar</text>
+      <path d="M590 132H634" marker-end="url(#fg)"/><text class="a" x="600" y="124">abre</text>
+      <path d="M810 132H854" marker-end="url(#fg)"/><text class="a" x="815" y="124">luego</text>
+      <!-- paralelo -->
+      <rect class="banda" x="10" y="248" width="980" height="88" rx="4"/>
+      <text class="a" x="20" y="268">Va aparte: no depende de la puerta</text>
+      <rect x="20" y="278" width="225" height="48" rx="4"/><text class="t" x="132" y="298">Asistente A1</text><text class="s" x="132" y="315">desde el 7 de noviembre</text>
+      <rect x="265" y="278" width="225" height="48" rx="4"/><text class="t" x="377" y="298">Catálogo: torre y castillo</text><text class="s" x="377" y="315">tras las tiradas</text>
+      <rect x="510" y="278" width="225" height="48" rx="4"/><text class="t" x="622" y="298">F7: cierre de F7.5 y F7.6</text><text class="s" x="622" y="315">sin medida en el vault</text>
+      <rect x="755" y="278" width="225" height="48" rx="4"/><text class="t" x="867" y="298">Pausa del hub</text><text class="s" x="867" y="315">tu decisión: sin commitear</text>
+    </svg>
+    </div>
+    <figcaption>El refactor no empieza hasta tener las dos ramas. La de arriba solo necesita que pidas leer las tiradas al acabar. La de abajo depende de que le pases las propuestas a count.</figcaption>
+  </figure>
+
+  <div class="tabla"><table>
+    <thead><tr><th>Frente</th><th>Dueño</th><th>Estado</th><th>Siguiente paso</th></tr></thead>
+    <tbody>
+      <tr><td>Arquitectura de comandos</td><td>seppuq</td><td><span class="pil p-e">Propuesta</span></td><td>Revisión de count, luego refactor</td></tr>
+      <tr><td>F8 Minero</td><td>seppuq</td><td><span class="pil p-e">Midiendo</span></td><td>Leer las 3 tiradas y fijar el criterio de veredicto</td></tr>
+      <tr><td>F8 Casual</td><td>seppuq</td><td><span class="pil p-e">Parado</span></td><td>Se decide al elegir ruta</td></tr>
+      <tr><td>F8 Roles de count</td><td>count</td><td><span class="pil p-a">En curso</span></td><td>Revisar propuestas; plan y banco de Sentinela o B1 de Builder</td></tr>
+      <tr><td>Catálogo de estructuras</td><td>seppuq</td><td><span class="pil p-a">En curso</span></td><td>Andamio para terminar la torre (1086/3210), luego el castillo</td></tr>
+      <tr><td>Asistente personal</td><td>seppuq</td><td><span class="pil p-e">Pausado</span></td><td>A1 desde el 7 de noviembre, con tope del 5 % del cupo semanal</td></tr>
+      <tr><td>F7 Supervivencia</td><td>seppuq</td><td><span class="pil p-a">En curso</span></td><td>Confirmar el cierre de F7.5 y lanzar F7.6</td></tr>
+      <tr><td>Obsidian</td><td>seppuq</td><td><span class="pil p-a">En curso</span></td><td>Instalar en los dos PCs y comprobar las Bases</td></tr>
+      <tr><td>F6 Alma</td><td>seppuq</td><td><span class="pil p-p">Aparcado</span></td><td>Medir T1-T3</td></tr>
+      <tr><td>Varios personajes</td><td>seppuq</td><td><span class="pil p-p">Aparcado</span></td><td>Medir la red de equipo en Minecraft</td></tr>
+      <tr><td>Trabajo a dos (hub)</td><td>seppuq</td><td><span class="pil p-p">Aparcado</span></td><td>Hasta nuevo aviso; el vault sigue</td></tr>
+    </tbody>
+  </table></div>
+</section>
+</div>
+
+</body>
+</html>

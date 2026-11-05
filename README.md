@@ -141,6 +141,7 @@ server. Los mundos de un solo jugador (el tuyo, `local`, `supervivencia`) no tie
 
 ## Dónde leer más
 
+- [resumen/mapa-project-soma_2026-11-05.html](resumen/mapa-project-soma_2026-11-05.html): mapa visual de la estructura, el reparto y lo pendiente (foto del 2026-11-05; ábrelo en el navegador).
 - [PLAN.md](PLAN.md): el plan del Experimento A, fase a fase.
 - [PLAN_F8_perfiles.md](PLAN_F8_perfiles.md): los roles de F8, con sus etapas, bancos y orden.
 - [PLAN_F7_supervivencia.md](PLAN_F7_supervivencia.md): supervivencia y la red DAgger.

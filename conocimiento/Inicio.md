@@ -1,8 +1,8 @@
 # Inicio · project-soma
 
 Vault del equipo: **roadmap, decisiones, experimentos de los modelos y aprendizajes** del Experimento A. Lo escriben las dos
-personas y sus agentes de Claude; git lo sincroniza (ver [[README]]). Lo inmediato (qué hace cada uno ahora, mensajes) va
-por el hub de `compartido/`, no aquí.
+personas y sus agentes de Claude; git lo sincroniza (ver [[README]]). El hub de `compartido/`, para lo inmediato, está en
+pausa desde el 2026-11-02. Vista general: `resumen/mapa-project-soma_2026-11-05.html` (foto de ese día; se abre en el navegador).
 
 ## Roadmap
 ![[roadmap.base]]
