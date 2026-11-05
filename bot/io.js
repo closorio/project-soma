@@ -724,6 +724,8 @@ class Personaje {
   }
 
   arrancarLibre() {
+    // 2026-11-04, banco M: el reinicio a 1 s llegaba ya en modo órdenes y su nuevaTarea(true) cortaba «recuperar mis cosas» (M1, 259 objetos)
+    if (this.modo !== 'libre') return
     if (this.libre) return // el bucle sigue (o está acabando: al acabar, vuelve a arrancar si el modo sigue siendo libre)
     this.libre = true
     this.bucleLibre().catch(e => this.ev('[libre] error: ' + e.message)).finally(() => {
