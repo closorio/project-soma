@@ -3,8 +3,8 @@ tipo: roadmap
 fase: F8
 estado: en-curso
 responsable: seppuq
-actualizado: 2026-11-04
-siguiente: "Arreglos de la prueba a mano y del banco hechos (13d682e); recuperar 3/3 en los cuatro casos. Falta repetir las pruebas a mano y, si el usuario lo pide, el humo y el banco M (≈ 80 min) con terreno regenerado. Pendiente: pico gastado al subir, ir_a_arbol sin árbol; conseguir desde cero 2/5"
+actualizado: 2026-11-05
+siguiente: "Banco M 4/8 con los arreglos (6/8 llegaron a 24; 2 lo perdieron al morir). Sin relanzar hasta que el usuario lo pida. Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
