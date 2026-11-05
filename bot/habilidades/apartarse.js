@@ -60,7 +60,7 @@ module.exports = async function apartarse(bot, args, tarea) {
     if (r === 'listo') break
   }
   // 2026-11-04, banco M: en medio de un lago no hay sitio a 4-7 («sin camino», 29 veces, y refugiarse tampoco puede): explora hasta la orilla
-  if (enAgua && !destino) {
+  if (enAgua && !destino && args[0] !== 'sin_explorar') {
     const ex = await require('./explorar')(bot, ['-', '24', '40'], tarea)
     return { exito: !!ex.exito, causa: ex.exito ? 'a salvo' : ex.causa, ...datos({ destino }) }
   }

@@ -39,7 +39,8 @@ const FUNDIBLES = { hierro: 'hierro', oro: 'oro', cobre: 'cobre', arena: 'arena'
   carne: 'carne', comida: 'carne' }
 const PONIBLES = { cofre: 'cofre', horno: 'horno', mesa: 'mesa', antorcha: 'antorcha', cama: 'cama', tierra: 'tierra', bloque: 'tierra' }
 const SACABLES = { troncos: 'troncos', tronco: 'troncos', madera: 'troncos', tablones: 'tablones', piedra: 'piedra', comida: 'comida',
-  carbon: 'carbon', hierro: 'hierro', lana: 'lana' }
+  carbon: 'carbon', hierro: 'hierro', lana: 'lana', cobre: 'cobre', oro: 'oro', diamante: 'diamante', diamantes: 'diamante', esmeralda: 'esmeralda', esmeraldas: 'esmeralda', redstone: 'redstone', lapis: 'lapis', lapislazuli: 'lapis' }
+const DAME_RELLENO = new Set(['me', 'lo', 'la', 'los', 'las', 'el', 'un', 'una', 'unos', 'unas', 'de', 'a', 'todo', 'eso', 'esto', 'que', 'llevas', 'tienes', 'tus', 'mis', 'tu', 'mi', 'cosas', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez'])
 const palabra = (t, tabla) => { const w = t.split(' ').find(x => tabla[x]); return w ? tabla[w] : null }
 const PLANOS = { cabana: 'cabana', cabanas: 'cabana', casa: 'cabana', casita: 'cabana', refugio: 'cabana', muro: 'muro', pared: 'muro', muralla: 'muro',
   pilar: 'pilar', columna: 'pilar', poste: 'pilar', plataforma: 'plataforma', suelo: 'plataforma', tarima: 'plataforma' }
@@ -177,7 +178,10 @@ function interpretar(texto) {
   // 2026-11-01: dar al jugador lo que lleva («dame 10 troncos», «dame todo»); antes que «saca» y que «tala» (que se come «trae»)
   if (/^(?:dame|damelo|damelos|dadme|traeme|entregame|pasame|tirame|suelta|sueltame)\b/.test(t)) {
     const objeto = palabra(t, SACABLES)
-    return { tipo: 'dame', objeto: objeto || 'todo', n: objeto ? numero(t) : null }
+    if (objeto) return { tipo: 'dame', objeto, n: numero(t) }
+    // 2026-11-04, prueba a mano: lo que no entendía caía en «todo»: «todo» solo si no pide otra cosa
+    const otra = t.split(' ').slice(1).find(w => !DAME_RELLENO.has(w) && !/^\d+$/.test(w))
+    return otra ? { tipo: 'dame', objeto: null, desconocido: otra, n: null } : { tipo: 'dame', objeto: 'todo', n: null }
   }
   if (/\b(?:saca|sacad|sacar)\b|\b(?:coge|trae) del cofre\b/.test(t)) return { tipo: 'saca', objeto: palabra(t, SACABLES), n: numero(t) || 8 }
   if (/\b(?:desatascate|desatascaos|desatascarte|estas atascad[oa]s?|sal de aqui como puedas)\b/.test(t)) return { tipo: 'desatascate' }
@@ -196,7 +200,7 @@ function interpretar(texto) {
     return { tipo: 'duerme' }
   if (/^(?:come|comed|comer|comete|cena|desayuna|almuerza)\b|\b(?:come|comete) algo\b/.test(t)) return { tipo: 'come' }
   // 2026-11-01: volver a por sus cosas tras morir (también lo lanza solo al reaparecer)
-  if (/\b(?:recupera|recuperad)\b|\bve a por tus cosas\b|\brecoge tu loot\b/.test(t)) return { tipo: 'recupera' }
+  if (/\b(?:recupera|recuperad)\b|\bve (?:a )?por tus cosas\b|\bbusca tus cosas\b|\brecoge tu loot\b/.test(t)) return { tipo: 'recupera' }
   // 2026-11-01: guardaespaldas defensivo (le sigue y solo pelea con quien le pega a él o al bot); antes que «ataca»
   // «… agresivo»: también va a por los hostiles que tenga cerca el protegido; «pasivo» (o nada): solo a por quien pegue
   const modoEscolta = /\bagresiv[oa]s?\b|\b(?:protegeme|protegedme|protege|proteged)\b/.test(t) ? 'agresivo' : 'pasivo' // 2026-11-02: «protégeme» ya vigila (ataca al hostil que se acerque); «defiéndeme» sigue pasivo salvo «agresivo»

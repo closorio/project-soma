@@ -329,6 +329,43 @@ apuntar(s1, { habilidad: 'cavar_tunel' }, { exito: true, causa: 'llegué' }); ok
   ok(o('saca 3 de hierro').tipo === 'saca', 'saca 3 de hierro sigue siendo del cofre')
   ok(o('búscame lapislázuli').material === 'lapis', 'lapislázuli')
 
+  // 2026-11-04, prueba a mano: órdenes
+  ok(o('dame diamantes').objeto === 'diamante', `dame diamantes: ${JSON.stringify(o('dame diamantes'))}`)
+  ok(o('dame 3 diamantes').objeto === 'diamante' && o('dame 3 diamantes').n === 3, 'dame 3 diamantes')
+  ok(o('dame cobre').objeto === 'cobre' && o('dame hierro').objeto === 'hierro', 'dame cobre, dame hierro')
+  for (const f of ['dame', 'dame todo', 'damelo', 'dame todo lo que llevas', 'dame tus cosas']) ok(o(f).objeto === 'todo', `${f}: ${JSON.stringify(o(f))}`)
+  ok(o('dame el pico').objeto === null && o('dame el pico').desconocido === 'pico', `dame el pico no es «todo»: ${JSON.stringify(o('dame el pico'))}`)
+  for (const f of ['ve por tus cosas', 've a por tus cosas', 'busca tus cosas', 'recupera tus cosas']) ok(o(f).tipo === 'recupera', `${f}: ${JSON.stringify(o(f))}`)
+  // 2026-11-04, prueba a mano: al retomar tras un golpe, la altura de salida es la de la orden, no la de bajo tierra
+  const manoLleva = (b5, nombre, n) => { b5.inventory.slots[36] = { name: nombre, count: n, slot: 36, type: 1 }; b5.inventory.emptySlotCount = () => 30 }
+  const b5 = mundoFalso({ pos: [0.5, 19, 0.5] })
+  manoLleva(b5, 'diamond', 3)
+  const vistos5 = []
+  const paso5 = (imita5) => async (h, a) => { vistos5.push(h); const r5 = (imita5[h] || (() => ({ exito: true })))(a); return [r5, { habilidad: h, exito: !!r5.exito, causa: r5.causa || '' }] }
+  b5.players = { Ana: { entity: { position: b5.entity.position } } }
+  const ctx5 = { tarea: { cancelada: false }, quien: 'Ana', decir: () => {}, orden: async () => ({ exito: true, pasos: [] }) }
+  await ejecutar(b5, 'diamante', 3, { ...ctx5, y0: 64, paso: paso5({ subir_a_superficie: () => ({ exito: true }) }) })
+  ok(vistos5.includes('subir_a_superficie'), `con y0 de la orden, sube al acabar: ${vistos5}`)
+  // la entrega se reintenta si la corta una amenaza
+  const veces = { dar: 0 }
+  vistos5.length = 0
+  const rEnt = await ejecutar(b5, 'diamante', 3, { ...ctx5, y0: 19, paso: paso5({ dar: () => (++veces.dar === 1 ? { exito: false, causa: 'amenaza' } : { exito: true }) }) })
+  ok(veces.dar === 2 && vistos5.includes('atacar') && rEnt.entrega === 'dado', `entrega tras la amenaza: ${vistos5} ${rEnt.entrega}`)
+  // sin ver al jugador, vuelve al punto de salida y lo intenta
+  const b6 = mundoFalso({ pos: [0.5, 64, 0.5] })
+  manoLleva(b6, 'diamond', 3)
+  b6.players = { Ana: {} }
+  let volvio = 0
+  vistos5.length = 0
+  const r6b = await ejecutar(b6, 'diamante', 3, { ...ctx5, y0: 64, volver: async () => { volvio++; b6.players.Ana.entity = { position: b6.entity.position } }, paso: paso5({}) })
+  ok(volvio === 1 && r6b.entrega === 'dado', `sin verlo, vuelve: ${volvio} ${r6b.entrega}`)
+  // hierro sin fundir: se dice
+  const b7 = mundoFalso({ pos: [0.5, 64, 0.5] })
+  manoLleva(b7, 'raw_iron', 8)
+  b7.players = {}
+  const r7b = await ejecutar(b7, 'hierro', 8, { ...ctx5, quien: '', y0: 64, paso: paso5({ fundir: () => ({ exito: false, causa: 'sin horno' }), depositar: () => ({ exito: false }) }) })
+  ok(r7b.sinFundir === 'sin horno', `sin fundir: ${JSON.stringify({ c: r7b.causa, s: r7b.sinFundir })}`)
+
   console.log(`${pruebas - fallos}/${pruebas} pruebas pasan`)
   process.exit(fallos ? 1 : 0)
 })().catch(e => { console.error(e); process.exit(1) })

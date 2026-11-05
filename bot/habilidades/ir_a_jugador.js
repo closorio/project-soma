@@ -2,7 +2,7 @@
 // Sin romper ni poner bloques. Acepta también el tipo de una entidad cercana (p. ej. villager) para las pruebas.
 // Si el jugador está en una zona vedada (../zonas.json), no entra: va a la casilla de fuera más cercana y espera en el borde.
 // Con «vedadas» (2026-11-02, la orden «ven»): entra en las zonas vedadas como en cualquier sitio; lo único vedado es romper bloques.
-const { goals } = require('mineflayer-pathfinder')
+const { Movements, goals } = require('mineflayer-pathfinder')
 const zonas = require('../zonas')
 const { buscarEntidad, moverHasta, dist, prudentes } = require('./comun')
 
@@ -33,7 +33,7 @@ class GoalSeguirFuera extends goals.Goal {
   enElBorde(bot) { return !!this.fuera && Math.hypot(this.x + 0.5 - bot.entity.position.x, this.z + 0.5 - bot.entity.position.z) <= 1.6 }
 }
 
-module.exports = async function irAJugador(bot, [nombre, segundos, vedadas], tarea) {
+async function caminar(bot, [nombre, segundos, vedadas], tarea) {
   const e = buscarEntidad(bot, nombre)
   if (!e) return { exito: false, causa: nombre ? 'no veo a ' + nombre : 'no veo a ningún jugador' }
   const d0 = dist(bot, e)
@@ -49,5 +49,23 @@ module.exports = async function irAJugador(bot, [nombre, segundos, vedadas], tar
   const datos = { distancia: +dist(bot, e).toFixed(1), desde: +d0.toFixed(1), ...(meta.fuera ? { zona: meta.fuera } : {}) }
   if (r === 'listo') return { exito: true, causa: dist(bot, e) <= CERCA ? 'llegué' : `en el borde de ${meta.fuera}`, ...datos }
   return { exito: false, causa: r === 'perdido' ? 'lo perdí de vista' : r, ...datos }
+}
+// Con «insistir» (2026-11-04, prueba a mano: «ven» y la entrega se rendían bajo tierra o a 30 bloques): si no llega a pie, sube a la superficie
+// y lo intenta otra vez; y si tampoco, una última vez cavando y poniendo bloques (el mundo solo se toca entonces, y fuera de las zonas protegidas).
+module.exports = async function irAJugador(bot, [nombre, segundos, vedadas, insistir], tarea) {
+  let r = await caminar(bot, [nombre, segundos, vedadas], tarea)
+  const seguir = () => !r.exito && !r.zona && !(tarea && tarea.cancelada) && /sin camino|tiempo agotado/.test(String(r.causa))
+  if (insistir !== 'insistir' || !seguir()) return r
+  const { subirASuperficie, fuera } = require('./escalera')
+  if (!fuera(bot)) {
+    await subirASuperficie(bot, [], tarea)
+    r = await caminar(bot, [nombre, segundos, vedadas], tarea)
+    if (!seguir()) return r
+  }
+  const e = buscarEntidad(bot, nombre)
+  if (!e) return r
+  const ms = (parseFloat(segundos) || 60) * 1000
+  const m = await moverHasta(bot, new goals.GoalFollow(e, CERCA - 1), () => dist(bot, e) <= CERCA, { ms, tarea, entidad: e, mov: zonas.aplicar(new Movements(bot)) })
+  return m === 'listo' ? { exito: true, causa: 'llegué', cavando: true, distancia: +dist(bot, e).toFixed(1) } : r
 }
 module.exports.GoalSeguirFuera = GoalSeguirFuera

@@ -15,7 +15,7 @@ module.exports = async function dar(bot, [nombre, objeto = 'todo', cantidad], ta
   const e = buscarEntidad(bot, nombre)
   if (!e) return { exito: false, causa: nombre ? 'no veo a ' + nombre : 'no veo a ningún jugador', ...datos() }
   if (e.position.distanceTo(bot.entity.position) > 3) {
-    const r = await irAJugador(bot, [nombre, '45'], tarea)
+    const r = await irAJugador(bot, [nombre, '45', '', 'insistir'], tarea)
     if (tarea && tarea.cancelada) return { exito: false, causa: 'cancelado', ...datos() }
     if (!r.exito) return { exito: false, causa: 'no llego: ' + r.causa, ...datos() }
   }

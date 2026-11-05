@@ -12,7 +12,7 @@ const { Vec3 } = require('vec3')
 const { goals } = require('mineflayer-pathfinder')
 const memoria = require('../memoria')
 const persistente = require('../memoria_persistente')
-const { conLimite, esperar, nodo, moverHasta, prudentes, usosPico } = require('./comun')
+const { conLimite, esperar, hayCamino, nodo, moverHasta, prudentes, usosPico } = require('./comun')
 const { picar } = require('./picar_tronco')
 const { colocar } = require('./colocar')
 const sv = require('./sv')
@@ -137,7 +137,7 @@ async function escalera(bot, { yMeta, dir, hasta }, tarea) {
   }
   const yo = memoria(bot)
   if (ctx.pasos.length) {
-    yo.escalera = { dir, sube, pasos: ctx.pasos, t: Date.now() }
+    yo.escalera = { dir, sube, pasos: ctx.pasos, t: Date.now(), boca: sube ? null : ctx.pasos[0] }
     if (!sube) persistente.anotarLugar(bot, 'minas', [...ctx.pasos[0], nodo(bot).y])
   }
   return { exito: causa === 'llegué', causa, y: nodo(bot).y, pasos: ctx.pasos.length, antorchas: ctx.antorchas, peligros: ctx.peligros,
@@ -157,6 +157,15 @@ async function subirASuperficie(bot, [rumbo], tarea) {
   const ultima = memoria(bot).escalera
   const dir = rumbo ? dirDe(bot, rumbo) : ultima && !ultima.sube ? [-ultima.dir[0], -ultima.dir[1]] : dirDe(bot)
   const parar = (b) => fuera(b) || alDescubierto(b)
+  // 2026-11-04, prueba a mano: cavaba una escalera nueva y gastaba el pico hasta romperlo (a mano, 19 s por bloque): si hay camino, por la que ya cavó
+  if (ultima && !ultima.sube && ultima.boca) {
+    const [bx, by, bz] = ultima.boca, meta = new goals.GoalNear(bx, by, bz, 1), mov = prudentes(bot)
+    if (hayCamino(bot, meta, 2000, mov)) {
+      await moverHasta(bot, meta, () => parar(bot) || meta.isEnd(nodo(bot)), { ms: 90000, tarea, mov })
+      if (parar(bot)) return { exito: true, causa: 'por la escalera', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [], modo: 'andando' }
+      if (tarea && tarea.cancelada) return { exito: false, causa: 'cancelado', y: nodo(bot).y, pasos: 0, antorchas: 0, peligros: [], rotos: [], puestos: [] }
+    }
+  }
   const r = await escalera(bot, { yMeta: Infinity, dir, hasta: () => parar(bot) }, tarea)
   if (r.exito || r.causa === 'cancelado') return { ...r, modo: 'escalera' }
   // sin escalera (líquido delante, protegido…): pilar recto hacia arriba

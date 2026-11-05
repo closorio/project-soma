@@ -292,7 +292,7 @@ class Personaje {
     }, 500)
     bot.on('messagestr', (m) => { // la causa de la muerte: el mensaje del server que me nombra, en los 3 s siguientes
       const u = this.ultimaMuerte
-      if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username)) u.causa = m
+      if (u && !u.causa && Date.now() - u.t < 3000 && m.includes(bot.username) && !m.startsWith('<')) u.causa = m // 2026-11-04: lo que él mismo dice no es la causa
     })
     bot.on('spawn', () => {
       if (!this.recuperarPendiente) { this.agenda.pausada = false; return }
@@ -548,7 +548,8 @@ class Personaje {
       const x = pendiente || reflejos.siguiente(this.bot, { h: previo, hechos })
       pendiente = null
       if (!x) break
-      const r = await habilidades.ejecutar(this.bot, x.habilidad, x.args, tarea)
+      // 2026-11-04, banco de recuperar: explorar para salir del agua lo alejaba de sus cosas
+      const r = await habilidades.ejecutar(this.bot, x.habilidad, x.habilidad === 'apartarse' && this.recuperando ? ['sin_explorar'] : x.args, tarea)
       reflejos.anotar(this.bot, x.habilidad, r)
       hechos.push({ habilidad: x.habilidad, motivo: x.motivo, exito: !!r.exito, causa: String(r.causa || ''), ms: r.ms })
       this.ev(`[reflejo] ${x.habilidad} ${x.args.join(' ')} (${x.motivo}) → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa} (${r.ms} ms)`)
@@ -607,6 +608,18 @@ class Personaje {
     return !!ojo && /^(sand|red_sand|gravel|suspicious_sand|suspicious_gravel)$/.test(ojo.name)
   }
 
+  async apartarseDeLaGrava() {
+    const bot = this.bot, b = bot.entity.position.floored()
+    const libre = (v) => { const k = bot.blockAt(v); return !!k && k.boundingBox !== 'block' }
+    const lado = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([x, z]) => b.offset(x, 0, z)).find(v => libre(v) && libre(v.offset(0, 1, 0)))
+    if (!lado) return
+    try {
+      await bot.lookAt(lado.offset(0.5, 1.6, 0.5), true)
+      bot.setControlState('forward', true)
+      await esperar(500)
+    } finally { bot.setControlState('forward', false) }
+  }
+
   async desenterrar() {
     const bot = this.bot
     this.desenterrando = true
@@ -615,6 +628,8 @@ class Personaje {
         const ojo = bot.blockAt(bot.entity.position.offset(0, 1.62, 0))
         try { bot.stopDigging(); await conLimite(bot.dig(ojo, true), 3000, () => bot.stopDigging()) } catch (_) {}
         await esperar(300)
+        // 2026-11-04, prueba a mano: la grava sigue cayendo y ahoga más deprisa de lo que se pica: a la segunda, a un lado
+        if (k >= 1 && this.cabezaEnArena()) await this.apartarseDeLaGrava()
       }
       this.ev(`[desenterrar] grava en la cabeza → ${this.cabezaEnArena() ? 'sigue' : 'fuera'}`)
     } finally { this.desenterrando = false }
@@ -635,7 +650,22 @@ class Personaje {
       await Promise.race([this.ocupado, esperar(800)]).catch(() => {}) // que lo cortado suelte el navegador
       const r = await respirar.respirar(bot, RESPIRAR_MS)
       this.ev(`[respirar] sin aire → ${r.fuera ? 'fuera' : 'sigo en el agua'} (aire ${bot.oxygenLevel}, ${r.picados} picados, ${r.ms} ms)`)
+      await this.salirSiAtascado()
     })().catch(e => this.ev('[respirar] error: ' + e.message)).finally(() => { this.defendiendo = null; this.respirando = false })
+  }
+
+  // 2026-11-04, prueba a mano: entre raíces de manglar anegadas respiraba una y otra vez sin moverse, y ni llegaba a sus cosas ni salía:
+  // a la tercera en el mismo sitio, hacia arriba cavando. Si sale, la recuperación sigue (los ahogos de antes ya no cuentan).
+  async salirSiAtascado() {
+    const bot = this.bot, p = bot.entity.position, a = this.ahogoAqui
+    if (a && Date.now() - a.t < 60000 && a.pos.distanceTo(p) <= 2) { a.n++; a.t = Date.now() } else this.ahogoAqui = { pos: p.clone(), t: Date.now(), n: 1 }
+    if (this.ahogoAqui.n < 3) return
+    this.ahogoAqui = null
+    const tarea = this.tareaReflejo = { cancelada: false }
+    const r = await habilidades.ejecutar(bot, 'subir_a_superficie', [], tarea)
+    if (this.tareaReflejo === tarea) this.tareaReflejo = null
+    this.ev(`[respirar] atascado en el agua: subo → ${r.exito ? 'éxito' : 'fallo'}: ${r.causa}`)
+    if (r.exito && !/^(ya fuera|al descubierto)$/.test(r.causa)) this.ahogosRecuperando = 0
   }
 
   // En reposo (ninguna habilidad, orden ni reflejo en marcha; en modo libre, entre dos decisiones: el bucle espera a que acabe):
@@ -1146,7 +1176,7 @@ class Personaje {
     // hecha o definitiva: fuera
     const t = clase === 'definitiva' && e.fallosSeguidos ? `${r.texto} (lo dejo tras ${e.fallosSeguidos + 1} intentos)` : r.texto
     if (r.exito && ORDENES_TRABAJO.has(o.tipo)) this.pendiente = null
-    if (t && !(guardia && o.reanuda)) { if (r.exito) this.decir(t); else this.decirAlDueno(t, e.quien) } // el fallo, solo al dueño
+    if (t && !(guardia && o.reanuda)) { if (r.exito || String(e.quien).startsWith('chat de ')) this.decir(t); else this.decirAlDueno(t, e.quien) } // el fallo, solo al dueño; 2026-11-04: pedido por el chat, en el chat (por /msg parecía que no hacía nada)
     if (!(guardia && o.reanuda)) anotar(!!r.exito, t, this.despues)
     this.soltar(e, { ...r, texto: t })
     return e.quien === 'auto' || e.quien === 'agenda' ? null : e
@@ -1309,12 +1339,13 @@ class Personaje {
       case 'ven': {
         const falta = await this.acercarseA(this.jugadorDe(quien), o.en, tarea, prudentes(bot, { pisarVedadas: true }))
         if (falta !== null) return { exito: false, texto: falta || 'Dejo de buscarte.' }
-        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60', 'vedadas']) // 2026-11-02: también dentro de las zonas vedadas; solo romper bloques está vedado // '' = el jugador humano más cercano
+        const [r, d] = await paso('ir_a_jugador', [this.jugadorDe(quien), '60', 'vedadas', 'insistir']) // 2026-11-02: también dentro de las zonas vedadas; solo romper bloques está vedado // '' = el jugador humano más cercano
         const texto = r.causa === 'llegué' || r.causa === 'ya estaba' ? 'Aquí estoy.'
           : r.zona ? `Estás en ${r.zona}, que es zona protegida: te espero en el borde.` : `No llego: ${r.causa}.`
         return { exito: !!r.exito, texto, pasos: [d] }
       }
       case 'dame': {
+        if (!o.objeto) return { exito: false, texto: `No sé qué es «${o.desconocido}»: dime qué material quieres, o «dame todo».`, pasos: [] }
         const [r, d] = await paso('dar', [this.jugadorDe(quien), o.objeto, o.n ? String(o.n) : ''])
         const lista = Object.entries(r.dado || {}).map(([k, n]) => `${n} ${k.replace(/_/g, ' ')}`).join(', ')
         return { exito: !!r.exito, texto: r.exito ? `Toma: ${lista}.` : `No puedo darte nada: ${r.causa}.`, pasos: [d] }
@@ -1726,11 +1757,15 @@ class Personaje {
       }
       case 'consigue': { // 2026-11-02: el recolector avanzado (conseguir.js): pico, antorchas, bajar, túneles, volver y entregar
         const quien2 = this.jugadorDe(quien)
-        const r = await this.conseguirCon(o.material, o.n, { paso, tarea, quien: quien2, decir: (t) => this.decir(t),
+        // 2026-11-04, prueba a mano: al retomar tras un golpe, «de dónde salí» era ya bajo tierra y no volvía a subir
+        if (o.y0 == null) { const pi = bot.entity.position; o.y0 = Math.floor(pi.y); o.desde = [pi.x, pi.y, pi.z] }
+        const volver = () => viajeLargo(bot, new (require('vec3').Vec3)(...o.desde), () => false, { tarea, mov: prudentes(bot), cerca: 8 })
+        const r = await this.conseguirCon(o.material, o.n, { paso, tarea, quien: quien2, y0: o.y0, volver, decir: (t) => this.decir(t),
           orden: (tipo, n) => this.hacer({ tipo, ...(n ? { n } : {}) }, tarea, quien) })
         const NOMBRE = { lapis: 'lapislázuli', carbon: 'carbón' }, nombre = NOMBRE[o.material] || o.material
         const lugar = r.entrega === 'dado' ? ' Te lo he dado.' : r.entrega === 'cofre' ? ' Está en el cofre.' : r.conseguidos ? ' Lo llevo yo.' : ''
-        const texto = r.exito ? `Conseguido: ${r.conseguidos} de ${nombre}.${lugar}`
+        const crudo = r.sinFundir ? ` sin fundir (${r.sinFundir})` : ''
+        const texto = r.exito ? `Conseguido: ${r.conseguidos} de ${nombre}${crudo}.${lugar}`
           : r.conseguidos ? `Conseguí ${r.conseguidos}/${o.n} de ${nombre} (${r.causa}).${lugar}` : `No conseguí ${nombre}: ${r.causa}.`
         return { exito: r.exito, conseguidos: r.conseguidos, texto, pasos: r.pasos }
       }

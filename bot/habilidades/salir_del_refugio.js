@@ -110,8 +110,13 @@ async function subirPozo(bot, salida, tarea, parar) {
       if (!sv.puedeTocar(encima.position.x, encima.position.y, encima.position.z)) return false
       const { item } = sv.mejorHerramienta(bot, encima)
       try { if (item && (!bot.heldItem || bot.heldItem.name !== item.name)) await conLimite(bot.equip(item, 'hand'), 3000) } catch (_) {}
-      const r = await picar(bot, encima, {}, tarea, 0)
-      if (!r.exito) return false
+      let r = await picar(bot, encima, {}, tarea, 0)
+      // 2026-11-04, prueba a mano: picando grava que sigue cayendo, «no se rompió» y se rendía con ella encima: asfixiado
+      for (let c = 0; !r.exito && c < 6 && CAE.test((bot.blockAt(encima.position) || {}).name || '') && !(tarea && tarea.cancelada); c++) {
+        await esperar(300)
+        r = await picar(bot, bot.blockAt(encima.position), {}, tarea, 0)
+      }
+      if (!r.exito && sv.solido(bot.blockAt(encima.position))) return false
     }
     if (CAE.test((bot.blockAt(b.offset(0, 3, 0)) || {}).name || '') && caidas++ < 16) { await esperar(400); k--; continue }
     if (!(await subirUno(bot))) { if (!(await subirUno(bot))) return false } // un reintento: el salto a veces no llega

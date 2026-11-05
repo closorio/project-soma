@@ -374,6 +374,9 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   bb = cuerpo({ bloques: enLago })
   res = await ap(bb, [], tarea())
   ok(res.exito && explorado && explorado[1] === '24', `en un lago, apartarse explora: ${JSON.stringify(res)} ${explorado}`)
+  explorado = null
+  res = await ap(cuerpo({ bloques: enLago }), ['sin_explorar'], tarea())
+  ok(!explorado && !res.exito, `recuperando, apartarse no explora: ${JSON.stringify(res)}`)
   require.cache[rutaExplorar].exports = explorarDeVerdad
 
   // 6 · órdenes en lenguaje sencillo

@@ -148,7 +148,7 @@ async function tirarBasura(bot) {
 
 // ctx: { paso(habilidad, args) → [r, d], orden(nombre, n) → r, reanudar() → bool (tras un golpe), decir(texto), quien, tarea, entregar (false: se lo queda) }. Devuelve { exito, causa, conseguidos, pasos }.
 async function ejecutar(bot, material, n0, ctx) {
-  const n = Math.min(MAX_N, Math.max(1, n0 || 1)), t0 = Date.now(), y0 = nodo(bot).y, pasos = []
+  const n = Math.min(MAX_N, Math.max(1, n0 || 1)), t0 = Date.now(), y0 = ctx.y0 != null ? ctx.y0 : nodo(bot).y, pasos = [] // ctx.y0: la altura de cuando se pidió, también al retomarlo tras una pausa
   const pila = [{ material, n, s: {} }] // la petición y, encima, lo que haga falta antes (el hierro del pico, el carbón)
   let fin = null, avisado = '', reanudadas = 0
   const decir = (t) => { if (t !== avisado) { avisado = t; ctx.decir(t) } }
@@ -199,23 +199,31 @@ async function ejecutar(bot, material, n0, ctx) {
   }
   // volver, fundir y entregar
   const m = MATERIALES[material] || {}
+  let sinFundir = null
   if (!ctx.tarea.cancelada && nodo(bot).y < y0 - 4) { const [, d] = await ctx.paso('subir_a_superficie', []); pasos.push(d) }
   if (!ctx.tarea.cancelada && m.funde && bot.inventory.items().some(i => i.name === m.suelta[0])) {
     const crudo = bot.inventory.items().filter(i => i.name === m.suelta[0]).reduce((a, i) => a + i.count, 0)
-    const [, d] = await ctx.paso('fundir', [m.funde, String(crudo)]); pasos.push(d)
+    const [rf, d] = await ctx.paso('fundir', [m.funde, String(crudo)]); pasos.push(d)
+    if (!rf.exito) sinFundir = rf.causa || 'no pude'
   }
   const conseguidos = m.suelta ? estado(bot).tiene[material] : 0
   let entrega = null
   if (!ctx.tarea.cancelada && conseguidos > 0 && ctx.entregar !== false) { // el capataz no entrega: sus etapas miran el inventario
     const objeto = m.suelta.find(nombre => bot.inventory.items().some(i => i.name === nombre && nombre !== m.suelta[0])) || m.suelta.find(nombre => bot.inventory.items().some(i => i.name === nombre))
-    if (ctx.quien && bot.players[ctx.quien] && bot.players[ctx.quien].entity) {
-      const [r, d] = await ctx.paso('dar', [ctx.quien, objeto]); pasos.push(d); entrega = r.exito ? 'dado' : null
+    // 2026-11-04, prueba a mano: una amenaza cortaba la entrega para siempre y, si no veía al jugador, se quedaba donde estaba
+    const visible = () => ctx.quien && bot.players[ctx.quien] && bot.players[ctx.quien].entity
+    if (ctx.quien && !visible() && ctx.volver && !ctx.tarea.cancelada) await ctx.volver()
+    for (let k = 0; k < 3 && !entrega && visible() && !ctx.tarea.cancelada; k++) {
+      const [r, d] = await ctx.paso('dar', [ctx.quien, objeto]); pasos.push(d)
+      if (r.exito) entrega = 'dado'
+      else if (/^(amenaza|golpe)$/.test(r.causa || '')) { const [, da] = await ctx.paso('atacar', []); pasos.push(da) }
+      else break
     }
     if (!entrega) { const [r, d] = await ctx.paso('depositar', []); pasos.push(d); entrega = r.exito ? 'cofre' : 'lo llevo' }
   }
   // 2026-11-04, banco M: fin.exito se decide antes de fundir, y decía «hecho (14/32)» tras perder el hierro en el horno
   const faltan = fin.exito && m.suelta ? n - conseguidos : 0
-  return { exito: !!fin.exito && faltan <= 0, causa: faltan > 0 ? `me faltan ${faltan}` : fin.causa, conseguidos, pedidos: n, entrega, pasos, s: +((Date.now() - t0) / 1000).toFixed(1) }
+  return { exito: !!fin.exito && faltan <= 0, causa: faltan > 0 ? `me faltan ${faltan}` : fin.causa, conseguidos, pedidos: n, entrega, sinFundir, pasos, s: +((Date.now() - t0) / 1000).toFixed(1) }
 }
 
 module.exports = { MATERIALES, ALIAS, siguiente, apuntar, estado, ejecutar }

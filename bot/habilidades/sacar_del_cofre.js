@@ -10,7 +10,8 @@ const { conLimite, moverHasta, esperar, prudentes } = require('./comun')
 const depositar = require('./depositar')
 
 const GRUPOS = { troncos: /_log$/, tablones: /_planks$/, piedra: /^(cobblestone|cobbled_deepslate|blackstone)$/, lana: /_wool$/,
-  carbon: /^(coal|charcoal)$/, hierro: /^(iron_ingot|raw_iron)$/ }
+  carbon: /^(coal|charcoal)$/, hierro: /^(iron_ingot|raw_iron)$/,
+  cobre: /^(copper_ingot|raw_copper)$/, oro: /^(gold_ingot|raw_gold)$/, diamante: /^diamond$/, esmeralda: /^emerald$/, redstone: /^redstone$/, lapis: /^lapis_lazuli$/ }
 const CONTENEDORES = new Set(['chest', 'trapped_chest', 'barrel'])
 const patronDe = (bot, o) => o === 'comida' ? { test: (n) => !!bot.registry.foodsByName[n] } : GRUPOS[o] || { test: (n) => n === o }
 
