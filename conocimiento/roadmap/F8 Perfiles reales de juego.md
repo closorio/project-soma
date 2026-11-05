@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-05
-siguiente: "Banco M 4/8 con los arreglos (6/8 llegaron a 24; 2 lo perdieron al morir). Sin relanzar hasta que el usuario lo pida. Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5"
+siguiente: "Leer las 3 tiradas de ruido del banco M lanzadas el 2026-11-05 a las 14:08 (nocturno-20261105-1408.log, etiqueta banco-m-base-20261105), hacer su nota y fijar cuántas tiradas pide un veredicto. No tocar bot/ hasta que acaben. Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
