@@ -10,7 +10,7 @@ const persistente = require('./memoria_persistente')
 const sv = require('./habilidades/sv')
 const { puntosArmadura } = require('./observacion')
 
-const NIVEL = { wooden: 0.33, golden: 0.33, stone: 0.66, copper: 0.66, iron: 1, diamond: 1, netherite: 1 }
+const NIVEL = { wooden: 0.33, golden: 0.33, stone: 0.66, copper: 0.66, iron: 1, diamond: 1.33, netherite: 1.66 }
 const nivel = (items, sufijo) => Math.max(0, ...items.filter(i => i.name.endsWith(sufijo)).map(i => NIVEL[i.name.split('_')[0]] || 0))
 const cuenta = (items, prueba) => items.filter(i => prueba(i.name)).reduce((a, i) => a + i.count, 0)
 

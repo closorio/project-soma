@@ -365,6 +365,17 @@ print(json.dumps({"siguiente": [siguiente_fabricacion(e["arma"], e["pico"], e["m
   res = await H.apartarse(bb, [], tarea())
   ok(res.exito && res.causa === 'a salvo' && bb.entity.position.distanceTo(new Vec3(-1.5, 64, 0.5)) >= 4, `apartarse de la lava: a salvo y lejos (${JSON.stringify(res)})`)
 
+  // 2026-11-04, banco M: en medio de un lago no hay sitio cerca al que ir («sin camino», 29 veces): explora hacia la orilla
+  const rutaExplorar = require.resolve('./habilidades/explorar'), explorarDeVerdad = require(rutaExplorar)
+  let explorado = null
+  require.cache[rutaExplorar].exports = async (b, args) => { explorado = args; return { exito: true, causa: 'llegué' } }
+  const enLago = {}
+  for (let x = -9; x <= 9; x++) for (let z = -9; z <= 9; z++) { enLago[`${x},63,${z}`] = 'water'; enLago[`${x},64,${z}`] = 'water' }
+  bb = cuerpo({ bloques: enLago })
+  res = await ap(bb, [], tarea())
+  ok(res.exito && explorado && explorado[1] === '24', `en un lago, apartarse explora: ${JSON.stringify(res)} ${explorado}`)
+  require.cache[rutaExplorar].exports = explorarDeVerdad
+
   // 6 · órdenes en lenguaje sencillo
   console.log('6 · órdenes')
   const esperado = { come: 'come', 'ataca al zombi': 'ataca', 'refúgiate': 'refugiate', 'sal del refugio': 'sal', duerme: 'duerme',

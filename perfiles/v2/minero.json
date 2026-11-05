@@ -46,7 +46,11 @@
    "id": "m_carbon"
   },
   {
-   "id": "hierro"
+   "id": "hierro",
+   "hacer": [
+    "conseguir hierro 3",
+    "fundir iron 3"
+   ]
   },
   {
    "id": "pico_hierro"

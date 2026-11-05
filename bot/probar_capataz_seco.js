@@ -161,7 +161,37 @@ for (let k = 0; k < 8; k++) {
   capataz.alResultado(bq, 'minero', dq, { exito: true })
 }
 ok(!vistosBien.includes('alt'), `con los pasos acertando no hay alternativa: ${vistosBien.join(' ')}`)
-console.log('  11 · cavar ✗✗ y subir ✓✓ → alternativa y a cavar otra vez; si todo acierta, ninguna alternativa')
+// 12 · el Minero baja a por el primer hierro (2026-11-04, banco M: minar a 12 no ve la mena enterrada: 2 días sin bajar)
+const pasoHierro = capataz.rol('minero').etapas.find(x => x.id === 'hierro').hacer
+ok(pasoHierro[0] === 'conseguir hierro 3' && pasoHierro.includes('fundir iron 3'), `el hierro del Minero: ${pasoHierro}`)
+ok(capataz.rol('casual').etapas.find(x => x.id === 'hierro').hacer[0].startsWith('minar'), 'los demás roles siguen con minar')
+// 13 · el pico de hierro no cuenta como el de diamante
+const eHierro = progresion.estado(mundoFalso({ inventario: [['iron_pickaxe', 1]] })), eDiamante = progresion.estado(mundoFalso({ inventario: [['diamond_pickaxe', 1]] }))
+const objDiamante = capataz.rol('minero').etapas.find(x => x.id === 'm_pico_diamante').objetivo
+ok(!progresion.cumple(objDiamante, eHierro), `m_pico_diamante se cumple con el pico de hierro (${JSON.stringify(objDiamante)})`)
+ok(progresion.cumple(objDiamante, eDiamante) && progresion.cumple({ inv: { pico: 1 } }, eDiamante), 'el de diamante cumple lo suyo y lo de hierro')
+// 14 · con poca vida y sin nadie a la vista, descansa a cubierto; si no puede refugiarse, sigue
+const bv = enPozo()
+bv.health = 5
+const dv = capataz.decidir(bv, 'minero')
+ok(dv.habilidad === 'refugiarse' && dv.motivo === 'poca vida', `con 5 de vida: ${JSON.stringify(dv)}`)
+capataz.alResultado(bv, 'minero', dv, { exito: false, causa: 'suelo peligroso' })
+ok(capataz.decidir(bv, 'minero').habilidad === 'cavar_escalera', 'sin refugio posible, sigue con la etapa')
+const pared = {}
+for (const [x, y, z] of [[0, 63, 0], [0, 66, 0], [1, 64, 0], [-1, 64, 0], [0, 64, 1], [0, 64, -1], [1, 65, 0], [-1, 65, 0], [0, 65, 1], [0, 65, -1]]) pared[`${x},${y},${z}`] = 'stone'
+const bc2 = mundoFalso({ comida: 20, salud: 5, bloques: pared, inventario: [['iron_pickaxe', 1], ['torch', 16], ['bread', 8]] })
+for (const et of capataz.rol('minero').etapas) { if (et.id === 'm_pozo') break; capataz.marcarHecha(bc2, 'minero', et.id) }
+const dc2 = capataz.decidir(bc2, 'minero')
+ok(dc2.habilidad === 'descansar', `herido y a cubierto: ${JSON.stringify(dc2)}`)
+capataz.alResultado(bc2, 'minero', { habilidad: 'refugiarse', motivo: 'poca vida' }, { exito: true })
+bc2.health = 14
+ok(capataz.decidir(bc2, 'minero').habilidad === 'salir_del_refugio', 'curado: sale del refugio')
+ok(capataz.decidir(bc2, 'minero').habilidad === 'cavar_escalera', 'y sigue con la etapa')
+const bh = enPozo()
+bh.health = 5
+bh.food = 10
+ok(capataz.decidir(bh, 'minero').habilidad !== 'refugiarse', 'sin comida suficiente no se cura: descansar no sirve')
+console.log('  11-14 · cavar ✗✗ y subir ✓✓ → alternativa y a cavar otra vez; si todo acierta, ninguna alternativa; hierro con conseguir; pico de diamante real; descanso con poca vida')
 ;(async () => {
   bc.entities = bc.entities || {}
   const sinPedir = await recogerComida(bc, ['24'], null), guardando = await recogerComida(bc, ['24', '-', 'guardar'], null)

@@ -59,6 +59,11 @@ module.exports = async function apartarse(bot, args, tarea) {
     r = await moverHasta(bot, meta, () => nodo(bot).distanceTo(c.p) <= 1 && bot.entity.onGround, { ms: 12000, tarea, mov })
     if (r === 'listo') break
   }
+  // 2026-11-04, banco M: en medio de un lago no hay sitio a 4-7 («sin camino», 29 veces, y refugiarse tampoco puede): explora hasta la orilla
+  if (enAgua && !destino) {
+    const ex = await require('./explorar')(bot, ['-', '24', '40'], tarea)
+    return { exito: !!ex.exito, causa: ex.exito ? 'a salvo' : ex.causa, ...datos({ destino }) }
+  }
   if (r === 'listo' || !alguno(peligros(bot, nodo(bot)))) return { exito: true, causa: 'a salvo', ...datos({ destino }) }
   return { exito: false, causa: r, ...datos({ destino, quedan: peligros(bot, nodo(bot)) }) }
 }

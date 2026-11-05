@@ -69,6 +69,7 @@
   "salir_del_refugio",
   "dormir",
   "esperar_al_dia",
+  "descansar",
   "usar_cama",
   "dar",
   "fabricar",
@@ -568,7 +569,7 @@
    },
    "objetivo": {
     "inv": {
-     "pico": 1
+     "pico": 1.33
     }
    },
    "hacer": [

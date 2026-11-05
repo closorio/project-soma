@@ -16,7 +16,7 @@ const progresion = require('./progresion')
 const sv = require('./habilidades/sv')
 const { nodo, encerrado } = require('./habilidades/comun')
 
-const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8, VIDA_REGENERA = 14
+const FALLOS_PASO = 2, HAMBRE = 12, VIDA_REFUGIO = 10, ATARDECER = 12000, AMENAZA = 8, VIDA_PELEA = 8, VIDA_REGENERA = 14, COMIDA_CURA = 18, REFUGIO_NO_MS = 120000
 
 const roles = new Map() // nombre → { perfil, etapas } (las etapas resueltas una vez)
 function rol(nombre) {
@@ -101,6 +101,17 @@ function decidir(bot, nombre) {
   if (bot.health < VIDA_REGENERA && bot.food < 18 && comida) return { habilidad: 'comer', args: [], motivo: 'regenerar' }
   if (bot.food <= HAMBRE && !comida && !sv.esNoche(bot)) // sin cama aún, las ovejas no se comen: son la lana
     return { habilidad: 'recoger_comida', args: progresion.estado(bot).inv.cama ? [] : ['24', 'sin:sheep'], motivo: 'hambre sin comida' }
+  // 2026-11-04, banco M: M1 seguía minando con 1-5 de vida hasta que lo mataron. Si la vida puede subir (comida alta) y no hay nadie a la vista,
+  // a cubierto hasta curarse; si no se puede refugiar aquí, sigue como antes y no lo reintenta en 2 min
+  if (bot.health <= VIDA_PELEA && bot.food >= COMIDA_CURA && !sv.aLaVista(bot).length) {
+    if (encerrado(bot)) return { habilidad: 'descansar', args: ['60'], motivo: 'poca vida' }
+    if (Date.now() - (estadoCapataz(bot).refugioNo || 0) > REFUGIO_NO_MS) return { habilidad: 'refugiarse', args: [], motivo: 'poca vida' }
+  }
+  // curado (o sin poder curarse más): fuera, que los pasos de la etapa no cuentan con estar emparedado
+  if (estadoCapataz(bot).aCubierto && !sv.esNoche(bot)) {
+    estadoCapataz(bot).aCubierto = false
+    if (encerrado(bot)) return { habilidad: 'salir_del_refugio', args: [], motivo: 'curado' }
+  }
   // 2 · la etapa que toca (las que ya se cumplen, hechas, y a por la siguiente)
   olvidarSiMurio(bot, nombre, etapas)
   const e = progresion.estado(bot)
@@ -134,6 +145,7 @@ function decidir(bot, nombre) {
 // Tras ejecutar lo decidido: cuenta el fallo o el acierto del paso, apunta la casa y las etapas que ya se cumplen.
 function alResultado(bot, nombre, d, r) {
   const st = estadoCapataz(bot)
+  if (d.habilidad === 'refugiarse' && d.motivo === 'poca vida') { if (r.exito) st.aCubierto = true; else st.refugioNo = Date.now() }
   if (d.paso != null && st.etapa === d.etapa) {
     if (r.exito) {
       // 2026-11-04, banco M: en m_pozo, tras dos fallos de cavar solo quedaba subir, que acierta al momento («ya fuera»): 695 veces hasta el final.

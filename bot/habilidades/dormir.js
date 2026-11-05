@@ -119,4 +119,19 @@ module.exports = async function dormir(bot, [segundos], tarea) {
   return { exito: false, causa: 'sin cama y sin refugio', modo: null, hora: [sv.hora(bot), sv.hora(bot)], comido: 0, s: 0 }
 }
 module.exports.esperarAlDia = async (bot, [segundos], tarea) => esperarAlDia(bot, segundos, tarea)
+// descansar [segundos] (2026-11-04, banco M: M1 seguía trabajando con 1-5 de vida hasta que lo mataron): dentro del refugio, hasta tener
+// VIDA_CURADO. La vida solo sube con la comida alta: el capataz solo lo pide entonces. Éxito «curado»; fallo tiempo agotado · sin refugio · refugio roto · cancelado.
+const VIDA_CURADO = 14
+module.exports.descansar = async (bot, [segundos], tarea) => {
+  const t0 = Date.now(), ms = Math.min(120, parseFloat(segundos) || 60) * 1000
+  const datos = () => ({ salud: bot.health, s: +((Date.now() - t0) / 1000).toFixed(1) })
+  if (!encerrado(bot)) return { exito: false, causa: 'sin refugio', ...datos() }
+  for (;;) {
+    if (tarea && tarea.cancelada) return { exito: false, causa: 'cancelado', ...datos() }
+    if (bot.health >= VIDA_CURADO) return { exito: true, causa: 'curado', ...datos() }
+    if (!encerrado(bot)) return { exito: false, causa: 'refugio roto', ...datos() }
+    if (Date.now() - t0 > ms) return { exito: false, causa: 'tiempo agotado', ...datos() }
+    await new Promise(res => setTimeout(res, 500))
+  }
+}
 module.exports.sitioCama = sitioCama // 2026-11-01: también lo usa usar_cama.js (poner una cama nueva)
