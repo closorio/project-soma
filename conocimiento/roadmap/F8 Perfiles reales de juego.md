@@ -4,7 +4,7 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 actualizado: 2026-11-05
-siguiente: "Leer las 3 tiradas de ruido del banco M lanzadas el 2026-11-05 a las 14:08 (nocturno-20261105-1408.log, etiqueta banco-m-base-20261105), hacer su nota y fijar cuántas tiradas pide un veredicto. No tocar bot/ hasta que acaben. Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5"
+siguiente: "Banco M medido: base 16/32 en 4 tiradas, y un veredicto pide 4 tiradas por versión ([[2026-11-05-tiradas-del-banco-m]]). Investigar por qué 5 personajes se quedan sin morir en m_pozo (falta «mina»), sobre todo en (15036, 15068) y (15132, 14956). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5"
 ---
 # F8 Perfiles reales de juego
 
