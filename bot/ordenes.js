@@ -68,7 +68,9 @@ function numero(t) {
 const ALIAS = { io: 'Soma', claude: 'Alma', soma: 'Oqva' } // 2026-11-01: Soma pasó a llamarse Oqva (su skin va con ese nombre)
 
 // Quién recibe la orden: { a: 'todos' | nombre (como en `nombres`) | null, resto: el texto original sin el nombre }
-function destinatario(texto, nombres) {
+// conectados: los jugadores del servidor. Cada bot puede ir en su proceso: un alias no vale si hay alguien conectado que se llama así de
+// verdad (2026-11-05, prueba a mano: con Soma conectada, «Soma, armate» lo obedecían Soma y Oqva).
+function destinatario(texto, nombres, conectados = []) {
   const t = normalizar(texto), original = String(texto || '').trim()
   const sinNombre = () => original.replace(/^\S+?[\s,:;.!¡¿]+/, '').trim()
   if (/^(todos|todas|equipo|chicos)\b/.test(t)) return { a: 'todos', resto: sinNombre() }
@@ -80,6 +82,7 @@ function destinatario(texto, nombres) {
   }
   for (const [viejo, nuevo] of Object.entries(ALIAS)) {
     if (!nombres.includes(nuevo)) continue
+    if (conectados.some(c => normalizar(c) === viejo)) continue
     if (t === viejo) return { a: nuevo, resto: '' }
     if (t.startsWith(viejo + ' ')) return { a: nuevo, resto: sinNombre() }
   }

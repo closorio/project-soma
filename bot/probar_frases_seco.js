@@ -15,7 +15,7 @@ const REPETICIONES = new Set(['bucle', 'hasta', 'veces']) // tipos de repetició
 const FUNCIONES = {
   interpretar: (f) => ordenes.interpretar(f),
   varias: (f) => ordenes.interpretarVarias(f),
-  destinatario: (f) => ordenes.destinatario(f, NOMBRES),
+  destinatario: (f, e) => ordenes.destinatario(f, NOMBRES, e.conectados),
 }
 
 // Sin depender del orden de las claves: el refactor puede mover código sin cambiar lo que devuelve
@@ -24,7 +24,7 @@ const canonico = (v) => {
   if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().filter(k => v[k] !== undefined).map(k => [k, canonico(v[k])]))
   return v === undefined ? null : v
 }
-const calcular = (e) => canonico(FUNCIONES[e.funcion](e.frase))
+const calcular = (e) => canonico(FUNCIONES[e.funcion](e.frase, e))
 
 // Una entrada por línea, para que los cambios se lean bien en un diff
 const serializar = (tabla) => '[\n' + tabla.map(e => '  ' + JSON.stringify(e)).join(',\n') + '\n]\n'

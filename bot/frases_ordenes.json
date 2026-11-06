@@ -121,6 +121,10 @@
   {"funcion":"destinatario","frase":"oqva ven","resultado":{"a":"Oqva","resto":"ven"}},
   {"funcion":"destinatario","frase":"Oqva","resultado":{"a":"Oqva","resto":""}},
   {"funcion":"destinatario","frase":"Soma, ven","resultado":{"a":"Oqva","resto":"ven"}},
+  {"funcion":"destinatario","frase":"Soma, ven","conectados":["Oqva","seppuq"],"resultado":{"a":"Oqva","resto":"ven"}},
+  {"funcion":"destinatario","frase":"Soma, ven","conectados":["Oqva","Soma","seppuq"],"resultado":{"a":null,"resto":"Soma, ven"}},
+  {"funcion":"destinatario","frase":"soma armate","conectados":["Oqva","Soma"],"resultado":{"a":null,"resto":"soma armate"}},
+  {"funcion":"destinatario","frase":"Oqva, ven","conectados":["Oqva","Soma"],"resultado":{"a":"Oqva","resto":"ven"}},
   {"funcion":"destinatario","frase":"todos: quietos","resultado":{"a":"todos","resto":"quietos"}},
   {"funcion":"destinatario","frase":"foto","resultado":{"a":"todos","resto":"foto"}},
   {"funcion":"destinatario","frase":"tala 3 troncos","resultado":{"a":null,"resto":"tala 3 troncos"}}

@@ -332,13 +332,13 @@ class Personaje {
       const t = m.trim()
       if (esBot(u)) return // los personajes no se dan órdenes entre ellos
       if (!obedece(u) || (AMOS.size && !AMOS.has(u))) { // con dueños (IO_DUENOS o IO_AMOS), solo atiende por el chat a esos jugadores (órdenes y !zona)
-        const dest = ordenes.destinatario(t, [...VIVOS.keys()]).a
+        const dest = ordenes.destinatario(t, [...VIVOS.keys()], Object.keys(bot.players)).a
         if (dest === 'todos') return // 2026-11-02: «todos …» de quien no es su dueño se ignora sin avisar (no contestan todos los bots a la vez)
         if (dest && Date.now() - (AVISADOS.get(u) || 0) > 60000) { AVISADOS.set(u, Date.now()); bot.chat(`Solo obedezco a ${[...(AMOS.size ? AMOS : DUENOS)].join(', ')}.`) }
         return
       }
       if (!/^!zona\b/i.test(t)) { // F4: una orden a un personaje de este proceso por su nombre (o a «todos»)
-        const { a } = ordenes.destinatario(t, [...VIVOS.keys()])
+        const { a } = ordenes.destinatario(t, [...VIVOS.keys()], Object.keys(bot.players))
         const clave = u + '|' + t // varios personajes oyen el mismo chat: la atiende el primero que la ve, para todos los destinatarios
         if (!a || CHAT_ORDEN.has(clave)) return
         CHAT_ORDEN.add(clave); setTimeout(() => CHAT_ORDEN.delete(clave), 3000)
@@ -2453,7 +2453,7 @@ class Personaje {
 // F4: una orden en lenguaje sencillo a quien vaya: «Eco, …» a Eco, «todos, …» a todos los de este proceso y, sin nombre, al personaje
 // que la recibe (por el puerto). Devuelve las respuestas («Ío: …; Eco: …» con varios).
 async function despachar(desde, texto, origen, esperarFin = false) {
-  const { a, resto } = ordenes.destinatario(texto, [...VIVOS.keys()])
+  const { a, resto } = ordenes.destinatario(texto, [...VIVOS.keys()], Object.keys((desde.bot && desde.bot.players) || {}))
   const quienes = a === 'todos' ? [...VIVOS.values()] : a ? [VIVOS.get(a)] : [desde]
   const rs = await Promise.all(quienes.map(p => p.ordenar(a ? resto : texto, origen, esperarFin).catch(e => 'fallo: ' + e.message)))
   return quienes.length > 1 ? quienes.map((p, k) => `${p.visible}: ${String(rs[k]).replace(/\.$/, '')}`).join('; ') + '.' : rs[0]
