@@ -2,6 +2,8 @@
 // las dos dan la misma lista de etapas resuelta y los mismos errores (lo comprueba bot/probar_perfiles_seco.js); si cambia una
 // regla aquí, cambia allí.
 // Un rol (perfiles/v2/<rol>.json) elige etapas del catálogo común (perfiles/v2/_etapas.json) por id y puede cambiar sus campos.
+// También puede incluir submodos (perfiles/v2/submodos/<nombre>.json): se componen al cargar y el capataz solo ve la lista plana.
+// Reglas: conocimiento/decisiones/2026-11-05-arquitectura-de-roles.md.
 const fs = require('fs')
 const path = require('path')
 
@@ -12,19 +14,66 @@ const TIPOS = ['madera', 'fabricar', 'mineral', 'comida', 'construir', 'explorar
 const NOCHE = ['refugio', 'aprovechar_con_luz']
 const COFRE = ['base', 'no']
 const POR_DEFECTO = { pre: {}, max_s: 600, repetir: false }
+const DIR_SUB = path.join(DIR_V2, 'submodos')
+const NIVELES_MAX = 4
+const MADUREZ = ['borrador', 'funciona', 'medido', 'aceptado']
+const DUENOS = ['seppuq', 'count']
+const CAMPOS = ['id', 'tipo', 'pre', 'objetivo', 'hacer', 'max_s', 'repetir']
 
 const leer = (f) => JSON.parse(fs.readFileSync(f, 'utf8'))
-const catalogo = () => leer(path.join(DIR_V2, '_etapas.json'))
+const leerSubmodos = () => fs.existsSync(DIR_SUB)
+  ? Object.fromEntries(fs.readdirSync(DIR_SUB).filter(f => f.endsWith('.json')).sort().map(f => [f.slice(0, -5), leer(path.join(DIR_SUB, f))]))
+  : {}
+const catalogo = () => ({ ...leer(path.join(DIR_V2, '_etapas.json')), submodos: leerSubmodos() })
 const roles = () => fs.readdirSync(DIR_V2).filter(f => f.endsWith('.json') && !f.startsWith('_')).map(f => f.slice(0, -5)).sort()
 const cargar = (nombre) => leer(path.join(DIR_V2, nombre + '.json'))
 const esNumero = (v) => typeof v === 'number' && Number.isFinite(v)
 
+const ordenar = (x) => Array.isArray(x) ? x.map(ordenar) : x && typeof x === 'object' ? Object.fromEntries(Object.keys(x).sort().map(k => [k, ordenar(x[k])])) : x
+const resolverEtapa = (e, cat) => {
+  const r = { ...POR_DEFECTO, ...(cat.etapas[e.id] || {}), ...e }
+  return Object.fromEntries(CAMPOS.map(k => [k, r[k] === undefined ? null : r[k]]))
+}
+
+// Despliega una lista de etapas y submodos. Precedencia: catálogo < submodo < «cambia» de quien lo incluye.
+function desplegar(lista, ruta, cat, errores, incluidos) {
+  const origen = ['rol', ...ruta].join(' → ')
+  const out = []
+  for (const e of lista || []) {
+    if (e.submodo === undefined) { out.push({ ...e, _origen: origen }); continue }
+    const n = e.submodo
+    const camino = [...ruta, n].join(' → ')
+    if (ruta.includes(n)) { errores.push(`submodo ${camino}: ciclo`); continue }
+    if (ruta.length >= NIVELES_MAX) { errores.push(`submodo ${camino}: más de ${NIVELES_MAX} niveles`); continue }
+    const sub = (cat.submodos || {})[n]
+    if (!sub) { errores.push(`${origen}: el submodo «${n}» no existe`); continue }
+    if (!incluidos.includes(n)) incluidos.push(n)
+    const dentro = desplegar(sub.etapas, [...ruta, n], cat, errores, incluidos)
+    const cambia = e.cambia || {}
+    for (const id of Object.keys(cambia)) if (!dentro.some(x => x.id === id)) errores.push(`${origen}: cambia.${id} no es una etapa de ${n}`)
+    out.push(...dentro.map(x => cambia[x.id] ? { ...x, ...cambia[x.id], id: x.id } : x))
+  }
+  return out
+}
+
+// La lista plana, más lo que se rompió al componerla. Una etapa que llega por dos caminos: si llega igual se queda la primera; si
+// llega distinta es un error. Dos veces en la misma lista no se junta: es la «etapa repetida» de validar.
+function componer(rol, cat) {
+  const errores = [], incluidos = [], etapas = [], vistas = new Map()
+  for (const e of desplegar(rol.etapas, [], cat, errores, incluidos)) {
+    const antes = vistas.get(e.id)
+    if (!antes) { vistas.set(e.id, e); etapas.push(e); continue }
+    if (antes._origen === e._origen) { etapas.push(e); continue }
+    if (JSON.stringify(ordenar(resolverEtapa(antes, cat))) !== JSON.stringify(ordenar(resolverEtapa(e, cat)))) {
+      errores.push(`etapa ${e.id}: llega distinta desde «${antes._origen}» y desde «${e._origen}»`)
+    }
+  }
+  return { etapas, errores, incluidos }
+}
+
 // Las etapas del rol con los campos del catálogo, en orden: [{id, tipo, pre, objetivo, hacer, max_s, repetir}].
 function resolver(rol, cat) {
-  return (rol.etapas || []).map(e => {
-    const r = { ...POR_DEFECTO, ...(cat.etapas[e.id] || {}), ...e }
-    return Object.fromEntries(['id', 'tipo', 'pre', 'objetivo', 'hacer', 'max_s', 'repetir'].map(k => [k, r[k] === undefined ? null : r[k]]))
-  })
+  return componer(rol, cat).etapas.map(e => resolverEtapa(e, cat))
 }
 
 function condicion(c, cat, donde, errores) {
@@ -72,9 +121,17 @@ function validar(rol, cat, nombre = null, v1 = null, escala = null) {
   if (!NOCHE.includes(reglas.noche)) errores.push(`reglas.noche: «${reglas.noche}» (${NOCHE.join(', ')})`)
   if (!(Number.isInteger(reglas.y_min) && reglas.y_min >= -64 && reglas.y_min <= 320)) errores.push('reglas.y_min: entero en [-64, 320]')
   if (!COFRE.includes(reglas.cofre)) errores.push(`reglas.cofre: «${reglas.cofre}» (${COFRE.join(', ')})`)
-  const ids = (rol.etapas || []).map(e => e.id)
+  const compuesto = componer(rol, cat)
+  const ids = compuesto.etapas.map(e => e.id)
   if (!ids.length) errores.push('sin etapas')
   for (const i of [...new Set(ids.filter((x, k) => ids.indexOf(x) !== k))].sort()) errores.push(`etapa ${i} repetida`)
+  errores.push(...compuesto.errores)
+  for (const n of compuesto.incluidos) {
+    const sub = cat.submodos[n]
+    const exige = (sub.exige || {}).y_min
+    if (Number.isInteger(exige) && Number.isInteger(reglas.y_min) && reglas.y_min > exige) errores.push(`submodo ${n}: exige y_min ≤ ${exige} y el rol tiene ${reglas.y_min}`)
+    if (rol.madurez === 'aceptado' && sub.madurez !== 'aceptado') errores.push(`madurez: el rol no puede estar aceptado con ${n} sin aceptar`)
+  }
   const dado = { inv: {}, memoria: new Set(), hitos: new Set() }
   for (const e of resolver(rol, cat)) {
     const donde = `etapa ${e.id}`
@@ -101,9 +158,35 @@ function validar(rol, cat, nombre = null, v1 = null, escala = null) {
   return errores
 }
 
+// El manifiesto de un submodo. La cadena de `pre` se comprueba en los roles que lo incluyen, sobre su lista plana.
+function validarSubmodo(nombre, cat) {
+  const sub = cat.submodos[nombre], errores = []
+  if (sub.v !== 2) errores.push('v debe ser 2')
+  if (sub.nombre !== nombre) errores.push(`nombre: no es el del archivo (${nombre})`)
+  if (typeof sub.identidad !== 'string' || !sub.identidad) errores.push('falta identidad')
+  if (!DUENOS.includes(sub.dueno)) errores.push(`dueno: debe ser ${DUENOS.join(' o ')}`)
+  if (!/^E[0-9]$/.test(String(sub.epica))) errores.push('epica: debe ser E0-E9')
+  if (!MADUREZ.includes(sub.madurez)) errores.push(`madurez: debe ser ${MADUREZ.join(', ')}`)
+  if (!(sub.etapas || []).length && !sub.servicio) errores.push('sin etapas ni servicio')
+  for (const k of Object.keys(sub.exige || {})) if (k !== 'y_min') errores.push(`exige.${k}: solo se entiende y_min`)
+  if (sub.exige && sub.exige.y_min !== undefined && !Number.isInteger(sub.exige.y_min)) errores.push('exige.y_min: debe ser un entero')
+  const compuesto = componer({ etapas: [{ submodo: nombre }] }, cat)
+  errores.push(...compuesto.errores)
+  for (const e of compuesto.etapas) if (!cat.etapas[e.id]) errores.push(`etapa ${e.id}: no está en el catálogo`)
+  for (const n of compuesto.incluidos) {
+    if (n !== nombre && sub.madurez === 'aceptado' && cat.submodos[n].madurez !== 'aceptado') errores.push(`madurez: no puede estar aceptado con ${n} sin aceptar`)
+  }
+  return errores
+}
+
 function todo() {
   const cat = catalogo()
   return Object.fromEntries(roles().map(n => [n, { etapas: resolver(cargar(n), cat), errores: validar(cargar(n), cat, n) }]))
 }
 
-module.exports = { DIR_V2, PESOS_V2, TIPOS, catalogo, roles, cargar, resolver, validar, todo }
+function todoSubmodos() {
+  const cat = catalogo()
+  return Object.fromEntries(Object.keys(cat.submodos).map(n => [n, validarSubmodo(n, cat)]))
+}
+
+module.exports = { DIR_V2, PESOS_V2, TIPOS, catalogo, roles, cargar, resolver, validar, validarSubmodo, todo, todoSubmodos }

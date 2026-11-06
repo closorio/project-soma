@@ -6,6 +6,8 @@
 **No se mueven ni se renombran.** Los leen `cargar_perfiles()` (`entrenamiento/entorno_habilidades.py`, un glob de `*.json` sin subcarpetas), `bot/observacion.js`, `mente/alma/mente.py` y tres políticas entrenadas que guardan su vector. En F8 solo ganan claves aditivas (`"v": 1, "rutina": "madera"`) y pasan a llamarse **estilos**: describen *cómo* hace una rutina el cuerpo (cómo tala, cómo pasa la noche).
 
 ## v2: roles (F8, planificado; ver `PLAN_F8_perfiles.md`)
+
+Un rol también puede incluir **submodos** (`perfiles/v2/submodos/<nombre>.json`), piezas con dueño que se componen al cargar: `{ "submodo": "fundacion", "cambia": { "madera": { "max_s": 120 } } }`. El capataz solo ve la lista plana. Las reglas están en `conocimiento/decisiones/2026-11-05-arquitectura-de-roles.md`.
 Irán en `perfiles/v2/<rol>.json`, con un catálogo común de etapas en `perfiles/v2/_etapas.json`. Un rol describe *a qué juega* el personaje: una cadena de etapas con objetivo medible que lleva el capataz (`bot/capataz.js`), y unos pesos que ve la red de zona gris. Roles base: `casual`, `speedrunner`, `redstoner`, `builder`; de apoyo: `granjero`, `minero`, `cartografo`.
 
 ```json

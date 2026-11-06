@@ -1,0 +1,22 @@
+{
+ "v": 2,
+ "nombre": "fundacion",
+ "dueno": "seppuq",
+ "epica": "E1",
+ "madurez": "medido",
+ "identidad": "Tronco común de los roles: madera, herramientas de madera, piedra y herramientas de piedra.",
+ "etapas": [
+  {
+   "id": "madera"
+  },
+  {
+   "id": "herr_madera"
+  },
+  {
+   "id": "piedra"
+  },
+  {
+   "id": "herr_piedra"
+  }
+ ]
+}

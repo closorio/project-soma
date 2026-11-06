@@ -25,53 +25,7 @@
  },
  "etapas": [
   {
-   "id": "madera"
-  },
-  {
-   "id": "herr_madera"
-  },
-  {
-   "id": "piedra"
-  },
-  {
-   "id": "herr_piedra"
-  },
-  {
-   "id": "comida"
-  },
-  {
-   "id": "carbon"
-  },
-  {
-   "id": "m_carbon"
-  },
-  {
-   "id": "hierro",
-   "hacer": [
-    "conseguir hierro 3",
-    "fundir iron 3"
-   ]
-  },
-  {
-   "id": "pico_hierro"
-  },
-  {
-   "id": "m_pozo"
-  },
-  {
-   "id": "m_hierro"
-  },
-  {
-   "id": "m_deepslate"
-  },
-  {
-   "id": "m_diamante"
-  },
-  {
-   "id": "m_pico_diamante"
-  },
-  {
-   "id": "m_redstone"
+   "submodo": "minero"
   }
  ]
 }

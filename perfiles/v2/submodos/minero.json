@@ -1,0 +1,58 @@
+{
+ "v": 2,
+ "nombre": "minero",
+ "dueno": "seppuq",
+ "epica": "E1",
+ "madurez": "medido",
+ "identidad": "Apoyo bajo tierra: carbón, hierro, cobre, diamante y redstone para los demás; baja con antorchas y tapa la lava.",
+ "exige": {
+  "y_min": -58
+ },
+ "etapas": [
+  {
+   "submodo": "fundacion"
+  },
+  {
+   "id": "comida"
+  },
+  {
+   "id": "carbon"
+  },
+  {
+   "id": "m_carbon"
+  },
+  {
+   "id": "hierro",
+   "hacer": [
+    "conseguir hierro 3",
+    "fundir iron 3"
+   ]
+  },
+  {
+   "id": "pico_hierro"
+  },
+  {
+   "id": "m_pozo"
+  },
+  {
+   "id": "m_hierro"
+  },
+  {
+   "id": "m_deepslate"
+  },
+  {
+   "id": "m_diamante"
+  },
+  {
+   "id": "m_pico_diamante"
+  },
+  {
+   "id": "m_redstone"
+  }
+ ],
+ "banco": {
+  "make": "bench-m",
+  "criterio": "hierro ≥ 24 al acabar en ≥ 24/32 personajes y 0 muertes por lava",
+  "tiradas": 4
+ }
+}

@@ -22,35 +22,36 @@
  },
  "etapas": [
   {
-   "id": "madera",
-   "objetivo": {
-    "inv": {
-     "troncos": 4
+   "submodo": "fundacion",
+   "cambia": {
+    "madera": {
+     "objetivo": {
+      "inv": {
+       "troncos": 4
+      }
+     },
+     "hacer": [
+      "rutina_madera 4 120"
+     ],
+     "max_s": 120
+    },
+    "herr_madera": {
+     "max_s": 60
+    },
+    "piedra": {
+     "objetivo": {
+      "inv": {
+       "piedra": 11
+      }
+     },
+     "hacer": [
+      "minar stone 11 8"
+     ]
+    },
+    "herr_piedra": {
+     "max_s": 240
     }
-   },
-   "hacer": [
-    "rutina_madera 4 120"
-   ],
-   "max_s": 120
-  },
-  {
-   "id": "herr_madera",
-   "max_s": 60
-  },
-  {
-   "id": "piedra",
-   "objetivo": {
-    "inv": {
-     "piedra": 11
-    }
-   },
-   "hacer": [
-    "minar stone 11 8"
-   ]
-  },
-  {
-   "id": "herr_piedra",
-   "max_s": 240
+   }
   },
   {
    "id": "hierro",

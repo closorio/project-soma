@@ -22,16 +22,7 @@
  },
  "etapas": [
   {
-   "id": "madera"
-  },
-  {
-   "id": "herr_madera"
-  },
-  {
-   "id": "piedra"
-  },
-  {
-   "id": "herr_piedra"
+   "submodo": "fundacion"
   },
   {
    "id": "carbon"
