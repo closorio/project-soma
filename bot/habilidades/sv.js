@@ -112,6 +112,8 @@ const LIQUIDOS = /^(water|lava|bubble_column)$/
 const esLiquido = (k) => !!k && (LIQUIDOS.test(k.name) || /^(kelp|kelp_plant|seagrass|tall_seagrass)$/.test(k.name) ||
   !!(k.getProperties && k.getProperties().waterlogged === true))
 const solido = (k) => !!k && k.boundingBox === 'block'
+// Un bloque sólido justo encima de un cofre impide abrirlo (el barril no tiene ese problema)
+const tapaCofre = (bot, v) => { const k = bot.blockAt(v.offset(0, -1, 0)); return !!k && /^(chest|trapped_chest|ender_chest)$/.test(k.name) }
 
 // La herramienta del inventario que pica antes el bloque y lo que tardaría con ella (ms), sin equiparla (para planear).
 function mejorHerramienta(bot, k) {
@@ -246,5 +248,5 @@ async function centrar(bot, ms = 1500) {
 
 module.exports = { equiparPara, RADIO_N, AMANECE, ATARDECER, CAMA, hora, esNoche, madrugada, esperable, esMonstruo, vivo, aLaVista, tipoHostil, comidas, comidaComible, CRUDA,
   puntosArma, mejorArma, cadencia, puntosPieza, valorPieza, nivelEncantamiento, DESTINO_PIEZA, colocables, cuantosColocables, esColocable, valorArma, puedeTocar, puedePoner,
-  NO_PICAR, esLiquido, solido, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
+  NO_PICAR, esLiquido, solido, tapaCofre, mejorHerramienta, estado, activos, reglasSupervivencia, golpeReciente, atendido, vigilarGolpes, esAgresor, amenazaCerca, intrusos, jugadoresCerca, debeComerPorSalud, SALUD_COMER, anotarRefugio, refugioInfo,
   centrar }

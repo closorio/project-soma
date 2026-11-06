@@ -57,7 +57,7 @@ function situacion(bot, ref, dest, [dx, dy, dz]) {
 }
 
 // Las casillas a mi lado donde poner algo: libres (y libre encima), con suelo firme y que se puedan tocar; las de los lados primero.
-function sitiosAlLado(bot) {
+function casillasAlLado(bot) {
   const b = nodo(bot), out = []
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
@@ -66,6 +66,8 @@ function sitiosAlLado(bot) {
   }
   return out
 }
+// 2026-11-06, prueba a mano: una mesa puesta encima de un cofre impide abrirlo
+const sitiosAlLado = (bot) => casillasAlLado(bot).filter(v => !sv.tapaCofre(bot, v))
 const sitioAlLado = (bot) => sitiosAlLado(bot)[0] || null
 // Lo pone en la primera casilla de al lado donde entre (F8.0b: el banco vio fallar 1 de 10 hornos en la primera casilla, «sin apoyo»).
 // 2026-11-03, banco: en el túnel de una escalera todo es roca y el horno no tenía sitio («sin sitio»). Fuera del mundo del usuario,
@@ -75,7 +77,7 @@ async function abrirAlLado(bot) {
   const b = nodo(bot)
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const v = b.offset(dx, 0, dz), k = bot.blockAt(v), suelo = bot.blockAt(v.offset(0, -1, 0))
-    if (!sv.solido(k) || sv.NO_PICAR.test(k.name) || !sv.solido(suelo) || !sv.puedeTocar(v.x, v.y, v.z)) continue
+    if (!sv.solido(k) || sv.NO_PICAR.test(k.name) || !sv.solido(suelo) || sv.tapaCofre(bot, v) || !sv.puedeTocar(v.x, v.y, v.z)) continue
     if (require('../parcela').vecinosLiquidos(bot, v).length) continue
     const { item, ms } = sv.mejorHerramienta(bot, k)
     if (ms > 6000) continue

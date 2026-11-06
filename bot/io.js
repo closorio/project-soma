@@ -1900,6 +1900,7 @@ class Personaje {
           const llevo = cuenta(armarse.LINGOTE), falta = plan.lingotes - llevo
           const junto = falta > 0 ? await armarse.juntarLingotes(bot, falta, tarea) : { sacado: 0, de: [], cofres: 0 }
           pasos.push({ habilidad: 'juntar_lingotes', exito: junto.sacado >= falta, causa: `${junto.sacado} de ${Math.max(falta, 0)}, ${junto.cofres} cofres` })
+          this.ev(`[armarse] ${junto.sacado} de ${Math.max(falta, 0)} lingotes, ${junto.cofres} cofres${(junto.motivos || []).length ? ` · ${junto.motivos.join(' · ')}` : ''}`)
           if (tarea.cancelada) return { exito: false, texto: '', pasos }
           if (junto.sacado < falta) {
             if (junto.de.length) await armarse.devolver(bot, junto.de, tarea)

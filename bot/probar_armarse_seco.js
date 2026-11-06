@@ -30,5 +30,15 @@ const sinAjeno = a.cofresUtiles([P(5, 64, 0), P(12, 64, 0)], P(0, 64, 0), (p) =>
 ok(sinAjeno.length === 1 && sinAjeno[0].x === 12, 'toma un cofre ajeno')
 ok(a.cofresUtiles(Array.from({ length: 40 }, (_, i) => P(i, 64, 0)), P(0, 64, 0)).length === 16, 'sin tope de cofres')
 
+// Nada encima de un cofre: impediría abrirlo
+process.env.IO_SERVIDOR = process.env.IO_SERVIDOR || 'supervivencia'
+const sv = require('./habilidades/sv')
+const { Vec3 } = require('vec3')
+const mundoDe = (nombre) => ({ blockAt: (v) => ({ name: v.y === 69 ? nombre : 'air' }) })
+ok(sv.tapaCofre(mundoDe('chest'), new Vec3(0, 70, 0)), 'encima de un cofre')
+ok(sv.tapaCofre(mundoDe('trapped_chest'), new Vec3(0, 70, 0)), 'encima de un cofre trampa')
+ok(!sv.tapaCofre(mundoDe('barrel'), new Vec3(0, 70, 0)), 'el barril se abre igual')
+ok(!sv.tapaCofre(mundoDe('dirt'), new Vec3(0, 70, 0)), 'sobre tierra se puede')
+
 console.log(fallos ? `${fallos} de ${pruebas} comprobaciones FALLAN` : `${pruebas}/${pruebas} comprobaciones bien`)
 process.exit(fallos ? 1 : 0)

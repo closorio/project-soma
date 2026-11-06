@@ -25,6 +25,7 @@ async function sacarDe(bot, bloque, patron, quiero) {
       const k = Math.min(it.count, quiero())
       try { await conLimite(v.withdraw(it.type, null, k), 5000) } catch (e) {
         if (/full/i.test(e.message)) { sacado._lleno = true; break }
+        sacado._error = e.message
         continue
       }
       sacado[it.name] = (sacado[it.name] || 0) + k
@@ -63,6 +64,7 @@ module.exports = async function sacarDelCofre(bot, [objeto, cantidad, ...resto],
     try {
       const s = await depositar.conCerrojo(c.nombre, () => sacarDe(bot, b, patron, () => n - total()))
       if (s._lleno) { lleno = true; delete s._lleno }
+      delete s._error
       for (const [k, m] of Object.entries(s)) sacado[k] = (sacado[k] || 0) + m
       if (Object.keys(s).length) usados.push(c.nombre)
     } catch (e) { causa = 'no se abrió: ' + e.message }

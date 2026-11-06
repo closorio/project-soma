@@ -50,21 +50,23 @@ async function juntarLingotes(bot, n, tarea) {
   const { sacarDe } = require('./habilidades/sacar_del_cofre')
   const { conCerrojo } = require('./habilidades/depositar')
   const posiciones = bot.findBlocks({ matching: (b) => CONTENEDORES.has(b.name), maxDistance: ALCANCE_COFRES, count: 64 })
-  const de = []
+  const de = [], motivos = [] // por qué no sacó de un cofre: va al registro, para poder explicarlo
   let sacado = 0, cofres = 0
   for (const p of cofresUtiles(posiciones, bot.entity.position, esAjeno)) {
     if (sacado >= n || (tarea && tarea.cancelada)) break
-    if (!(await irAlCofre(bot, p, tarea))) continue
+    const donde = `${p.x},${p.y},${p.z}`
+    if (!(await irAlCofre(bot, p, tarea))) { motivos.push(`${donde}: no llego`); continue }
     const b = bot.blockAt(p)
-    if (!b || !CONTENEDORES.has(b.name)) continue
+    if (!b || !CONTENEDORES.has(b.name)) { motivos.push(`${donde}: no es un cofre`); continue }
     try {
-      const s = await conCerrojo(`${p.x},${p.y},${p.z}`, () => sacarDe(bot, b, LINGOTE, () => n - sacado))
+      const s = await conCerrojo(donde, () => sacarDe(bot, b, LINGOTE, () => n - sacado))
       cofres++
+      if (s._error) motivos.push(`${donde}: ${s._error}`)
       if (s.iron_ingot) { sacado += s.iron_ingot; de.push({ p, n: s.iron_ingot }) }
       if (s._lleno) break
-    } catch (e) { /* no se abrió: al siguiente */ }
+    } catch (e) { motivos.push(`${donde}: ${e.message}`) }
   }
-  return { sacado, de, cofres }
+  return { sacado, de, cofres, motivos }
 }
 
 // Lo sacado vuelve a sus cofres. Devuelve cuántos lingotes devolvió.
