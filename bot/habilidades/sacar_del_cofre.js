@@ -76,3 +76,4 @@ module.exports = async function sacarDelCofre(bot, [objeto, cantidad, ...resto],
   return { exito: false, causa: total() ? 'no hay bastante en los cofres' : causa || `no hay ${objeto} en los cofres`, ...datos }
 }
 module.exports.patronDe = patronDe // 2026-11-01: también lo usa dar.js
+module.exports.sacarDe = sacarDe // 2026-11-05: también lo usa armarse.js

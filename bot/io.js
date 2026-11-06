@@ -90,6 +90,7 @@ const memoria = require('./memoria')
 const respirar = require('./respirar')
 const { conLimite, esperar, moverHasta, viajeLargo, jugadorCercano, prudentes, hayCamino } = require('./habilidades/comun')
 const tala = require('./tala')
+const armarse = require('./armarse')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
@@ -184,7 +185,7 @@ const AVISOS = { portal: () => 'Voy al portal.', ven: () => 'Voy.', sigueme: () 
   // F7.2
   come: () => 'Como algo.', ataca: (o) => (o.de ? `Voy a por ${o.de}.` : o.nombre ? `Voy a por ${o.nombre}.` : 'Voy a por el monstruo más cercano.'), refugiate: () => 'Me refugio.',
   sal: () => 'Salgo del refugio.', duerme: () => 'Voy a la cama.', dame: (o) => (o.objeto === 'todo' ? 'Te doy lo que llevo.' : `Te doy ${o.n || 'los'} ${o.objeto}.`), fabrica: (o) => (o.objeto ? `Fabrico: ${o.objeto.replace(/_/g, ' ')}.` : 'Fabrico lo siguiente que me falta.'),
-  equipate: () => 'Me equipo.', armate: () => 'Me armo: espada, pico y hacha de piedra.', apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
+  equipate: () => 'Me equipo.', armate: (o) => (o.hierro ? 'Me armo: miro si hay hierro en los cofres.' : 'Me armo: espada, pico y hacha de piedra.'), apartate: () => 'Me aparto del peligro.', caza: () => 'Voy a por comida.',
   // F6
   explora: (o) => `Voy a explorar ${o.rumbo === '-' ? 'por ahí' : 'hacia el ' + o.rumbo}, ${o.n} bloques${o.nada ? ', nadando si hace falta' : ''}.`, mina: (o) => `Voy a minar ${o.n} de ${o.bloque}.`,
   construye: (o) => `Voy a construir: ${o.plano}.`, deshaz: (o) => `Voy a deshacer ${o.obra || 'la obra'}.`, campamento_vuelve: () => 'Vuelvo al campamento.',
@@ -1869,10 +1870,11 @@ class Personaje {
       case 'armate': { // 2026-11-02 (pedido del usuario): espada, pico y hacha de piedra, consiguiendo lo que falte, y equiparse
         const pasos = [], inv = () => bot.inventory.items(), cuenta = (re) => inv().filter(i => re.test(i.name)).reduce((a, i) => a + i.count, 0)
         const PIEDRA = /^(cobblestone|cobbled_deepslate|blackstone)$/
+        const nombres = () => [...inv(), ...bot.inventory.slots.slice(5, 9).filter(Boolean)].map(i => i.name) // items() no incluye la armadura puesta
+        // Por el chat no fabrica de piedra lo que ya lleva mejor. Sin `hierro` (conseguir) sí: de eso sale su pico de repuesto.
         const faltan = [['espada_piedra', 'stone_sword', 2], ['pico_piedra', 'stone_pickaxe', 3], ['hacha_piedra', 'stone_axe', 3]]
-          .filter(([, item]) => !inv().some(i => i.name === item))
+          .filter(([, item]) => !inv().some(i => i.name === item) && !(o.hierro && armarse.tiene(nombres(), armarse.tipoDe(item))))
         const equiparse = async () => { const [, d] = await paso('equipar', ['todo']); pasos.push(d) }
-        if (!faltan.length) { await equiparse(); return { exito: true, texto: 'Ya llevo espada, pico y hacha de piedra: equipado.', pasos } }
         // Si ya recorrió todo sin ver árboles, no repite la búsqueda; el motivo real va en la respuesta (2026-11-05, prueba a mano)
         let tala0 = null
         const talar = async (n) => {
@@ -1881,13 +1883,8 @@ class Personaje {
           tala0 = r
         }
         const porQueSinMadera = () => (tala0 && !tala0.exito ? ` ${tala0.texto}` : '')
-        // piedra: la que pidan las que faltan; para picarla, un pico (de madera si no hay ninguno)
-        const q = () => faltan.reduce((a, [, , n]) => a + n, 0) - cuenta(PIEDRA)
-        const sinPico = () => !inv().some(i => i.name.endsWith('_pickaxe'))
-        const madera = 3 + (q() > 0 && sinPico() ? 2 : 0) // palos y mesa (+ el pico de madera y otra mesa abajo o lejos)
         // lo que cuenta es la madera que lleva de verdad: a veces no llega a recoger lo talado (2026-11-02, Oqva se quedó corto)
         const maderaQueLlevo = () => cuenta(/_log$/) + Math.floor(cuenta(/_planks$/) / 4)
-        for (let i = 0; i < 3 && maderaQueLlevo() < madera && !tarea.cancelada; i++) await talar(madera - maderaQueLlevo())
         // una mesa fija al lado para todo lo de aquí: fabricar la usa sin ponerla ni quitarla. Si la pone y la recoge en cada
         // receta, a veces no llega a recogerla y la siguiente gasta 4 tablones en otra (2026-11-02: se quedaba sin madera)
         const mesaAqui = async () => {
@@ -1895,6 +1892,37 @@ class Personaje {
           if (!inv().some(i => i.name === 'crafting_table')) { const [, d] = await paso('fabricar', ['mesa']); pasos.push(d) }
           const [, d2] = await paso('poner', ['mesa']); pasos.push(d2)
         }
+        if (o.hierro) {
+          const plan = armarse.faltan(nombres())
+          if (!plan.piezas.length) { await equiparse(); return { exito: true, texto: 'Ya voy armado de hierro: equipado.', pasos } }
+          const llevo = cuenta(armarse.LINGOTE), falta = plan.lingotes - llevo
+          const junto = falta > 0 ? await armarse.juntarLingotes(bot, falta, tarea) : { sacado: 0, de: [], cofres: 0 }
+          pasos.push({ habilidad: 'juntar_lingotes', exito: junto.sacado >= falta, causa: `${junto.sacado} de ${Math.max(falta, 0)}, ${junto.cofres} cofres` })
+          if (tarea.cancelada) return { exito: false, texto: '', pasos }
+          if (junto.sacado < falta) {
+            if (junto.de.length) await armarse.devolver(bot, junto.de, tarea)
+            this.decir(`Solo hay ${llevo + junto.sacado} de ${plan.lingotes} lingotes: me armo de piedra.`)
+          } else {
+            const hacen = (plan.palos ? 1 : 0) + 1 // un tronco da para los palos de todo, y otro para la mesa
+            for (let i = 0; i < 3 && maderaQueLlevo() < hacen && !tarea.cancelada; i++) await talar(hacen - maderaQueLlevo())
+            await mesaAqui()
+            for (const p of plan.piezas) {
+              if (tarea.cancelada) break
+              const [, d] = await paso('fabricar', [p.item]); pasos.push(d)
+            }
+            await equiparse()
+            const tengo = nombres(), no = plan.piezas.filter(p => !tengo.includes(p.item))
+            const hechas = plan.piezas.filter(p => tengo.includes(p.item)).map(p => p.nombre).join(', ')
+            if (no.length) return { exito: false, texto: `Me falta de hierro: ${no.map(p => p.nombre).join(', ')}.${hechas ? ` Hecho: ${hechas}.` : ''}${porQueSinMadera()} Me quedo con los lingotes para reintentar.`, pasos }
+            return { exito: true, texto: `Armado de hierro: ${hechas}.`, pasos }
+          }
+        }
+        if (!faltan.length) { await equiparse(); return { exito: true, texto: o.hierro ? 'Ya llevo espada, pico y hacha: equipado.' : 'Ya llevo espada, pico y hacha de piedra: equipado.', pasos } }
+        // piedra: la que pidan las que faltan; para picarla, un pico (de madera si no hay ninguno)
+        const q = () => faltan.reduce((a, [, , n]) => a + n, 0) - cuenta(PIEDRA)
+        const sinPico = () => !inv().some(i => i.name.endsWith('_pickaxe'))
+        const madera = 3 + (q() > 0 && sinPico() ? 2 : 0) // palos y mesa (+ el pico de madera y otra mesa abajo o lejos)
+        for (let i = 0; i < 3 && maderaQueLlevo() < madera && !tarea.cancelada; i++) await talar(madera - maderaQueLlevo())
         if (q() > 0 && sinPico() && !tarea.cancelada) {
           await mesaAqui()
           const [r, d] = await paso('fabricar', ['pico_madera']); pasos.push(d)
