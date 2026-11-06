@@ -253,6 +253,7 @@ async function recogerMesa(bot, mesa, tarea) {
 }
 
 module.exports.siguienteFabricacion = siguienteFabricacion
+module.exports.ponerMesa = ponerMesa
 module.exports.GENERICOS = GENERICOS
 module.exports.objetivosDe = objetivosDe
 module.exports.troncosPara = troncosPara

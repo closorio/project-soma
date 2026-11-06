@@ -1890,7 +1890,9 @@ class Personaje {
         const mesaAqui = async () => {
           if (bot.findBlock({ matching: bot.registry.blocksByName.crafting_table.id, maxDistance: 4 })) return
           if (!inv().some(i => i.name === 'crafting_table')) { const [, d] = await paso('fabricar', ['mesa']); pasos.push(d) }
-          const [, d2] = await paso('poner', ['mesa']); pasos.push(d2)
+          const [r2, d2] = await paso('poner', ['mesa']); pasos.push(d2)
+          // 2026-11-05, prueba a mano: poner da «sin apoyo» donde ponerMesa sí puede; sin mesa fija, fabricar pone y quita la suya en cada pieza
+          if (!r2.exito && !(await require('./habilidades/fabricar').ponerMesa(bot))) pasos.push({ habilidad: 'poner_mesa', exito: false, causa: 'sin sitio' })
         }
         if (o.hierro) {
           const plan = armarse.faltan(nombres())
