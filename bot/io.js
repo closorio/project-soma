@@ -88,7 +88,8 @@ const registro = require('./registro')
 const informe = require('./informe') // F6: informe del cuerpo hacia la mente (orden `resumen`)
 const memoria = require('./memoria')
 const respirar = require('./respirar')
-const { conLimite, esperar, moverHasta, viajeLargo, jugadorCercano, prudentes } = require('./habilidades/comun')
+const { conLimite, esperar, moverHasta, viajeLargo, jugadorCercano, prudentes, hayCamino } = require('./habilidades/comun')
+const tala = require('./tala')
 const { GoalSeguirFuera } = require('./habilidades/ir_a_jugador')
 const reflejos = require('./reflejos') // F7.2: reflejos de supervivencia (comer, huir, defenderse, apartarse, equipar)
 const sv = require('./habilidades/sv')
@@ -1872,7 +1873,14 @@ class Personaje {
           .filter(([, item]) => !inv().some(i => i.name === item))
         const equiparse = async () => { const [, d] = await paso('equipar', ['todo']); pasos.push(d) }
         if (!faltan.length) { await equiparse(); return { exito: true, texto: 'Ya llevo espada, pico y hacha de piedra: equipado.', pasos } }
-        const talar = async (n) => { const r = await this.talarN({ tipo: 'tala', n }, tarea, paso); pasos.push(...(r.pasos || [])) }
+        // Si ya recorrió todo sin ver árboles, no repite la búsqueda; el motivo real va en la respuesta (2026-11-05, prueba a mano)
+        let tala0 = null
+        const talar = async (n) => {
+          if (tala0 && tala0.sinArboles) return
+          const r = await this.talarN({ tipo: 'tala', n }, tarea, paso); pasos.push(...(r.pasos || []))
+          tala0 = r
+        }
+        const porQueSinMadera = () => (tala0 && !tala0.exito ? ` ${tala0.texto}` : '')
         // piedra: la que pidan las que faltan; para picarla, un pico (de madera si no hay ninguno)
         const q = () => faltan.reduce((a, [, , n]) => a + n, 0) - cuenta(PIEDRA)
         const sinPico = () => !inv().some(i => i.name.endsWith('_pickaxe'))
@@ -1890,7 +1898,7 @@ class Personaje {
         if (q() > 0 && sinPico() && !tarea.cancelada) {
           await mesaAqui()
           const [r, d] = await paso('fabricar', ['pico_madera']); pasos.push(d)
-          if (!r.exito) return { exito: false, texto: `No pude hacerme un pico de madera: ${r.causa}.`, pasos }
+          if (!r.exito) return { exito: false, texto: `No pude hacerme un pico de madera: ${r.causa}.${porQueSinMadera()}`, pasos }
         }
         if (q() > 0 && !tarea.cancelada) { const [, d] = await paso('minar', ['stone', String(q()), '8']); pasos.push(d) }
         // sin piedra a la vista: una escalera de 8 hacia abajo (la que baje de las 4 direcciones; los escalones ya dan piedra),
@@ -1921,7 +1929,7 @@ class Personaje {
         }
         await equiparse()
         const no = faltan.map(([obj]) => obj.replace('_piedra', '')).filter(n => !hechas.includes(n))
-        return { exito: !no.length, texto: no.length ? `Me falta: ${no.join(', ')} de piedra${q() > 0 ? ` (no encontré ${q()} de piedra)` : ''}.${hechas.length ? ` Hecho: ${hechas.join(', ')}.` : ''}` : `Armado: espada, pico y hacha de piedra.`, pasos }
+        return { exito: !no.length, texto: no.length ? `Me falta: ${no.join(', ')} de piedra${q() > 0 ? ` (no encontré ${q()} de piedra)` : ''}.${hechas.length ? ` Hecho: ${hechas.join(', ')}.` : ''}${no.length ? porQueSinMadera() : ''}` : `Armado: espada, pico y hacha de piedra.`, pasos }
       }
       case 'equipate': {
         // 2026-11-01: antes de equipar lo que lleva, toma lo mejor de los armor stands cercanos (y espada o hacha del cofre que tengan al lado)
@@ -2177,7 +2185,40 @@ class Personaje {
   async talarN(o, tarea, paso) {
     const bot = this.bot, n = o.n, inicio = this.troncos(), t0 = Date.now(), limite = Math.min(600, 60 + 30 * n) * 1000
     const pasos = []
-    let fallos = 0, causa = null, picados = 0, acercamientos = 0
+    let fallos = 0, causa = null, picados = 0, acercamientos = 0, acercar = false, sinArboles = false
+    let busqueda = null, msBuscando = 0, avisado = false
+    const probados = new Set()
+    const esLibre = (b) => b.name.endsWith('_log') && !zonas.talaProtegida(b.position.x, b.position.y, b.position.z)
+    const troncosLibres = (count) => bot.findBlocks({ useExtraInfo: true, maxDistance: 48, count, matching: esLibre })
+    // El tronco libre más cercano con camino a pie (ir_a_arbol anda sin navegador y se atasca aunque se pueda rodear)
+    const troncoConCamino = () => {
+      for (const v of troncosLibres(8).filter(v => !probados.has(`${v}`)).slice(0, 4)) {
+        if (hayCamino(bot, new goals.GoalNear(v.x, v.y, v.z, 3))) return v
+        probados.add(`${v}`)
+      }
+      return null
+    }
+    // Sin árboles a la vista: al siguiente sitio donde mirar (bot/tala.js). Falso si no quedan sitios. Mirar a cada paso sería caro.
+    let vistoEn = 0, visto = false
+    const veoTronco = () => {
+      if (Date.now() - vistoEn > 2000) { vistoEn = Date.now(); visto = troncosLibres(1).length > 0 }
+      return visto
+    }
+    const buscarLejos = async () => {
+      const t = Date.now()
+      busqueda = busqueda || tala.crearBusqueda({ trabajo: zonas.trabajo(), pos: bot.entity.position, puntoFuera: zonas.puntoFuera })
+      const s = tala.siguiente(busqueda, msBuscando)
+      if (s.fin) { causa = s.fin; sinArboles = true; return false }
+      if (!avisado) { avisado = true; this.decir(busqueda.puntos ? `No veo árboles cerca: voy a mirar en ${busqueda.nombres.join(', ')}.` : 'No veo árboles cerca: voy a buscar más lejos.') }
+      if (s.ir) {
+        const destino = { x: s.ir.x, y: Math.floor(bot.entity.position.y), z: s.ir.z }
+        const r = await viajeLargo(bot, destino, veoTronco, { tarea, cerca: 8, ms: 60000, mov: prudentes(bot) })
+        pasos.push({ habilidad: 'buscar_arboles', exito: r === 'listo' || r === 'llegué', causa: r, pos: [destino.x, destino.y, destino.z] })
+      } else { const [, d] = await paso('explorar', ['-', '24', '40']); pasos.push(d) }
+      acercamientos = 0; fallos = 0; acercar = false; vistoEn = 0; probados.clear()
+      msBuscando += Date.now() - t
+      return true
+    }
     // como «talar»: si lo más cercano está protegido, decirlo una vez
     const cerca = bot.findBlocks({ matching: b => b.name.endsWith('_log'), maxDistance: 24, count: 200 })
     const protegidas = new Set()
@@ -2186,19 +2227,19 @@ class Personaje {
     const I = Object.fromEntries(observacion.NOMBRES.map((k, i) => [k, i]))
     while (this.troncos() - inicio < n) {
       if (tarea.cancelada) break
-      if (Date.now() - t0 > limite) { causa = 'se acabó el tiempo'; break }
-      if (fallos >= 4) { causa = `cuatro fallos seguidos (${pasos[pasos.length - 1].causa})`; break }
+      if (Date.now() - t0 - msBuscando > limite) { causa = 'se acabó el tiempo'; break } // buscar lejos tiene su propio tope
+      if (fallos >= 4) { if (await buscarLejos()) continue; break }
       const { obs } = observacion.observar(bot)
       let h
       if (obs[I.objetos_suelo] > 0) h = 'recoger'
       else if (picados >= n + 2) { causa = `piqué ${picados}, pero lo demás no me entró (o lo recogió otro que estaba cerca, o cayó donde no llego)`; break }
       else if (obs[I.tronco_al_alcance] || obs[I.arbol_enfrente]) h = 'picar_tronco'
-      else if (obs[I.arbol_dist] >= 1) {
+      else if (acercar || obs[I.arbol_dist] >= 1) {
+        acercar = false
         // la observación (cerebro.arbolCercano) mira los 40 troncos más cercanos: junto a una zona con muchos troncos protegidos
         // (HOGAR) no ve los de fuera. Acercarse (sin romper nada ni pisar zonas) al tronco libre más cercano y volver a mirar.
-        const libre = acercamientos < 2 && bot.findBlocks({ useExtraInfo: true, maxDistance: 48, count: 1,
-          matching: b => b.name.endsWith('_log') && !zonas.talaProtegida(b.position.x, b.position.y, b.position.z) })[0]
-        if (!libre) { causa = zonas.trabajo().length ? 'no veo árboles en la zona de trabajo' : 'no veo árboles fuera de las zonas protegidas'; break }
+        const libre = acercamientos < 2 ? troncoConCamino() : null
+        if (!libre) { if (await buscarLejos()) continue; break }
         acercamientos++
         const m = await moverHasta(bot, new goals.GoalNear(libre.x, libre.y, libre.z, 3), () => bot.entity.position.distanceTo(libre) <= 4,
           { ms: 30000, tarea })
@@ -2209,6 +2250,7 @@ class Personaje {
       const [r, d] = await paso(h, ARGS[h])
       pasos.push(d)
       fallos = r.exito ? 0 : fallos + 1
+      if (!r.exito && (h === 'ir_a_arbol' || h === 'ir_a_otro_arbol')) acercar = true
       if (h === 'picar_tronco' && r.exito) { picados++; await esperar(400) } // que el tronco caiga (o entre solo) antes de mirar otra vez
     }
     const g = this.troncos() - inicio
@@ -2216,7 +2258,7 @@ class Personaje {
     const tr = (k) => `${k} tronco${k === 1 ? '' : 's'}`
     const texto = g >= n ? `Hecho: ${tr(g)}${protegidas.size ? `, ninguno de ${[...protegidas].join(', ')}` : ''}.${nota}`
       : `Llevo ${g} de ${tr(n)}${causa ? `: ${causa}` : ''}.${nota}`
-    return { exito: g >= n, texto, pasos, troncos: g }
+    return { exito: g >= n, texto, pasos, troncos: g, sinArboles }
   }
 
   // Zonas protegidas. Desde el chat del juego (!zona ...) o por el puerto de control (zona ...).
