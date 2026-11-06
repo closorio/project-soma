@@ -3,6 +3,7 @@ tipo: roadmap
 fase: F-multi
 estado: aparcado
 responsable: seppuq
+epica: E7
 actualizado: 2026-11-05
 siguiente: "Medir la red de equipo en Minecraft (solo, dúo y trío desde los mismos puntos) y repetir el trío con el arreglo de picar_tronco"
 ---

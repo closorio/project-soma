@@ -3,6 +3,7 @@ tipo: roadmap
 fase: F7
 estado: en-curso
 responsable: seppuq
+epica: E7
 actualizado: 2026-11-05
 siguiente: "Comprobar el cierre de F7.5 con comprobar.py y el campamento de mundos/supervivencia/mundo.json, y lanzar F7.6 con entrenamiento/experimentos_sv.py"
 ---

@@ -3,6 +3,7 @@ tipo: roadmap
 fase: ""
 estado: pendiente
 responsable: ""
+epica: ""
 actualizado: "{{date}}"
 siguiente: ""
 ---

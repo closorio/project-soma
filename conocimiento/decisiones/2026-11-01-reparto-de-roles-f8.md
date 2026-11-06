@@ -2,7 +2,7 @@
 tipo: decision
 fecha: "2026-11-01"
 autor: "seppuq"
-estado: vigente
+estado: sustituida
 fases: [F8]
 ---
 # Reparto de roles de F8

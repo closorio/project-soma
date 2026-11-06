@@ -3,8 +3,9 @@ tipo: roadmap
 fase: F8
 estado: en-curso
 responsable: seppuq
+epica: E1
 actualizado: 2026-11-05
-siguiente: "Banco M medido: base 16/32 en 4 tiradas, y un veredicto pide 4 tiradas por versión ([[2026-11-05-tiradas-del-banco-m]]). Investigar por qué 5 personajes se quedan sin morir en m_pozo (falta «mina»), sobre todo en (15036, 15068) y (15132, 14956). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5. Aparte: count revisa [[2026-11-05-arquitectura-de-roles]]; al aceptarla, composición de submodos"
+siguiente: "Banco M medido: base 16/32 en 4 tiradas, y un veredicto pide 4 tiradas por versión ([[2026-11-05-tiradas-del-banco-m]]). Investigar por qué 5 personajes se quedan sin morir en m_pozo (falta «mina»), sobre todo en (15036, 15068) y (15132, 14956). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; ir_a_arbol sin árbol; conseguir desde cero 2/5. Aparte, ya sin esperar a nadie: composición de submodos (paso 1 de [[2026-11-05-arquitectura-de-roles]]); el refactor de io.js espera a que count integre"
 ---
 # F8 Perfiles reales de juego
 

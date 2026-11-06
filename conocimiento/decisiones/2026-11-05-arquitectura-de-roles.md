@@ -2,13 +2,12 @@
 tipo: decision
 fecha: "2026-11-05"
 autor: "seppuq"
-estado: propuesta
+estado: vigente
 fases: [F8]
 ---
 # Arquitectura de roles y submodos
 
-**Propuesta: count debe aceptarla, y sobre todo cerrar los puntos marcados con ⚠.** Al aceptarla, `estado: vigente`, y
-[[2026-11-01-reparto-de-roles-f8]] pasa a `estado: sustituida`. Hasta entonces no se toca código.
+**Vigente desde el 2026-11-05.** seppuq contestó los puntos por cerrar en nombre de count, que queda avisado y puede objetar con otra nota. Sustituye a [[2026-11-01-reparto-de-roles-f8]].
 
 ## Contexto
 Hoy hay tres conceptos sueltos:
@@ -21,7 +20,7 @@ una pieza. Tampoco queda escrito quién es dueño de cada pieza ni si está prob
 
 ## Decisión
 Cuatro roles con dueño y una biblioteca común de **submodos**, piezas declarativas con dueño y contrato que se componen al cargar.
-El capataz sigue recibiendo una lista plana, así que no cambia.
+El capataz sigue recibiendo una lista plana, así que no cambia. `perfiles/v2/minero.json` sigue existiendo como rol fino para `capataz@minero` y `make bench-m`, pero no cuenta como uno de los cuatro roles de juego.
 
 ```
 Rol        casual · speedrunner · builder · redstoner      a qué juega; pesos y reglas; tiene dueño
@@ -44,12 +43,12 @@ Un submodo puede tener dos partes:
 
 | Submodo | Etapas | Servicio | Dueño | Épica | Madurez hoy (estimada, por confirmar) |
 |---|---|---|---|---|---|
-| `fundacion` (C1-C7, tronco común) | sí | no | seppuq | E1 | medido a trozos |
+| `fundacion` (`madera`, `herr_madera`, `piedra`, `herr_piedra`: lo que comparten hoy los tres roles en el mismo orden) | sí | no | seppuq | E1 | medido a trozos |
 | `minero` | sí | no | seppuq | E1 | medido, no aceptado (base 16/32) |
 | `cartografo` | sí | no | seppuq | E1 | borrador |
-| `constructor` | sí | no | count ⚠ | E3 | funciona |
-| `granjero` | sí (huerto) | sí (cosechar) | count ⚠ | E4 | funciona a medias |
-| `herrero` | no | sí | count ⚠ | E4 | funciona |
+| `constructor` | sí | no | count | E3 | funciona |
+| `granjero` | sí (huerto) | sí (cosechar) | count | E4 | funciona a medias |
+| `herrero` | no | sí | count | E4 | funciona |
 | `centinela` | no | sí | count | E2 | funciona |
 | `guardaespaldas` | no | sí | count | E2 | funciona |
 
@@ -107,14 +106,12 @@ abre si un banco demuestra que hace falta.
   4: [[2026-11-05-tiradas-del-banco-m]]).
 - **Un rol no puede estar `aceptado` si incluye algo que no lo está.** Lo comprueba el validador.
 - **Dos niveles de banco:** el del submodo aísla el fallo y el del rol mide la integración.
-- **Hoy nada está `aceptado`.**
+- **Hoy nada está `aceptado` por este criterio.** El Recolector se aceptó por excepción, sin cumplir su banco ([[2026-11-03-recolector-aceptado-y-criterio-m]]), y eso no cuenta como `aceptado`.
 
-### ⚠ Por cerrar con count
-1. **`granjero` y `herrero`:** ¿los lleva count dentro de E4? Es el punto Granjero de [[2026-11-05-epicas-y-duenos]], ampliado a
-   `herrero`. El código de `cosechar` y `herrero` ya es suyo.
-2. **`constructor`:** ¿lo lleva count, con el traspaso del catálogo de estructuras que propone esa misma nota?
-3. **Madurez de lo tuyo:** ¿es correcta la columna de la tabla para `constructor`, `granjero`, `herrero`, `centinela` y
-   `guardaespaldas`?
+### Puntos cerrados
+1. **`granjero` y `herrero`:** los lleva count dentro de E4.
+2. **`constructor`:** lo lleva count, y el catálogo de estructuras pasa a count ya.
+3. **Madurez de las piezas de count:** se queda como estimación, y count la corrige al hacer el banco de cada una.
 
 ## Alternativas descartadas
 - **Árbol de comportamiento o pila de submodos en ejecución:** riesgo alto, y los bancos dejarían de ser comparables.
@@ -124,11 +121,11 @@ abre si un banco demuestra que hace falta.
 - **Campesino y granjero por separado:** dos submodos y dos bancos para lo mismo.
 
 ## Consecuencias
-**Ajustes a las propuestas pendientes**, que se aplican si se aceptan las tres:
+**Ajustes aplicados:**
 - [[2026-11-05-arquitectura-de-comandos]]: el glosario añade «submodo», y un encargo pasa a ser un submodo con `servicio` activo.
-- [[2026-11-05-epicas-y-duenos]]: el Granjero se decide con el ⚠ 1. Sentinela es un submodo de E2, no un rol.
+- [[2026-11-05-epicas-y-duenos]]: Sentinela es un submodo de E2, no un rol.
 
-**Pasos después de aceptar, cada uno una PR corta:**
+**Pasos, cada uno una PR corta:**
 1. **Composición.** Guardar antes la salida de `perfiles_v2.py --json` como referencia. Pasar las etapas de `minero` a su submodo y
    dejar `perfiles/v2/minero.json` como rol fino, para que `capataz@minero` y `make bench-m` sigan igual. Extraer `fundacion` solo en
    la parte que los roles comparten en el mismo orden. **Requisito:** lista resuelta idéntica a la referencia; así no hace falta
@@ -137,7 +134,7 @@ abre si un banco demuestra que hace falta.
    madurez. Alias «campesino» en `bot/ordenes.js`.
 3. **Control unificado.** Último trozo del refactor E0: un encargo por grupo en `bot/control.js`. Es el único paso que puede cambiar
    el comportamiento; se compara con 4 tiradas del banco M contra `banco-m-base-20261105`.
-4. **Cada dueño completa sus piezas.** count: plan y banco de `centinela`, luego `constructor` (B1) y Builder. seppuq: `minero` en el
+4. **Cada dueño completa sus piezas.** count, en el orden que elija: `granjero` pronto, plan y banco de `centinela`, `constructor` (B1) con la torre y el castillo, y Builder. seppuq: `minero` en el
    banco M y luego Casual.
 
 **Lo que no cambia:** la red de zona gris (F8.G), porque los `pesos` siguen en el rol.

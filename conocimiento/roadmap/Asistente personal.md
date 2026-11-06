@@ -3,6 +3,7 @@ tipo: roadmap
 fase: F-asistente
 estado: en-curso
 responsable: seppuq
+epica: E6
 actualizado: 2026-11-01
 siguiente: "A1 con Sonnet desde el 2026-11-07 (planes/asistente/A1.md). El fallo de colocar en 26.3 no se reproduce (22/22 y dos humos 7/7, 2026-11-01)"
 ---

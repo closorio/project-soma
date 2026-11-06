@@ -3,6 +3,7 @@ tipo: roadmap
 fase: F6
 estado: aparcado
 responsable: seppuq
+epica: E7
 actualizado: 2026-11-05
 siguiente: "Medir T1-T3 con entrenamiento/experimento_mente.py (madera, cabaña, atasco junto al HOGAR)"
 ---

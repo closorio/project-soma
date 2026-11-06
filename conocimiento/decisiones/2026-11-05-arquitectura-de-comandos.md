@@ -2,12 +2,12 @@
 tipo: decision
 fecha: "2026-11-05"
 autor: "seppuq"
-estado: propuesta
+estado: vigente
 fases: [F8]
 ---
 # Arquitectura de comandos e interacción con los bots
 
-**Propuesta: necesita la revisión de count antes de tocar código.** Al aceptarla, `estado: vigente`.
+**Vigente desde el 2026-11-05.** seppuq contestó los puntos por cerrar en nombre de count, que queda avisado y puede objetar con otra nota. El refactor de `io.js` sigue esperando a que count integre lo pendiente.
 
 ## Contexto
 Añadir una orden obliga a tocar archivos comunes, y por eso los dos coincidimos siempre en ellos. Desde el 2026-10-20,
@@ -70,7 +70,8 @@ Cada archivo tiene dueño (ver [[2026-11-05-epicas-y-duenos]]).
 | **Decisor** | Quién elige la siguiente acción en modo libre | `red`, `guion`, `capataz` |
 | **Rol** | Perfil v2 con etapas, que sigue el decisor `capataz` | `casual`, `minero`, `speedrunner` |
 | **Estilo** | Perfil v1: sesgo de comportamiento. En la orden sigue llamándose `perfil` | `recolector`, `explorador` |
-| **Encargo** (nuevo) | Trabajo persistente que se retoma tras otras órdenes | centinela, guardaespaldas, oficio |
+| **Submodo** (nuevo) | Pieza reutilizable con dueño, que un rol compone: [[2026-11-05-arquitectura-de-roles]] | `minero`, `granjero`, `centinela` |
+| **Encargo** (nuevo) | Submodo con `servicio` activo: trabajo persistente que se retoma tras otras órdenes | centinela, guardaespaldas, oficio |
 | **Oficio** | Encargo de una tarea repetitiva | `cosechar`, `herrero` |
 
 ### Prioridad del control
@@ -85,7 +86,7 @@ repartida por el código:
 6. Modo base: libre con su decisor, o quieto.
 
 ### Preguntas abiertas
-- ¿Un rol es un encargo, o sigue siendo solo «libre con decisor `capataz`»? Propongo decidirlo en el último trozo.
+- ~~¿Un rol es un encargo?~~ Resuelta en [[2026-11-05-arquitectura-de-roles]]: no; un rol es el modo base y el encargo se superpone.
 - `dame` y `foto` son sociales, no de movimiento. No merecen archivo propio mientras sean dos.
 
 ## Alternativas descartadas

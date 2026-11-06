@@ -2,8 +2,9 @@
 tipo: roadmap
 fase: "F-estructuras"
 estado: en-curso
-responsable: "seppuq"
-actualizado: "2026-11-02"
+responsable: "count"
+epica: E3
+actualizado: "2026-11-05"
 siguiente: "Andamio sobre los suelos ya puestos (la torre del castillo para en la capa 9, 1086/3210, en el server creativo) y luego terminarla y el castillo entero"
 ---
 # Catálogo de estructuras

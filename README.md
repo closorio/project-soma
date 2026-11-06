@@ -10,12 +10,11 @@ Claude Code, coordinadas por un vault de Obsidian (el hub en la LAN está en pau
 
 | persona | lleva |
 |---|---|
-| **seppuq** | roadmap F1-F8 salvo lo de abajo: F6 Alma, F7 supervivencia, F8 Casual y Speedrunner, roles de apoyo (Minero, Granjero, Explorador), la red de equipo y el asistente personal |
-| **count** | roles F8 **Builder**, **Redstoner** y **Sentinela**; su server 26.x (`WORLD=companero`) y el hub (`compartido/`) en su PC |
+| **seppuq** | roadmap F1-F8 salvo lo de abajo: F6 Alma, F7 supervivencia, F8 Casual y Speedrunner, Minero, Explorador, la plataforma de comandos (E0), la red de equipo y el asistente personal |
+| **count** | roles F8 **Builder** y **Redstoner**; submodos `centinela`, `guardaespaldas`, `granjero`, `herrero` y `constructor`; catálogo de estructuras; operación multijugador; su server 26.x (`WORLD=companero`) y el hub (`compartido/`) en su PC |
 
-Decisión: [conocimiento/decisiones/2026-11-01-reparto-de-roles-f8.md](conocimiento/decisiones/2026-11-01-reparto-de-roles-f8.md).
-Hay una propuesta, pendiente de que count la revise, para ordenar este reparto en épicas con dueño:
-[conocimiento/decisiones/2026-11-05-epicas-y-duenos.md](conocimiento/decisiones/2026-11-05-epicas-y-duenos.md).
+Decisiones vigentes: [épicas con dueño](conocimiento/decisiones/2026-11-05-epicas-y-duenos.md) y
+[roles y submodos](conocimiento/decisiones/2026-11-05-arquitectura-de-roles.md).
 
 ## Empezar
 
@@ -58,22 +57,25 @@ herrero, zona de hogar y zonas por dueño, y el plugin `SomaConnect` (`/connect`
 |---|---|
 | F7 Supervivencia en un mundo normal | F7.0-F7.4 hechas (red DAgger, semilla 0); F7.5 sin cierre confirmado; falta la medición real F7.6 |
 | F8.1 Casual | parada: el banco K da 2-3/8 y pide ≥ 6/8. Faltan cazar bajo tierra, árboles inalcanzables, ahogamiento y el tejado de la cabaña |
-| F8.2 Minero | el banco M da 4/8 y pide ≥ 6/8. Antes de más arreglos se está midiendo el ruido del banco, porque un mismo punto salta de 32 a 0 de hierro entre tiradas |
+| F8.2 Minero | el banco M da 16/32 en 4 tiradas y pide ≥ 24/32 y 0 muertes por lava; [un veredicto pide 4 tiradas por versión](conocimiento/decisiones/2026-11-05-tiradas-del-banco-m.md) |
 | F8 resto | Granjero → primera red (F8.G) → Explorador → **Builder** → **Redstoner** → Speedrunner (`PLAN_F8_perfiles.md`, «Orden recomendado») |
 
 **Líneas laterales activas:**
 
 | línea | siguiente paso |
 |---|---|
-| Arquitectura de comandos | propuesta pendiente de revisión: [2026-11-05-arquitectura-de-comandos.md](conocimiento/decisiones/2026-11-05-arquitectura-de-comandos.md) |
+| Arquitectura de comandos | [vigente](conocimiento/decisiones/2026-11-05-arquitectura-de-comandos.md); el refactor de `io.js` espera a que count integre lo pendiente |
 | Asistente personal | pausada hasta el 2026-11-07 por el límite semanal; luego A1 (`planes/asistente/A1.md`) |
-| Catálogo de estructuras | andamio sobre los suelos ya puestos para terminar la torre (para en 1086/3210) y luego el castillo |
+| Catálogo de estructuras (count) | andamio sobre los suelos ya puestos para terminar la torre (para en 1086/3210) y luego el castillo |
 | Conocimiento compartido en Obsidian | abrir `conocimiento/` en los dos PCs y comprobar que cargan las Bases |
 
 **Aparcadas** (se retoman por el campo `siguiente` de su nota en `conocimiento/roadmap/`): F6 La mente de Alma, Varios personajes
 con un modelo compartido y Trabajo a dos (el hub).
 
 ## La parte de count
+
+El orden lo decide count; el Granjero debe empezar pronto porque va antes de la primera red. También lleva la torre y el
+castillo del catálogo, a medias.
 
 Las etapas, habilidades nuevas, bancos y criterios de Builder y Redstoner ya están fijados en
 [PLAN_F8_perfiles.md](PLAN_F8_perfiles.md) (secciones «Builder B1-B6», «Redstoner R1-R7», «Fases» y «Bancos»). No se
@@ -87,8 +89,8 @@ copian aquí, para que no se desincronicen.
 2. **Redstoner (F8.6, R1-R7).** Mecanismos: puerta de hierro con palanca, cultivo cosechado con agua, puerta de pistón…
    Puerta: R4 5/5 y R5 ≥ 4/5. R1 necesita redstone de M6 (el Minero, de seppuq). Mientras no esté, el banco R da los
    materiales por `give`, así que R2-R5 no tienen que esperar.
-3. **Sentinela (sin plan todavía).** Protector o atacante: hay que decidir cuál, o los dos, y escribir sus etapas y su
-   banco igual que los otros roles (añadir una sección en `PLAN_F8_perfiles.md` y su `perfiles/v2/sentinela.json`). Se
+3. **Submodo `centinela` (sin plan todavía).** Protector o atacante: hay que decidir cuál, o los dos, y escribir su
+   banco y su manifiesto (sección en `PLAN_F8_perfiles.md` y `perfiles/v2/submodos/centinela.json`). Se
    apoya en lo que ya hay de combate: `bot/habilidades/atacar.js`, `huir.js`, `bot/reflejos.js` y la taxonomía de
    amenazas (`bot/habilidades/taxonomia.js`).
 
