@@ -5,7 +5,7 @@ estado: en-curso
 responsable: seppuq
 epica: E1
 actualizado: "2026-11-07"
-siguiente: "Arreglos de m_pozo en 77ff430 (huir sin camino → refugiarse/atacar; columna con agua → explorar), sin veredicto: humo de la rotación 2 da 3/4 ([[2026-11-07-1437-banco-m-humo-rotacion-2-tras-arreglos-de-m-pozo]]). Siguiente: bucle «fabricar pico_piedra → sin sitio para la mesa» en (15132, 14956), y luego las 4 tiradas contra banco-m-base-20261105 (base 16/32). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio; conseguir desde cero 2/5; rutina_madera sigue dando ir_a_arbol sin árbol. El paso 2 de la composición va después de m_pozo. El refactor de io.js espera a que count integre"
+siguiente: "Atasco de m_pozo arreglado sin veredicto (77ff430, a9a4eca: huir sin camino, columna con agua, sin sitio para la mesa). Dos humos de la rotación 2 dan 3/4 sin bucles ([[2026-11-07-1612-banco-m-humo-rotacion-2-tras-arreglo-de-la-mesa]]). Siguiente: las 4 tiradas (make nightly o bench-m ZONE=3 REGEN=1) contra banco-m-base-20261105 (base 16/32). Lo que queda son muertes tras llegar a 24 (araña de cueva, creeper) y las causas abiertas: muertes en cadena al recuperar, muerte tras reconectar; conseguir desde cero 2/5; ir_a_arbol bloqueado. El paso 2 de la composición va después de m_pozo. El refactor de io.js espera a que count integre"
 ---
 # F8 Perfiles reales de juego
 
