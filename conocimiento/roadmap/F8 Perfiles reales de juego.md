@@ -4,8 +4,8 @@ fase: F8
 estado: en-curso
 responsable: seppuq
 epica: E1
-actualizado: 2026-11-05
-siguiente: "Banco M medido: base 16/32 en 4 tiradas, y un veredicto pide 4 tiradas por versión ([[2026-11-05-tiradas-del-banco-m]]). Investigar por qué 5 personajes se quedan sin morir en m_pozo (falta «mina»), sobre todo en (15036, 15068) y (15132, 14956). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio, huir de creeper sin camino, pico gastado; conseguir desde cero 2/5. La tala ya busca lejos (sin probar en el juego; no cubre rutina_madera, que sigue dando ir_a_arbol sin árbol). Composición de submodos hecha (paso 1 de [[2026-11-05-arquitectura-de-roles]], lista resuelta idéntica); el paso 2 va después de m_pozo. El refactor de io.js espera a que count integre"
+actualizado: "2026-11-07"
+siguiente: "Arreglos de m_pozo en 77ff430 (huir sin camino → refugiarse/atacar; columna con agua → explorar), sin veredicto: humo de la rotación 2 da 3/4 ([[2026-11-07-1437-banco-m-humo-rotacion-2-tras-arreglos-de-m-pozo]]). Siguiente: bucle «fabricar pico_piedra → sin sitio para la mesa» en (15132, 14956), y luego las 4 tiradas contra banco-m-base-20261105 (base 16/32). Causas abiertas: muertes en cadena al recuperar, muerte tras reconectar que borra el sitio; conseguir desde cero 2/5; rutina_madera sigue dando ir_a_arbol sin árbol. El paso 2 de la composición va después de m_pozo. El refactor de io.js espera a que count integre"
 ---
 # F8 Perfiles reales de juego
 
