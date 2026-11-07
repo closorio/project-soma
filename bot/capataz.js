@@ -49,9 +49,11 @@ const paso = (texto) => { const [habilidad, ...args] = texto.trim().split(/\s+/)
 const estadoCapataz = (bot) => memoria(bot, 'capataz', () => ({ etapa: null, paso: 0, fallos: {}, alternativas: 0 }))
 
 // Cuando todos los pasos de la etapa han fallado: algo que cambie la situación.
-function alternativa(bot, etapa, n) {
+function alternativa(bot, etapa, n, causa) {
   const y = nodo(bot).y
-  if (etapa.tipo === 'mineral' && n % 2 === 0 && y > 20) return { habilidad: 'cavar_escalera', args: [String(y - 12), '-'] }
+  // 2026-11-06, banco M: «agua delante» y «hueco» se repiten en la misma columna (rechazo a 0 ms): cavar otra vez ahí falla igual, hay que apartarse
+  const columnaMala = /agua|lava|hueco/.test(String(causa))
+  if (etapa.tipo === 'mineral' && n % 2 === 0 && y > 20 && !columnaMala) return { habilidad: 'cavar_escalera', args: [String(y - 12), '-'] }
   if (etapa.tipo === 'comida') return { habilidad: 'explorar', args: ['-', '120', '150'] } // animales: aún más lejos
   return { habilidad: 'explorar', args: ['-', '80', '120'] } // más lejos que el explorar de siempre (40): menas, árboles
 }
@@ -81,6 +83,13 @@ function decidir(bot, nombre) {
   if (cerca.length) {
     const creeper = cerca.some(x => sv.tipoHostil(x) === 'creeper'), arma = sv.mejorArma(bot)
     const lucha = arma && bot.health >= VIDA_PELEA && cerca.length <= 2 && !creeper
+    // 2026-11-07, banco M: en el pozo, «huir → sin camino» 263 veces seguidas hasta el final. Tras dos sin camino: tapiarse aquí
+    // (si no falló hace poco) o, con arma, plantar cara
+    const st = estadoCapataz(bot)
+    if (!lucha && (st.huirSinCamino || 0) >= FALLOS_PASO) {
+      if (Date.now() - (st.refugioNo || 0) > REFUGIO_NO_MS) return { habilidad: 'refugiarse', args: [], motivo: 'sin salida' }
+      if (arma) return { habilidad: 'atacar', args: ['-'], motivo: 'sin salida' }
+    }
     return { habilidad: lucha ? 'atacar' : 'huir', args: ['-'], motivo: 'amenaza' }
   }
   if (reglas.noche === 'refugio' && (sv.esNoche(bot) || atardecer)) {
@@ -139,13 +148,17 @@ function decidir(bot, nombre) {
     if ((st.fallos[i] || 0) < FALLOS_PASO) return { ...paso(pasos[i]), paso: i, ...datos }
   }
   st.fallos = {}
-  return { ...alternativa(bot, et, st.alternativas++), alternativa: true, ...datos }
+  return { ...alternativa(bot, et, st.alternativas++, st.causaFallo), alternativa: true, ...datos }
 }
 
 // Tras ejecutar lo decidido: cuenta el fallo o el acierto del paso, apunta la casa y las etapas que ya se cumplen.
 function alResultado(bot, nombre, d, r) {
   const st = estadoCapataz(bot)
   if (d.habilidad === 'refugiarse' && d.motivo === 'poca vida') { if (r.exito) st.aCubierto = true; else st.refugioNo = Date.now() }
+  if (d.habilidad === 'refugiarse' && d.motivo === 'sin salida' && !r.exito) st.refugioNo = Date.now()
+  // la cuenta de huidas sin camino solo vale mientras dure la amenaza
+  if (d.habilidad === 'huir') st.huirSinCamino = !r.exito && /sin camino/.test(String(r.causa)) ? (st.huirSinCamino || 0) + 1 : 0
+  else if (d.motivo !== 'sin salida' && d.motivo !== 'amenaza') st.huirSinCamino = 0
   if (d.paso != null && st.etapa === d.etapa) {
     if (r.exito) {
       // 2026-11-04, banco M: en m_pozo, tras dos fallos de cavar solo quedaba subir, que acierta al momento («ya fuera»): 695 veces hasta el final.
@@ -155,8 +168,8 @@ function alResultado(bot, nombre, d, r) {
       st.paso = d.paso + 1
       st.sinSalida = agotado ? (st.sinSalida || 0) + 1 : 0
       const et = st.sinSalida >= FALLOS_PASO && rol(nombre).etapas.find(x => x.id === d.etapa)
-      if (et) { st.fallos = {}; st.sinSalida = 0; st.luego = { ...alternativa(bot, et, st.alternativas++), alternativa: true } }
-    } else st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1
+      if (et) { st.fallos = {}; st.sinSalida = 0; st.luego = { ...alternativa(bot, et, st.alternativas++, st.causaFallo), alternativa: true } }
+    } else { st.fallos[d.paso] = (st.fallos[d.paso] || 0) + 1; st.causaFallo = String(r.causa) }
     // minar no ve la mena (está enterrada): lo siguiente, ir hasta la más cercana cavando, y luego minar otra vez
     if (d.habilidad === 'minar' && !r.exito && /nada que minar|no piqué/.test(String(r.causa))) st.luego = { habilidad: 'ir_a_mena', args: [d.args[0], '32'], motivo: 'mena enterrada' }
     // la casa pide 71 tablones (≈ 18 troncos) y las etapas de antes gastan la madera: talar lo que falte (1 tronco → 4) y volver

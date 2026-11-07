@@ -103,6 +103,15 @@ ok(h5.madera && h5.herr_madera, 'madera y herr_madera deberían estar hechas')
 persistente.anotarMuerte(b5, 'prueba')
 capataz.decidir(b5, 'casual')
 ok(!capataz.hechas(b5, 'casual').madera, 'tras morir, madera sigue hecha')
+// 5b · huir sin camino no se repite sin fin (2026-11-07, banco M: 263 veces en el pozo)
+const atrapado = mundoFalso({ entidades: [{ name: 'creeper', pos: [4.5, 64, 0.5] }], inventario: [['stone_sword', 1]] })
+const vistosHuir = []
+for (let k = 0; k < 5; k++) {
+  const dh = capataz.decidir(atrapado, 'casual')
+  vistosHuir.push(dh.habilidad)
+  capataz.alResultado(atrapado, 'casual', dh, dh.habilidad === 'huir' ? { exito: false, causa: 'sin camino' } : { exito: false, causa: 'suelo peligroso' })
+}
+ok(vistosHuir.slice(0, 2).every(v => v === 'huir') && vistosHuir[2] === 'refugiarse' && vistosHuir[3] === 'atacar', `huir sin camino ×2 → refugiarse → atacar: ${vistosHuir.join(' ')}`)
 console.log('  5 · zombi → atacar, creeper → huir; la etapa empezada sigue; tras morir se rehacen las de inventario')
 
 // 6 · la casa: sin tablones bastantes, construir falla y lo siguiente es talar lo que falta
@@ -144,16 +153,18 @@ const enPozo = () => {
   for (const et of capataz.rol('minero').etapas) { if (et.id === 'm_pozo') break; capataz.marcarHecha(b, 'minero', et.id) }
   return b
 }
-const bp = enPozo(), vistosPozo = []
+const bp = enPozo(), vistosPozo = [], habsAlt = []
 for (let k = 0; k < 8; k++) {
   const dp = capataz.decidir(bp, 'minero')
   vistosPozo.push(dp.alternativa ? 'alt' : dp.habilidad)
+  if (dp.alternativa) habsAlt.push(dp.habilidad)
   capataz.alResultado(bp, 'minero', dp, dp.habilidad === 'cavar_escalera' && !dp.alternativa ? { exito: false, causa: 'agua delante' } : { exito: true, causa: 'ya fuera' })
 }
 const iAlt = vistosPozo.indexOf('alt')
 ok(vistosPozo.slice(0, 2).every(v => v === 'cavar_escalera'), `m_pozo empieza cavando: ${vistosPozo.join(' ')}`)
 ok(iAlt >= 0 && iAlt <= 4, `sin alternativa tras cavar ✗✗ y subir ✓✓: ${vistosPozo.join(' ')}`)
 ok(iAlt >= 0 && vistosPozo[iAlt + 1] === 'cavar_escalera', `tras la alternativa no vuelve a cavar: ${vistosPozo.join(' ')}`)
+ok(habsAlt[0] === 'explorar', `con «agua delante» la alternativa se aparta, no cava en la misma columna: ${habsAlt.join(' ')}`)
 const bq = enPozo(), vistosBien = []
 for (let k = 0; k < 8; k++) {
   const dq = capataz.decidir(bq, 'minero')
