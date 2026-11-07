@@ -441,6 +441,7 @@ def main():
     ap.add_argument("--rol", default="casual")
     ap.add_argument("--dias", type=float, default=2)
     ap.add_argument("--rotaciones", type=int, default=2)
+    ap.add_argument("--desde-rotacion", type=int, default=0, help="primera rotación (0 = la 1.ª): para repetir solo la 2.ª con sus mismos puntos")
     ap.add_argument("--puertos", type=int, default=3201)
     ap.add_argument("--prefijo", default="K")
     ap.add_argument("--n", type=int, default=4)
@@ -471,13 +472,14 @@ def main():
     zona = a.zona if a.zona is not None else int(time.time() // 3600) % 40 + 1
     donde = f"puntos fijos de {a.puntos}" if banco else f"zonas desde {zona}"
     print(f"rol {a.rol} · {a.n} personajes × {a.rotaciones} rotaciones · {a.dias} días · {donde}", flush=True)
-    zonas_medida = [zona + 7 * k for k in range(a.rotaciones)]
+    ks = range(a.desde_rotacion, a.desde_rotacion + a.rotaciones)
+    zonas_medida = [zona + 7 * k for k in ks]
     if a.regenerar:
         if banco or a.zona is None:
             sys.exit("--regenerar pide --zona y no vale con --puntos (los puntos fijos ya restauran su foto)")
         regenerar_zonas(zonas_medida, nombres)
     res = {}
-    for k in range(a.rotaciones):
+    for k in ks:
         print(f"== rotación {k + 1}", flush=True)
         if banco:
             if not a.sin_restaurar:

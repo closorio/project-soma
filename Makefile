@@ -119,6 +119,7 @@ help:
 	@echo "  bench-gather [ONLY=…] [N=5] [SEGUIR=json]   «consigue N X» en el terreno local: lo pedido en ≥ 4/5 y 0 muertes"
 	@echo "  bench-m [DAYS=2]    banco M del Minero: 4 bots × 2 rotaciones (≈ 90 min): ≥ 24 de hierro en ≥ 6/8 y 0 muertes por lava"
 	@echo "                      ZONE=3 REGEN=1 regenera antes el terreno desde la semilla, para repetir en las mismas condiciones"
+	@echo "                      FROM_ROT=1 ROTS=1 solo la 2.ª rotación (sus mismos puntos), para un humo corto"
 	@echo "  bench-m-smoke       humo del banco M: 1 bot, medio día (≈ 10 min)"
 	@echo "  bench-breath        respirar bajo el agua en dos recintos: aire a 6 bloques y techo de 1 (≈ 3 min)"
 	@echo "  bench-climb-furnace subir sobre un estanque y dos bots con un solo horno (≈ 5 min)"
@@ -450,7 +451,8 @@ bench-k:
 	  $(if $(strip $(BASE)),--comparar $(strip $(BASE)))
 
 bench-m:
-	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --dias $(strip $(DAYS)) --prefijo M $(if $(strip $(ZONE)),--zona $(strip $(ZONE))) $(if $(strip $(REGEN)),--regenerar)
+	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --dias $(strip $(DAYS)) --prefijo M $(if $(strip $(ZONE)),--zona $(strip $(ZONE))) $(if $(strip $(REGEN)),--regenerar) \
+	  $(if $(strip $(FROM_ROT)),--desde-rotacion $(strip $(FROM_ROT))) $(if $(strip $(ROTS)),--rotaciones $(strip $(ROTS)))
 
 bench-m-smoke:
 	IO_SERVIDOR=local python entrenamiento/experimentos_roles.py --rol minero --n 1 --rotaciones 1 --dias 0.5 --prefijo M $(if $(strip $(ZONE)),--zona $(strip $(ZONE))) $(if $(strip $(REGEN)),--regenerar)
