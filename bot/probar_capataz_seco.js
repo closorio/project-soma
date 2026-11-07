@@ -31,6 +31,12 @@ const mundoFalso = (o = {}) => {
   return b
 }
 
+function enPozoMesa() {
+  const b = mundoFalso({ comida: 20, inventario: [['cobblestone', 8], ['stick', 4], ['torch', 16], ['bread', 8]] }) // el pico se rompió
+  for (const et of capataz.rol('minero').etapas) { if (et.id === 'm_pozo') break; capataz.marcarHecha(b, 'minero', et.id) }
+  return b
+}
+
 // 1 · estado
 const b1 = mundoFalso({ inventario: [['stone_pickaxe', 1], ['wooden_sword', 1], ['red_bed', 1], ['bread', 3], ['iron_ingot', 2], ['oak_log', 5]] })
 const e1 = progresion.estado(b1)
@@ -112,6 +118,15 @@ for (let k = 0; k < 5; k++) {
   capataz.alResultado(atrapado, 'casual', dh, dh.habilidad === 'huir' ? { exito: false, causa: 'sin camino' } : { exito: false, causa: 'suelo peligroso' })
 }
 ok(vistosHuir.slice(0, 2).every(v => v === 'huir') && vistosHuir[2] === 'refugiarse' && vistosHuir[3] === 'atacar', `huir sin camino ×2 → refugiarse → atacar: ${vistosHuir.join(' ')}`)
+// 5c · sin sitio para la mesa no se repite sin fin (2026-11-07, humo del banco M: 46 veces en agua honda)
+const mojado = enPozoMesa()
+const vistosMesa = []
+for (let k = 0; k < 6; k++) {
+  const dm = capataz.decidir(mojado, 'minero')
+  vistosMesa.push(dm.habilidad + (dm.motivo === 'pico gastado' ? '*' : ''))
+  capataz.alResultado(mojado, 'minero', dm, dm.habilidad === 'fabricar' ? { exito: false, causa: 'sin sitio para la mesa' } : { exito: true, causa: 'llegué' })
+}
+ok(vistosMesa[0] === 'fabricar*' && vistosMesa[1] === 'fabricar*' && vistosMesa[2] === 'explorar' && vistosMesa[3] === 'fabricar*', `fabricar sin mesa ×2 → explorar → fabricar: ${vistosMesa.join(' ')}`)
 console.log('  5 · zombi → atacar, creeper → huir; la etapa empezada sigue; tras morir se rehacen las de inventario')
 
 // 6 · la casa: sin tablones bastantes, construir falla y lo siguiente es talar lo que falta

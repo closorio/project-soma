@@ -127,6 +127,10 @@ function decidir(bot, nombre) {
   // herramientas gastadas (un pico de piedra dura 131 bloques): reponer el del nivel ya conseguido antes de seguir (en el banco K, sin
   // pico, minar decía «sin pico» y la etapa no avanzaba)
   const h00 = hechas(bot, nombre)
+  // 2026-11-07, humo del banco M: en agua honda, «fabricar pico_piedra → sin sitio para la mesa» 46 veces seguidas. A las dos, apartarse
+  // (explorar llega a suelo seco) y volver a probar desde allí
+  const stm = estadoCapataz(bot)
+  if ((stm.sinMesa || 0) >= FALLOS_PASO) { stm.sinMesa = 0; return { habilidad: 'explorar', args: ['-', '80', '120'], motivo: 'sin sitio para la mesa' } }
   if (h00.herr_piedra && e.inv.pico < 0.66) return { habilidad: e.inv.piedra >= 3 ? 'fabricar' : 'minar', args: e.inv.piedra >= 3 ? ['pico_piedra'] : ['stone', '3', '8'], motivo: 'pico gastado' }
   if (h00.herr_madera && e.inv.pico === 0) return { habilidad: 'fabricar', args: ['pico_madera'], motivo: 'pico gastado' }
   const st0 = estadoCapataz(bot), h0 = hechas(bot, nombre)
@@ -156,6 +160,7 @@ function alResultado(bot, nombre, d, r) {
   const st = estadoCapataz(bot)
   if (d.habilidad === 'refugiarse' && d.motivo === 'poca vida') { if (r.exito) st.aCubierto = true; else st.refugioNo = Date.now() }
   if (d.habilidad === 'refugiarse' && d.motivo === 'sin salida' && !r.exito) st.refugioNo = Date.now()
+  if (d.habilidad === 'fabricar') st.sinMesa = !r.exito && /sin sitio para la mesa/.test(String(r.causa)) ? (st.sinMesa || 0) + 1 : 0
   // la cuenta de huidas sin camino solo vale mientras dure la amenaza
   if (d.habilidad === 'huir') st.huirSinCamino = !r.exito && /sin camino/.test(String(r.causa)) ? (st.huirSinCamino || 0) + 1 : 0
   else if (d.motivo !== 'sin salida' && d.motivo !== 'amenaza') st.huirSinCamino = 0
